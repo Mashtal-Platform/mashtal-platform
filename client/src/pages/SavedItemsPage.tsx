@@ -9,7 +9,7 @@ interface SavedItemsPageProps {
 }
 
 export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedItemsPageProps) {
-  const [filter, setFilter] = useState<'all' | 'product' | 'post' | 'business'>('all');
+  const [filter, setFilter] = useState<'all' | 'product' | 'post' | 'thread' | 'business'>('all');
 
   const filteredItems = filter === 'all' 
     ? savedItems 
@@ -48,6 +48,14 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
             }`}
           >
             Posts ({savedItems.filter(i => i.type === 'post').length})
+          </button>
+          <button
+            onClick={() => setFilter('thread')}
+            className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+              filter === 'thread' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
+            }`}
+          >
+            Threads ({savedItems.filter(i => i.type === 'thread').length})
           </button>
           <button
             onClick={() => setFilter('business')}
@@ -90,9 +98,9 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
                   </div>
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-lg hover:bg-red-50 transition-colors"
+                    className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm p-2.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 group/btn border border-neutral-200 hover:border-red-200"
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4 text-neutral-500 group-hover/btn:text-red-500 transition-colors" />
                   </button>
                 </div>
 

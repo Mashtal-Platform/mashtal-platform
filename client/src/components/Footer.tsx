@@ -114,7 +114,7 @@ export function Footer() {
         <div className="pt-8 border-t border-neutral-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-neutral-400">
             <div>
-              © 2024 Mashtal. All rights reserved.
+              © 2025 Mashtal. All rights reserved.
             </div>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-green-400 transition-colors">Privacy Policy</a>
