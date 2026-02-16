@@ -183,3 +183,108 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Custom Scrollbar Styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #16a34a;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
+
+/* Chat Messages Scrollbar - Professional Green Design */
+.chat-messages-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 12px;
+  margin: 8px 0;
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1);
+}
+
+.chat-messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #15803d 0%, #14532d 100%);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Chat List Scrollbar */
+.chat-list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-list-scroll::-webkit-scrollbar-track {
+  background: #f5f5f4;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.chat-list-scroll::-webkit-scrollbar-thumb {
+  background: #16a34a;
+  border-radius: 10px;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
+
+/* Global Default Scrollbar - Platform Theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #16a34a #f5f5f4;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f5f5f4;
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #15803d 0%, #14532d 100%);
+}
+
+/* Subtle Pulse Animation for Highlighted Items */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}

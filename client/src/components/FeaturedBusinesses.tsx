@@ -3,9 +3,10 @@ import { TrendingUp, Star, MapPin } from 'lucide-react';
 
 interface FeaturedBusinessesProps {
   onViewBusiness: (businessId: string) => void;
+  onViewAll: () => void;
 }
 
-export function FeaturedBusinesses({ onViewBusiness }: FeaturedBusinessesProps) {
+export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusinessesProps) {
   return (
     <section id="businesses" className="py-16 bg-gradient-to-br from-green-50 to-neutral-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,7 +24,10 @@ export function FeaturedBusinesses({ onViewBusiness }: FeaturedBusinessesProps) 
               Verified businesses with excellent customer ratings
             </p>
           </div>
-          <button className="hidden md:block text-green-600 hover:text-green-700 transition-colors">
+          <button 
+            onClick={onViewAll}
+            className="hidden md:block text-green-600 hover:text-green-700 transition-colors"
+          >
             View All →
           </button>
         </div>
@@ -96,6 +100,16 @@ export function FeaturedBusinesses({ onViewBusiness }: FeaturedBusinessesProps) 
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Mobile View All Button */}
+        <div className="mt-8 md:hidden text-center">
+          <button 
+            onClick={onViewAll}
+            className="text-green-600 hover:text-green-700 transition-colors font-medium"
+          >
+            View All Businesses →
+          </button>
         </div>
       </div>
     </section>

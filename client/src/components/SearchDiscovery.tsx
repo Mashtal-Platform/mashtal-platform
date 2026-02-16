@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Leaf, Sprout, Shovel, TreePine, Filter, MapPin, X } from 'lucide-react';
-import { businesses } from '../data/businessData';
+import { otherUsers } from '../data/centralMockData';
 
 interface SearchDiscoveryProps {
   onViewBusiness: (businessId: string) => void;
@@ -20,14 +20,16 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [location, setLocation] = useState('all');
 
+  const businesses = otherUsers.filter(u => u.role === 'business');
+
   // Filter businesses based on category and advanced filters
   const filteredBusinesses = businesses.filter(business => {
-    // Category filter
+    // Category filter - searching bio for matching terms
     const matchesCategory = selectedCategory === 'all' || 
-      business.specialties.some(s => s.toLowerCase().includes(selectedCategory.toLowerCase()));
+      business.bio.toLowerCase().includes(selectedCategory.toLowerCase());
 
     // Rating filter
-    const matchesRating = business.rating >= minRating;
+    const matchesRating = (business.rating || 0) >= minRating;
 
     // Verified filter
     const matchesVerified = !verifiedOnly || business.verified;
@@ -175,12 +177,12 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
             <div
               key={business.id}
               className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-              onClick={() => onViewBusiness(business.id)}
+              onClick={() => onViewBusiness(business.businessId || business.id)}
             >
               <div className="relative h-48">
                 <img
-                  src={business.logo}
-                  alt={business.name}
+                  src={business.avatar}
+                  alt={business.fullName}
                   className="w-full h-full object-cover"
                 />
                 {business.verified && (
@@ -191,18 +193,18 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
               </div>
               
               <div className="p-5">
-                <h3 className="text-xl text-neutral-900 mb-2">{business.name}</h3>
+                <h3 className="text-xl text-neutral-900 mb-2">{business.fullName}</h3>
                 <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
                   <MapPin className="w-4 h-4" />
                   <span>{business.location}</span>
                 </div>
-                <p className="text-neutral-600 mb-4 line-clamp-2">{business.description}</p>
+                <p className="text-neutral-600 mb-4 line-clamp-2">{business.bio}</p>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <span className="text-amber-500">★</span>
                     <span className="text-neutral-900">{business.rating}</span>
-                    <span className="text-neutral-500 text-sm">({business.reviews})</span>
+                    <span className="text-neutral-500 text-sm">({business.reviewsCount})</span>
                   </div>
                   <div className="text-sm text-green-600">{business.followers} followers</div>
                 </div>
@@ -228,7 +230,14 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
         {/* Load More */}
         {filteredBusinesses.length > 0 && (
           <div className="text-center mt-12">
-            <button className="px-8 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors">
+            <button 
+              onClick={() => {
+                // In a real app, this would load more businesses from the backend
+                // For now, it just shows a message
+                alert('Loading more businesses...');
+              }}
+              className="px-8 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors"
+            >
               Load More Businesses
             </button>
           </div>

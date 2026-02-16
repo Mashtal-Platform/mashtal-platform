@@ -1,12 +1,15 @@
 import React from 'react';
 import { Search, UserPlus, MessageCircle, CheckCircle } from 'lucide-react';
 import { Page } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HowItWorksProps {
   onNavigate: (page: Page) => void;
 }
 
 export function HowItWorks({ onNavigate }: HowItWorksProps) {
+  const { user } = useAuth();
+  
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,14 +61,17 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
             Join thousands of farmers and agricultural businesses already using Mashtal
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Only show Register Business button if user is not already a business */}
+            {user?.role !== 'business' && (
+              <button
+                onClick={() => onNavigate('register-business')}
+                className="bg-white text-green-600 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors"
+              >
+                Create Business Account
+              </button>
+            )}
             <button
-              onClick={() => onNavigate('register-business')}
-              className="bg-white text-green-600 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors"
-            >
-              Create Business Account
-            </button>
-            <button
-              onClick={() => onNavigate('home')}
+              onClick={() => onNavigate('search')}
               className="border-2 border-white text-white px-8 py-3 rounded-lg hover:bg-white/10 transition-colors"
             >
               Browse as Visitor

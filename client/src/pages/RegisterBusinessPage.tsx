@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Store, CheckCircle, Upload, MapPin, Phone, Mail, Globe } from 'lucide-react';
 import { Page } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RegisterBusinessPageProps {
   onNavigate: (page: Page) => void;
 }
 
 export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) {
+  const { updateProfile, user } = useAuth();
   const [step, setStep] = useState<'choice' | 'form' | 'success'>('choice');
   const [formData, setFormData] = useState({
     businessName: '',
@@ -23,10 +25,26 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Update user to business role and save business data
+    if (user) {
+      await updateProfile({
+        ...user,
+        role: 'business',
+        companyName: formData.businessName,
+        businessType: formData.businessType,
+        bio: formData.description,
+        phone: formData.phone,
+        email: formData.email,
+        location: `${formData.address}, ${formData.city}`,
+        verified: true,
+        subscriptionStatus: 'active',
+      });
+    }
+    
     setStep('success');
     setTimeout(() => {
-      onNavigate('home');
+      onNavigate('profile');
     }, 3000);
   };
 
@@ -123,16 +141,19 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-2xl text-neutral-900 mb-3">Registration Submitted!</h2>
+            <h2 className="text-2xl text-neutral-900 mb-3">Welcome to Mashtal Business!</h2>
             <p className="text-neutral-600 mb-6">
-              Thank you for registering your business. Our team will review your application and contact you within 24-48 hours.
+              Your business has been successfully registered. You now have access to your business dashboard where you can manage products, track sales, and view analytics.
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-neutral-700">
-                We'll send a confirmation email to <span className="text-green-600">{formData.email}</span>
+              <p className="text-sm text-neutral-700 mb-2">
+                Confirmation sent to <span className="text-green-600 font-medium">{formData.email}</span>
+              </p>
+              <p className="text-xs text-neutral-600">
+                You can now start adding products and growing your business!
               </p>
             </div>
-            <p className="text-sm text-neutral-500">Redirecting you to home...</p>
+            <p className="text-sm text-neutral-500">Redirecting to your dashboard...</p>
           </div>
         </div>
       </div>
