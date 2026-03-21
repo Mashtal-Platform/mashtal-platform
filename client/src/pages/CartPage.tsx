@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { CartItem } from '../App';
+import { getImageUrl } from '../shared/api/client';
 
 interface CartPageProps {
   cartItems: CartItem[];
@@ -12,8 +13,7 @@ interface CartPageProps {
 export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: CartPageProps) {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.15; // 15% VAT
-  const shipping = subtotal > 200 ? 0 : 25; // Free shipping over SR 200
-  const total = subtotal + tax + shipping;
+  const total = subtotal + tax;
 
   return (
     <div className="min-h-screen bg-neutral-50 py-8">
@@ -39,11 +39,17 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item) => (
                 <div key={item.id} className="bg-white rounded-xl p-6 flex gap-4">
-                  <img
-                    src={item.image}
-                    alt={item.productName}
-                    className="w-24 h-24 rounded-lg object-cover"
-                  />
+                  {getImageUrl(item.image) ? (
+                    <img
+                      src={getImageUrl(item.image)}
+                      alt={item.productName}
+                      className="w-24 h-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="w-10 h-10 text-neutral-400" />
+                    </div>
+                  )}
                   
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
@@ -76,7 +82,7 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
                         </button>
                       </div>
                       <div className="text-lg text-green-600">
-                        SR {(item.price * item.quantity).toFixed(2)}
+                        ${(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -92,25 +98,16 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-neutral-700">
                     <span>Subtotal</span>
-                    <span>SR {subtotal.toFixed(2)}</span>
+                    <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-neutral-700">
                     <span>Tax (15%)</span>
-                    <span>SR {tax.toFixed(2)}</span>
+                    <span>${tax.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-neutral-700">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? 'Free' : `SR ${shipping.toFixed(2)}`}</span>
-                  </div>
-                  {subtotal < 200 && (
-                    <p className="text-sm text-green-600">
-                      Add SR {(200 - subtotal).toFixed(2)} more for free shipping
-                    </p>
-                  )}
                   <div className="border-t border-neutral-200 pt-3">
                     <div className="flex justify-between text-lg">
                       <span className="text-neutral-900">Total</span>
-                      <span className="text-neutral-900">SR {total.toFixed(2)}</span>
+                      <span className="text-neutral-900">${total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

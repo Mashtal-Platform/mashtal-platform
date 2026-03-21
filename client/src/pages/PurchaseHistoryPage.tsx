@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { mockPurchases, Purchase } from '../data/purchaseData';
+import { fetchMyOrders, OrderDto } from '../shared/api/orders';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { CartItem } from '../App';
 import { Badge } from '../components/ui/badge';
@@ -47,7 +47,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
+  const [orders, setOrders] = useState<OrderDto[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<number | null>(null);
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -69,6 +69,34 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isSortOpen]);
+
+  useEffect(() => {
+    fetchMyOrders()
+      .then(setOrders)
+      .catch((err) => {
+        console.error('[PurchaseHistoryPage] Failed to load orders from API:', err);
+      });
+  }, []);
+
+  const flattenOrdersToPurchases = (allOrders: OrderDto[]) =>
+    allOrders.flatMap((order) =>
+      order.items.map((item, index) => ({
+        id: index,
+        orderId: order.id,
+        status: order.status,
+        date: order.createdAt,
+        name: item.product.name,
+        image: item.product.image,
+        price: item.priceAtPurchase,
+        quantity: item.quantity,
+        businessId: item.product.businessId || '',
+        businessName: item.product.businessName || 'Business',
+        category: item.product.category || 'product',
+        rating: undefined as number | undefined,
+      })),
+    );
+
+  const purchases = flattenOrdersToPurchases(orders);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -101,8 +129,8 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
     });
   };
 
-  const sortPurchases = (purchases: Purchase[]) => {
-    const sorted = [...purchases];
+  const sortPurchases = (list: typeof purchases) => {
+    const sorted = [...list];
     switch (sortBy) {
       case 'newest':
         return sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -117,8 +145,8 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
     }
   };
 
-  const sortAndOrganizePurchases = (purchases: Purchase[], statusFilter: StatusFilter) => {
-    const sorted = sortPurchases(purchases);
+  const sortAndOrganizePurchases = (list: typeof purchases, statusFilter: StatusFilter) => {
+    const sorted = sortPurchases(list);
     
     // When viewing 'all', move cancelled orders to the bottom
     if (statusFilter === 'all') {
@@ -164,12 +192,9 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
   };
 
   const confirmDeletePurchase = () => {
-    if (purchaseToDelete !== null) {
-      const updatedPurchases = purchases.filter(p => p.id !== purchaseToDelete);
-      setPurchases(updatedPurchases);
-      setShowDeleteModal(false);
-      setPurchaseToDelete(null);
-    }
+    // Local-only removal from view; does not delete backend orders
+    setShowDeleteModal(false);
+    setPurchaseToDelete(null);
   };
 
   const handleBuyAgain = (purchase: Purchase) => {

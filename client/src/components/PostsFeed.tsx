@@ -4,12 +4,16 @@ import { ShareModal } from './ShareModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { mockPosts as centralPosts, otherUsers, currentUser, mockComments as centralComments } from '../data/centralMockData';
-import { postComments as detailedComments } from '../data/commentsData';
 import { VerifiedBadge } from './VerifiedBadge';
+import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/posts';
+import { fetchUser, fetchBusinesses, fetchMentionableProfiles, UserDto } from '../shared/api/users';
+import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
+import { getImageUrl } from '../shared/api/client';
 
 interface PostsFeedProps {
   onSavePost?: (post: any) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
+  savedItems?: { id: string; type: string; itemId?: string; refId?: string }[];
   onNavigateToBusiness?: (businessId: string) => void;
   onNavigateToUserProfile?: (userId: string) => void;
   followedBusinesses: any[];
@@ -27,17 +31,10 @@ interface MentionUser {
   verified?: boolean;
 }
 
-// Mock users/businesses for mentions - pull from central
-const mentionableUsers: MentionUser[] = [...otherUsers, currentUser].map(u => ({
-  id: u.id,
-  name: u.fullName,
-  avatar: u.avatar,
-  type: u.role || 'user',
-  verified: u.verified
-}));
-
 export function PostsFeed({ 
   onSavePost, 
+  onRemoveSavedItem,
+  savedItems = [],
   onNavigateToBusiness, 
   onNavigateToUserProfile, 
   followedBusinesses, 
@@ -47,117 +44,271 @@ export function PostsFeed({
   onClearHighlight
 }: PostsFeedProps) {
   const { user, isAuthenticated } = useAuth();
-  
-  // Format posts for the feed
-  const allPosts = centralPosts.map(p => {
-    const author = p.authorId === 'me' ? currentUser : otherUsers.find(u => u.id === p.authorId) || currentUser;
-    return {
-      ...p,
-      author: {
-        id: author.id,
-        name: author.fullName,
-        avatar: author.avatar,
-        verified: author.verified,
-        type: author.role,
-        businessId: author.businessId
-      },
-      comments: p.commentsCount // Map field names if different
-    };
-  });
+  const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
+  const [backendPosts, setBackendPosts] = useState<any[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(false);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const [authors, setAuthors] = useState<Record<string, UserDto>>({});
 
-  // Combine user posts with all posts from centralized data
-  const combinedPosts = React.useMemo(() => {
-    const formattedUserPosts = userPosts.map(post => ({
-      ...post,
-      author: {
-        id: user?.id || 'me',
-        name: user?.fullName || 'User',
-        avatar: user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300',
-        verified: user?.verified || false,
-        type: user?.role || 'user',
-        businessId: user?.businessId,
-      },
-      tags: post.tags || [],
-      likes: post.likes || 0,
-      comments: post.comments || 0,
-      shares: post.shares || 0,
-      isLiked: false,
-      isSaved: false,
-    }));
-    
-    // Filter out duplicates from central posts if userPosts already has them
-    const centralPostsFiltered = allPosts.filter(cp => !userPosts.some(up => up.id === cp.id));
-    let combined = [...formattedUserPosts, ...centralPostsFiltered];
-    
-    // If highlightPostId is provided, move that post to the top
-    if (highlightPostId) {
-      const highlightedPostIndex = combined.findIndex(p => p.id === highlightPostId);
-      if (highlightedPostIndex > -1) {
-        const [highlightedPost] = combined.splice(highlightedPostIndex, 1);
-        combined = [highlightedPost, ...combined];
+  const PAGE_SIZE = 20;
+
+  // Load mentionable profiles once so @mentions can be rendered as green/clickable
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMentionable() {
+      try {
+        const profiles = await fetchMentionableProfiles().catch(() => []);
+        const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .map((u) => ({
+            id: u.id,
+            name: (u.fullName || u.companyName || '').trim(),
+            avatar: u.avatar || '',
+            type: u.role || 'business',
+            verified: !!u.verified,
+          }))
+          .filter((u) => u.name.length > 0);
+        if (isMounted) setMentionableUsers(mapped);
+      } catch {
+        // Non-fatal: mention dropdown/rendering just won't work.
       }
     }
-    
-    return combined;
-  }, [userPosts, user, highlightPostId]);
-  
-  const [posts, setPosts] = useState(combinedPosts);
+    loadMentionable();
+    return () => { isMounted = false; };
+  }, []);
 
-  // Update posts when userPosts or combinedPosts change
+  // Load first page of posts (all users, newest first)
   useEffect(() => {
-    setPosts(combinedPosts);
-  }, [combinedPosts]);
-  
-  // Initialize comments from centralized data
-const initialComments: { [key: string]: any[] } = {};
+    let isMounted = true;
+    async function loadInitial() {
+      setIsLoadingPosts(true);
+      setPostsError(null);
+      try {
+        const apiPosts: PostDto[] = await fetchPosts({ limit: PAGE_SIZE, skip: 0 });
+        if (!isMounted) return;
+        const normalized = apiPosts.map((p) => ({
+          ...p,
+          comments: typeof p.commentsCount === 'number' ? p.commentsCount : 0,
+        }));
+        setBackendPosts(normalized);
+        nextSkipRef.current = normalized.length;
+        setHasMorePosts(normalized.length === PAGE_SIZE);
+        const authorIds = Array.from(
+          new Set(normalized.map((p) => p.author?.id).filter(Boolean) as string[]),
+        );
+        const [biz] = await Promise.all([fetchBusinesses().catch(() => [])]);
+        const authorMap: Record<string, UserDto> = {};
+        (biz as UserDto[]).forEach((b) => { authorMap[b.id] = b; });
+        for (const id of authorIds) {
+          if (!authorMap[id]) {
+            try {
+              const u = await fetchUser(id);
+              authorMap[id] = u;
+            } catch { /* ignore */ }
+          }
+        }
+        if (isMounted) setAuthors(authorMap);
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.error('[PostsFeed] Failed to load posts from API:', err);
+        setPostsError('Failed to load latest posts.');
+        setBackendPosts([]);
+        setHasMorePosts(false);
+      } finally {
+        if (isMounted) setIsLoadingPosts(false);
+      }
+    }
+    loadInitial();
+    return () => { isMounted = false; };
+  }, []);
 
-// First, load detailed comments from commentsData (which use post IDs like 'p1', 'p2', 'p3', etc.)
-Object.keys(detailedComments).forEach(postId => {
-  const postCommentsArray = detailedComments[postId];
-  
-  if (!initialComments[postId]) initialComments[postId] = [];
+  // Same relative time format as ThreadsFeed: "Just now", "2m ago", "5h ago", "3d ago", "2w ago", "3mo ago", "1y ago"
+  const formatPostTime = (timestamp: string | undefined) => {
+    if (!timestamp) return 'Unknown';
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Unknown';
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return `${minutes}m ago`;
+      if (hours < 24) return `${hours}h ago`;
+      if (days < 7) return `${days}d ago`;
+      if (days < 30) return `${Math.floor(days / 7)}w ago`;
+      if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+      return `${Math.floor(days / 365)}y ago`;
+    } catch {
+      return 'Unknown';
+    }
+  };
 
-  postCommentsArray.forEach(comment => {
-    initialComments[postId].push(comment);
-  });
-});
-
-// Then, also load comments from centralComments for posts that don't have detailed comments
-Object.keys(centralComments).forEach(postId => {
-  // Only load if this post doesn't already have detailed comments
-  if (!initialComments[postId] || initialComments[postId].length === 0) {
-    // Ensure it's always an array
-    const postCommentsArray = Array.isArray(centralComments[postId]) ? centralComments[postId] : [];
-    
-    if (!initialComments[postId]) initialComments[postId] = [];
-
-    postCommentsArray.forEach(comment => {
-      const author = comment.userId === 'me'
-        ? currentUser
-        : otherUsers.find(u => u.id === comment.userId) || currentUser;
-
-      initialComments[postId].push({
-        ...comment,
-        author: author.fullName,
-        avatar: author.avatar,
-        userType: author.role,
-        isVerified: author.verified,
-        userId: author.id,
-        text: comment.text,
-        replies: Array.isArray(comment.replies) ? comment.replies : [],
-      });
+  // Format posts for the feed (all users, backend order = newest first)
+  const allPosts = React.useMemo(() => {
+    return backendPosts.map((p) => {
+      const author = p.author || {};
+      return {
+        ...p,
+        timeAgo: formatPostTime(p.timestamp),
+        author: {
+          id: author.id,
+          name: author.name,
+          avatar: author.avatar,
+          verified: author.verified,
+          type: author.type,
+          businessId: author.businessId,
+        },
+      };
     });
+  }, [backendPosts]);
+
+  const [posts, setPosts] = useState<any[]>([]);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+  const nextSkipRef = useRef(0);
+
+  useEffect(() => {
+    setPosts(allPosts);
+  }, [allPosts]);
+
+  // Merge isSaved from savedItems (DB) so Save button state is correct
+  const displayPosts = React.useMemo(
+    () =>
+      posts.map((p) => ({
+        ...p,
+        isSaved: savedItems.some(
+          (i) => i.type === 'post' && (i.itemId || (i as any).refId) === p.id
+        ),
+      })),
+    [posts, savedItems]
+  );
+
+  const getSavedItemId = (postId: string) =>
+    savedItems.find(
+      (i) => i.type === 'post' && (i.itemId || (i as any).refId) === postId
+    )?.id;
+
+  const loadMorePosts = React.useCallback(async () => {
+    if (loadingMorePosts || !hasMorePosts) return;
+    const skip = nextSkipRef.current;
+    nextSkipRef.current += PAGE_SIZE;
+    setLoadingMorePosts(true);
+    try {
+      const next = await fetchPosts({ limit: PAGE_SIZE, skip });
+      const normalized = next.map((p) => ({
+        ...p,
+        comments: typeof p.commentsCount === 'number' ? p.commentsCount : 0,
+      }));
+      setBackendPosts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const toAppend = normalized.filter((p) => !existingIds.has(p.id));
+        return [...prev, ...toAppend];
+      });
+      setHasMorePosts(normalized.length === PAGE_SIZE);
+    } catch {
+      setHasMorePosts(false);
+    } finally {
+      setLoadingMorePosts(false);
+    }
+  }, [loadingMorePosts, hasMorePosts]);
+
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMorePosts();
+      },
+      { rootMargin: '200px', threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMorePosts]);
+  
+  // Map API comment shape to UI shape
+  const mapCommentDtoToUi = (dto: CommentDto): any => ({
+    id: dto.id,
+    userId: dto.author?.id ?? '',
+    author: dto.author?.name ?? 'Unknown',
+    avatar: dto.author?.avatar ?? '',
+    text: dto.content,
+    timeAgo: formatTimeAgo(dto.createdAt),
+    likes: dto.likes ?? 0,
+    isLiked: dto.isLiked ?? false,
+    replies: (dto.replies ?? []).map(mapCommentDtoToUi),
+    isVerified: dto.author?.verified ?? false,
+    userType: dto.author?.type ?? 'user',
+    businessId: (dto.author as any)?.businessId,
+  });
+  function formatTimeAgo(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
   }
-});
 
   const [commentsModalPost, setCommentsModalPost] = useState<string | null>(null);
-  const [comments, setComments] = useState<{ [key: string]: any[] }>(initialComments);
+  const [comments, setComments] = useState<{ [key: string]: any[] }>({});
+  const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
+
+  // Load comments from API when modal opens for a post
+  useEffect(() => {
+    if (!commentsModalPost) return;
+    setCommentsLoading((prev) => ({ ...prev, [commentsModalPost]: true }));
+    fetchComments('post', commentsModalPost)
+      .then((list) => {
+        const mapped = list.map(mapCommentDtoToUi);
+        setComments((prev) => ({ ...prev, [commentsModalPost]: mapped }));
+
+        // Add comment authors to mentionable users so @mentions from replies are clickable
+        const fromComments: MentionUser[] = [];
+        const walk = (arr: any[]) => {
+          for (const c of arr) {
+            if (c.userId) {
+              fromComments.push({
+                id: c.userId,
+                name: (c.author || '').trim(),
+                avatar: c.avatar || '',
+                type: c.userType || 'user',
+                verified: !!c.isVerified,
+              });
+            }
+            if (c.replies?.length) walk(c.replies);
+          }
+        };
+        walk(mapped as any[]);
+        if (fromComments.length) {
+          setMentionableUsers((prev) => {
+            const merged = [...prev];
+            for (const u of fromComments) {
+              if (!u.id || !u.name) continue;
+              if (!merged.some((x) => x.id === u.id)) merged.push(u);
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {
+        setComments((prev) => ({ ...prev, [commentsModalPost]: [] }));
+      })
+      .finally(() => {
+        setCommentsLoading((prev) => ({ ...prev, [commentsModalPost]: false }));
+      });
+  }, [commentsModalPost]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string; author: string; parentId?: string } | null>(null);
   const [showAllComments, setShowAllComments] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [shareModalPost, setShareModalPost] = useState<any | null>(null);
-  const [visiblePosts, setVisiblePosts] = useState(isAuthenticated ? posts.length : 44);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   
@@ -189,6 +340,7 @@ Object.keys(centralComments).forEach(postId => {
   // Highlighted post from profile navigation
   const [showHighlight, setShowHighlight] = useState(false);
   const highlightedPostRef = useRef<HTMLDivElement>(null);
+  const [expandedFullTextIds, setExpandedFullTextIds] = useState<Set<string>>(new Set());
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -228,24 +380,25 @@ Object.keys(centralComments).forEach(postId => {
     }
   }, [editMentionSearch]);
 
-  // Handle highlighted post from profile, notification, or direct link navigation
-  // This ensures the post is loaded (even if not yet scrolled to) and highlighted
+  // Handle highlighted post from profile, notification, or shared link navigation
   useEffect(() => {
     if (highlightPostId) {
       setShowHighlight(true);
-      
-      // Scroll to highlighted post after a delay to ensure DOM is ready
-      // Since the post is now moved to the top, scroll to top of page
       setTimeout(() => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     } else {
       setShowHighlight(false);
     }
   }, [highlightPostId]);
+
+  // Auto-remove highlight after 3 seconds
+  useEffect(() => {
+    if (showHighlight && highlightPostId) {
+      const timer = setTimeout(() => setShowHighlight(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showHighlight, highlightPostId]);
 
   const handleFollow = (post: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -479,25 +632,25 @@ Object.keys(centralComments).forEach(postId => {
           parts.push(text.substring(currentIndex, i));
         }
 
-        // Try to find the longest matching username after @
-        let matchedUser: typeof mentionableUsers[0] | null = null;
-        let matchedName = '';
-        
         // Get text after @
         const textAfterAt = text.substring(i + 1);
-        
-        // Try to match against mentionable users
+        const lowerAfterAt = textAfterAt.toLowerCase();
+
+        // 1) Prefer full match (supports multi-word names already inserted like "@Ali Smith").
+        let matchedUser: typeof mentionableUsers[0] | null = null;
+        let matchedFullName = '';
         for (const user of mentionableUsers) {
-          if (textAfterAt.toLowerCase().startsWith(user.name.toLowerCase())) {
-            if (user.name.length > matchedName.length) {
+          const lowerUserName = user.name.toLowerCase();
+          if (lowerAfterAt.startsWith(lowerUserName)) {
+            if (user.name.length > matchedFullName.length) {
               matchedUser = user;
-              matchedName = user.name;
+              matchedFullName = user.name;
             }
           }
         }
 
-        if (matchedUser && matchedName) {
-          // Found a match - render as clickable mention
+        if (matchedUser && matchedFullName) {
+          // Found a full match - render as clickable mention
           const mentionableUser = matchedUser as MentionUser;
           parts.push(
             <span
@@ -517,13 +670,64 @@ Object.keys(centralComments).forEach(postId => {
                 }
               }}
             >
-              @{matchedName}
+              @{matchedFullName}
             </span>
           );
-          currentIndex = i + 1 + matchedName.length;
+          currentIndex = i + 1 + matchedFullName.length;
           i = currentIndex - 1; // Skip past the mention
         } else {
-          // No match found, just add @ as regular text
+          // 2) Partial match: if the user typed only part of the name (e.g. "@Ali"),
+          // match the first whitespace-delimited token and still render it as green/clickable.
+          const tokenMatch = textAfterAt.match(/^[^\s]+/);
+          const token = tokenMatch?.[0] ?? '';
+          if (token) {
+            const lowerToken = token.toLowerCase();
+            let partialMatch: typeof mentionableUsers[0] | null = null;
+            let bestPartialName = '';
+
+            for (const user of mentionableUsers) {
+              const lowerUserName = user.name.toLowerCase();
+              if (lowerUserName.startsWith(lowerToken)) {
+                if (user.name.length > bestPartialName.length) {
+                  partialMatch = user;
+                  bestPartialName = user.name;
+                }
+              }
+            }
+
+            if (partialMatch) {
+              const mentionableUser = partialMatch as MentionUser;
+              parts.push(
+                <span
+                  key={`mention-${i}`}
+                  className="text-green-600 font-medium cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCommentsModalPost(null);
+
+                    if (mentionableUser.type === 'business' && onNavigateToBusiness) {
+                      onNavigateToBusiness(mentionableUser.id);
+                    } else if (
+                      (mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') &&
+                      onNavigateToBusiness
+                    ) {
+                      onNavigateToBusiness(mentionableUser.id);
+                    } else if (onNavigateToUserProfile) {
+                      onNavigateToUserProfile(mentionableUser.id);
+                    }
+                  }}
+                >
+                  @{token}
+                </span>,
+              );
+
+              currentIndex = i + 1 + token.length;
+              i = currentIndex - 1;
+              continue;
+            }
+          }
+
+          // No match found at all
           parts.push('@');
           currentIndex = i + 1;
         }
@@ -543,184 +747,111 @@ Object.keys(centralComments).forEach(postId => {
       return;
     }
 
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          isLiked: !post.isLiked,
-          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-        };
-      }
-      return post;
-    }));
+    toggleLikePost(postId)
+      .then((updated) => {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, likes: updated.likes, isLiked: updated.isLiked }
+              : p
+          )
+        );
+      })
+      .catch((err) => console.error('[PostsFeed] toggleLike error:', err));
   };
 
   const handleLikeComment = (commentId: string, isReply: boolean = false, parentId?: string) => {
-    if (!isAuthenticated) {
-      return;
-    }
+    if (!isAuthenticated || !commentsModalPost) return;
 
-    if (!commentsModalPost) return;
-
-    setComments(prev => {
-      const postComments = prev[commentsModalPost] || [];
-      
-      const updatedComments = postComments.map(comment => {
-        if (isReply && comment.id === parentId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply =>
-              reply.id === commentId
-                ? {
-                    ...reply,
-                    isLiked: !reply.isLiked,
-                    likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1,
-                  }
-                : reply
-            ),
-          };
-        } else if (!isReply && comment.id === commentId) {
-          return {
-            ...comment,
-            isLiked: !comment.isLiked,
-            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
-          };
-        }
-        return comment;
-      });
-
-      return {
-        ...prev,
-        [commentsModalPost]: updatedComments,
-      };
-    });
+    toggleLikeComment(commentId)
+      .then((updated) => {
+        setComments(prev => {
+          const postComments = prev[commentsModalPost] || [];
+          const updateOne = (list: any[]): any[] =>
+            list.map((c: any) => {
+              if (c.id === commentId) {
+                return { ...c, likes: updated.likes ?? c.likes, isLiked: updated.isLiked ?? !c.isLiked };
+              }
+              if (c.replies?.length) {
+                return { ...c, replies: updateOne(c.replies) };
+              }
+              return c;
+            });
+          return { ...prev, [commentsModalPost]: updateOne(postComments) };
+        });
+      })
+      .catch((err) => console.error('[PostsFeed] toggleLikeComment error:', err));
   };
 
   const handleSave = (post: any) => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    setPosts(posts.map(p => {
-      if (p.id === post.id) {
-        return { ...p, isSaved: !p.isSaved };
-      }
-      return p;
-    }));
-
-    if (onSavePost && !post.isSaved) {
+    if (!isAuthenticated) return;
+    const isSaved = displayPosts.find((p) => p.id === post.id)?.isSaved;
+    if (isSaved && onRemoveSavedItem) {
+      const savedId = getSavedItemId(post.id);
+      if (savedId) onRemoveSavedItem(savedId);
+    } else if (onSavePost && !isSaved) {
       onSavePost({
         id: Date.now().toString(),
         type: 'post',
         itemId: post.id,
         title: post.title,
-        image: post.image || post.author.avatar,
+        image: post.image || post.author?.avatar,
         description: post.content,
         savedAt: new Date(),
       });
     }
   };
 
-  const handleAddComment = (postId: string) => {
-    if (!isAuthenticated) {
-      return;
-    }
+  const handleShareAction = () => {
+    if (!shareModalPost) return;
+    sharePost(shareModalPost.id)
+      .then((updated) => {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === shareModalPost.id ? { ...p, shares: updated.shares } : p
+          )
+        );
+      })
+      .catch((err) => console.error('[PostsFeed] share error:', err));
+  };
 
+  const handleAddComment = async (postId: string) => {
+    if (!isAuthenticated || !user) return;
     if (!newComment.trim()) return;
 
-    const newCommentObj: Comment | Reply = {
-      id: Date.now().toString(),
-      userId: user?.id || '',
-      author: user?.fullName || 'User',
-      avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300',
-      text: newComment,
-      timeAgo: 'Just now',
-      likes: 0,
-      isLiked: false,
-      replies: [],
-      isVerified: user?.verified,
-      userType: user?.role,
-      businessId: user?.businessId,
-    };
+    const trimmed = newComment.trim();
+    const content = replyingTo
+      ? (() => {
+          const prefix = `@${replyingTo.author}`.trim();
+          const lowerTrimmed = trimmed.toLowerCase();
+          const lowerPrefix = prefix.toLowerCase();
+          if (lowerTrimmed.startsWith(lowerPrefix)) {
+            const rest = trimmed.slice(prefix.length).trim();
+            return rest ? `${prefix} ${rest}` : prefix;
+          }
+          return `${prefix} ${trimmed}`.trim();
+        })()
+      : trimmed;
+    const parentCommentId = replyingTo?.id;
 
-    if (replyingTo) {
-      // Add as reply (could be nested)
-      setComments(prev => {
-        const postComments = prev[postId] || [];
-        
-        // Helper function to add reply recursively
-        const addReplyRecursively = (comments: Comment[]): Comment[] => {
-          return comments.map(comment => {
-            // If this is the target comment
-            if (comment.id === replyingTo.id) {
-              return { ...comment, replies: [...(comment.replies || []), newCommentObj as Reply] };
-            }
-            
-            // If this is the parent comment (for nested replies)
-            if (replyingTo.parentId && comment.id === replyingTo.parentId) {
-              return {
-                ...comment,
-                replies: addReplyToReplies(comment.replies || [], replyingTo.id, newCommentObj as Reply)
-              };
-            }
-            
-            // Check nested replies
-            if (comment.replies && comment.replies.length > 0) {
-              const updatedReplies = addReplyToReplies(comment.replies, replyingTo.id, newCommentObj as Reply);
-              if (updatedReplies !== comment.replies) {
-                return { ...comment, replies: updatedReplies };
-              }
-            }
-            
-            return comment;
-          });
-        };
-        
-        // Helper function to add reply to nested replies
-        const addReplyToReplies = (replies: Reply[], targetId: string, newReply: Reply): Reply[] => {
-          return replies.map(reply => {
-            if (reply.id === targetId) {
-              return { ...reply, replies: [...(reply.replies || []), newReply] };
-            }
-            if (reply.replies && reply.replies.length > 0) {
-              const updatedNestedReplies = addReplyToReplies(reply.replies, targetId, newReply);
-              if (updatedNestedReplies !== reply.replies) {
-                return { ...reply, replies: updatedNestedReplies };
-              }
-            }
-            return reply;
-          });
-        };
-        
-        const updatedComments = addReplyRecursively(postComments);
-        return { ...prev, [postId]: updatedComments };
+    try {
+      await createComment({
+        targetType: 'post',
+        targetId: postId,
+        content,
+        parentCommentId,
       });
-      
-      // Highlight the parent comment briefly
-      setHighlightedCommentId(replyingTo.id);
-      setTimeout(() => setHighlightedCommentId(null), 1200);
-    } else {
-      // Add as new comment
-      setComments({
-        ...comments,
-        [postId]: [newCommentObj as Comment, ...(comments[postId] || [])],
-      });
-      
-      // Scroll to top where new comment is added and highlight it
-      setTimeout(() => {
-        if (commentsListRef.current) {
-          commentsListRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        setHighlightedCommentId(newCommentObj.id);
-        setTimeout(() => setHighlightedCommentId(null), 1200);
-      }, 100);
+      const list = await fetchComments('post', postId);
+      const mapped = list.map(mapCommentDtoToUi);
+      setComments((prev) => ({ ...prev, [postId]: mapped }));
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId ? { ...post, comments: (post.comments ?? 0) + 1 } : post
+        )
+      );
+    } catch (err) {
+      console.error('[PostsFeed] Failed to add comment:', err);
     }
-
-    // Update comment count
-    setPosts(posts.map(post => 
-      post.id === postId ? { ...post, comments: post.comments + 1 } : post
-    ));
-
     setNewComment('');
     setReplyingTo(null);
   };
@@ -749,7 +880,10 @@ Object.keys(centralComments).forEach(postId => {
 
   const handleReply = (commentId: string, author: string, parentId?: string) => {
     setReplyingTo({ id: commentId, author, parentId });
-    setNewComment(`@${author} `);
+    // Do not pre-fill with @author here.
+    // The Send handler already prefixes exactly one @author, and pre-filling
+    // would cause duplication like "@ali @ali hello".
+    setNewComment('');
     // Focus textarea
     setTimeout(() => {
       textareaRef.current?.focus();
@@ -761,11 +895,23 @@ Object.keys(centralComments).forEach(postId => {
     }, 100);
   };
 
-  const handleLoadMore = () => {
-    if (!isAuthenticated) {
-      return;
+  const handleDeleteComment = async (commentId: string) => {
+    if (!isAuthenticated || !commentsModalPost) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('post', commentsModalPost);
+      const mapped = list.map(mapCommentDtoToUi);
+      setComments((prev) => ({ ...prev, [commentsModalPost]: mapped }));
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === commentsModalPost
+            ? { ...post, comments: Math.max(0, (post.comments ?? 0) - 1) }
+            : post
+        )
+      );
+    } catch (err) {
+      console.error('[PostsFeed] Failed to delete comment:', err);
     }
-    setVisiblePosts(prev => Math.min(prev + 10, posts.length));
   };
 
   const getTotalComments = (postId: string): number => {
@@ -817,38 +963,52 @@ Object.keys(centralComments).forEach(postId => {
     }
   };
 
-  // Prepare displayed posts with highlighted post at top if needed
+  // Display all accumulated posts; move highlighted to top if present; use displayPosts for correct isSaved
   const displayedPosts = React.useMemo(() => {
-    const slicedPosts = posts.slice(0, visiblePosts);
-    
-    // If there's a highlighted post, ensure it's visible and at the top
     if (highlightPostId) {
-      const highlightedPost = posts.find(p => p.id === highlightPostId);
+      const highlightedPost = displayPosts.find((p) => p.id === highlightPostId);
       if (highlightedPost) {
-        // Check if the highlighted post is already in the visible posts
-        const isInVisiblePosts = slicedPosts.some(p => p.id === highlightPostId);
-        
-        // Either way, we want it at the top for visibility and highlighting
-        const filteredPosts = slicedPosts.filter(p => p.id !== highlightPostId);
-        return [highlightedPost, ...filteredPosts];
+        const rest = displayPosts.filter((p) => p.id !== highlightPostId);
+        return [highlightedPost, ...rest];
       }
     }
-    
-    return slicedPosts;
-  }, [posts, visiblePosts, highlightPostId]);
+    return displayPosts;
+  }, [displayPosts, highlightPostId]);
 
   return (
     <section id="posts" className="py-16 bg-neutral-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Optional API error banner */}
+        {postsError && (
+          <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
+            {postsError}
+          </div>
+        )}
+
         {/* Posts List */}
         <div className="space-y-6">
           {displayedPosts.map((post) => {
             const { text: displayText, isTruncated } = truncateText(post.content, 200);
-            const [showFullText, setShowFullText] = useState(false);
+            const showFullText = expandedFullTextIds.has(post.id);
+            const toggleShowFullText = () => {
+              setExpandedFullTextIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(post.id)) next.delete(post.id);
+                else next.add(post.id);
+                return next;
+              });
+            };
+            const currentBusinessId = user?.businessId || user?.id;
+            const authorBusinessId =
+              post.author.type === 'business'
+                ? post.author.businessId || post.author.id
+                : post.author.id || post.author.businessId;
+
             const isFollowing = isFollowingBusiness(post.author.id);
-            const isOwnBusiness = user?.businessId === post.author.id;
-            // Check if this post is by the current user
-            const isOwnPost = user?.id === post.author.id || isOwnBusiness;
+            // Hide follow button when the post is authored by the current business/pro profile
+            const isOwnPost =
+              Boolean(currentBusinessId) &&
+              (post.author.id === user?.id || authorBusinessId === currentBusinessId);
             const isHighlighted = highlightPostId === post.id && showHighlight;
 
             return (
@@ -856,10 +1016,10 @@ Object.keys(centralComments).forEach(postId => {
                 key={post.id} 
                 id={`post-${post.id}`} 
                 ref={isHighlighted ? highlightedPostRef : null}
-                className={`bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-all duration-500 ${
+                className={`rounded-xl border overflow-hidden hover:shadow-lg transition-colors duration-500 ${
                   isHighlighted 
-                    ? 'border-green-500 shadow-xl ring-4 ring-green-500 ring-offset-2' 
-                    : 'border-neutral-200'
+                    ? 'bg-green-100 border-green-300 shadow-lg' 
+                    : 'bg-white border-neutral-200'
                 }`}
               >
                 {/* Post Header */}
@@ -868,7 +1028,7 @@ Object.keys(centralComments).forEach(postId => {
                     {/* Profile picture with role icon at bottom-right */}
                     <div className="relative flex-shrink-0">
                       <img
-                        src={post.author.avatar}
+                        src={getImageUrl(post.author.avatar)}
                         alt={post.author.name}
                         onClick={() => handlePostAuthorClick(post)}
                         draggable="false"
@@ -918,7 +1078,7 @@ Object.keys(centralComments).forEach(postId => {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
                         <Clock className="w-4 h-4" />
-                        <span>{post.timeAgo}</span>
+                        <time dateTime={post.timestamp}>{post.timeAgo}</time>
                       </div>
                     </div>
                   </div>
@@ -930,7 +1090,7 @@ Object.keys(centralComments).forEach(postId => {
                     {isTruncated && !showFullText && '... '}
                     {isTruncated && (
                       <button
-                        onClick={() => setShowFullText(!showFullText)}
+                        onClick={toggleShowFullText}
                         className="text-green-600 hover:text-green-700 font-medium ml-1"
                       >
                         {showFullText ? 'Read less' : 'Read more'}
@@ -957,17 +1117,17 @@ Object.keys(centralComments).forEach(postId => {
                 {post.image && (
                   <div className="relative h-80 overflow-hidden">
                     <img
-                      src={post.image}
+                      src={getImageUrl(post.image)}
                       alt={post.title}
                       draggable="false"
                       className="w-full h-full object-cover select-none cursor-pointer transition-opacity duration-200"
                       onDoubleClick={() => {
                         handleLike(post.id);
                       }}
-                      onMouseDown={() => handleImageMouseDown(post.image)}
+                      onMouseDown={() => handleImageMouseDown(getImageUrl(post.image) || post.image)}
                       onMouseUp={handleImageMouseUp}
                       onMouseLeave={handleImageMouseUp}
-                      onTouchStart={() => handleImageMouseDown(post.image)}
+                      onTouchStart={() => handleImageMouseDown(getImageUrl(post.image) || post.image)}
                       onTouchEnd={handleImageMouseUp}
                     />
                   </div>
@@ -997,7 +1157,9 @@ Object.keys(centralComments).forEach(postId => {
                       className="flex items-center gap-2 text-neutral-600 hover:text-green-600 transition-colors"
                     >
                       <MessageCircle className="w-5 h-5" />
-                      <span className="font-medium">{getTotalComments(post.id)}</span>
+                      <span className="font-medium">
+                        {comments[post.id] ? getTotalComments(post.id) : (post.commentsCount ?? (typeof post.comments === 'number' ? post.comments : 0))}
+                      </span>
                     </button>
                     <button
                       onClick={() => setShareModalPost(post)}
@@ -1034,16 +1196,16 @@ Object.keys(centralComments).forEach(postId => {
           })}
         </div>
 
-        {/* Load More */}
-        {visiblePosts < posts.length && (
-          <div className="text-center mt-8">
-            <button
-              onClick={handleLoadMore}
-              className="px-8 py-3 bg-white border-2 border-neutral-200 text-neutral-700 rounded-lg hover:border-green-600 hover:text-green-600 transition-colors"
-            >
-              {isAuthenticated ? 'Load More Posts' : 'Sign in to view more'}
-            </button>
+        {/* Infinite scroll sentinel + loading more */}
+        <div ref={loadMoreSentinelRef} className="h-4" aria-hidden />
+        {loadingMorePosts && (
+          <div className="text-center py-6">
+            <span className="inline-block w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+            <p className="mt-2 text-neutral-500 text-sm">Loading more posts...</p>
           </div>
+        )}
+        {!hasMorePosts && posts.length > 0 && (
+          <p className="text-center py-6 text-neutral-500 text-sm">You&apos;ve seen all posts.</p>
         )}
       </div>
 
@@ -1095,7 +1257,7 @@ Object.keys(centralComments).forEach(postId => {
                       {/* Profile picture with role icon at bottom-right */}
                       <div className="relative flex-shrink-0">
                         <img
-                          src={comment.avatar}
+                          src={getImageUrl(comment.avatar)}
                           alt={comment.author}
                           onClick={() => handleProfileClick(comment)}
                           draggable="false"
@@ -1135,14 +1297,14 @@ Object.keys(centralComments).forEach(postId => {
                                     }`}
                                   >
                                     <img 
-                                      src={mentionUser.avatar} 
+                                      src={getImageUrl(mentionUser.avatar)} 
                                       alt={mentionUser.name} 
                                       draggable="false"
                                       className="w-8 h-8 rounded-full object-cover select-none"
                                     />
                                     <div className="flex-1 text-left">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-neutral-900">{mentionUser.name}</span>
+                                        <span className="text-sm font-medium text-green-700">@{mentionUser.name}</span>
                                         {mentionUser.verified && (
                                           <CheckCircle2 className="w-3 h-3 text-green-600 fill-current" />
                                         )}
@@ -1209,6 +1371,15 @@ Object.keys(centralComments).forEach(postId => {
                                   Edit
                                 </button>
                               )}
+                              {user?.id === comment.userId && (
+                                <button
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
+                                  type="button"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           </>
                         )}
@@ -1222,7 +1393,7 @@ Object.keys(centralComments).forEach(postId => {
                                 {/* Profile picture with role icon at bottom-right */}
                                 <div className="relative flex-shrink-0">
                                   <img
-                                    src={reply.avatar}
+                                    src={getImageUrl(reply.avatar)}
                                     alt={reply.author}
                                     onClick={() => handleProfileClick(reply)}
                                     draggable="false"
@@ -1270,6 +1441,15 @@ Object.keys(centralComments).forEach(postId => {
                                         <span>Reply</span>
                                       </button>
                                     )}
+                                    {user?.id === reply.userId && (
+                                      <button
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                        className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
+                                        type="button"
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
                                   </div>
                                   
                                   {/* Nested Replies */}
@@ -1280,7 +1460,7 @@ Object.keys(centralComments).forEach(postId => {
                                           {/* Profile picture with role icon at bottom-right */}
                                           <div className="relative flex-shrink-0">
                                             <img
-                                              src={nestedReply.avatar}
+                                              src={getImageUrl(nestedReply.avatar)}
                                               alt={nestedReply.author}
                                               onClick={() => handleProfileClick(nestedReply)}
                                               draggable="false"
@@ -1326,6 +1506,15 @@ Object.keys(centralComments).forEach(postId => {
                                                 >
                                                   <ReplyIcon className="w-3 h-3" />
                                                   <span className="text-[10px]">Reply</span>
+                                                </button>
+                                              )}
+                                              {user?.id === nestedReply.userId && (
+                                                <button
+                                                  onClick={() => handleDeleteComment(nestedReply.id)}
+                                                  className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
+                                                  type="button"
+                                                >
+                                                  Delete
                                                 </button>
                                               )}
                                             </div>
@@ -1405,33 +1594,39 @@ Object.keys(centralComments).forEach(postId => {
                   )}
                   
                   {/* Mention Dropdown */}
-                  {showMentions && filteredMentions.length > 0 && (
+                  {showMentions && (
                     <div className="absolute bottom-full left-6 right-6 mb-2 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-64 overflow-y-auto z-10">
-                      {filteredMentions.map((mentionUser, index) => (
-                        <button
-                          key={mentionUser.id}
-                          onClick={() => insertMention(mentionUser)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${
-                            index === selectedMentionIndex ? 'bg-green-50' : ''
-                          }`}
-                        >
-                          <img 
-                            src={mentionUser.avatar} 
-                            alt={mentionUser.name} 
-                            draggable="false"
-                            className="w-8 h-8 rounded-full object-cover select-none"
-                          />
-                          <div className="flex-1 text-left">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-neutral-900">{mentionUser.name}</span>
-                              {mentionUser.verified && (
-                                <CheckCircle2 className="w-3 h-3 text-green-600 fill-current" />
-                              )}
+                      {filteredMentions.length > 0 ? (
+                        filteredMentions.map((mentionUser, index) => (
+                          <button
+                            key={mentionUser.id}
+                            onClick={() => insertMention(mentionUser)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${
+                              index === selectedMentionIndex ? 'bg-green-50' : ''
+                            }`}
+                          >
+                            <img
+                              src={getImageUrl(mentionUser.avatar)}
+                              alt={mentionUser.name}
+                              draggable="false"
+                              className="w-8 h-8 rounded-full object-cover select-none"
+                            />
+                            <div className="flex-1 text-left">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-green-700">@{mentionUser.name}</span>
+                                {mentionUser.verified && (
+                                  <CheckCircle2 className="w-3 h-3 text-green-600 fill-current" />
+                                )}
+                              </div>
+                              <span className="text-xs text-neutral-500 capitalize">{mentionUser.type}</span>
                             </div>
-                            <span className="text-xs text-neutral-500 capitalize">{mentionUser.type}</span>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-neutral-500">
+                          No matches
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1473,9 +1668,13 @@ Object.keys(centralComments).forEach(postId => {
       <ShareModal
         isOpen={!!shareModalPost}
         onClose={() => setShareModalPost(null)}
+        postId={shareModalPost?.id}
         postUrl={shareModalPost ? `${window.location.origin}/post/${shareModalPost.id}` : ''}
         postTitle={shareModalPost?.title}
-        postImage={shareModalPost?.image}
+        postImage={(shareModalPost?.image || shareModalPost?.images?.[0]) ? getImageUrl(shareModalPost?.image || shareModalPost?.images?.[0]) : undefined}
+        postOwnerName={shareModalPost?.author?.name || shareModalPost?.author?.fullName}
+        postOwnerAvatar={shareModalPost?.author?.avatar ? getImageUrl(shareModalPost.author.avatar) : undefined}
+        onShare={handleShareAction}
       />
 
       {/* Image Preview Modal */}

@@ -26,8 +26,14 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
     try {
       await signIn(email, password);
       onNavigate('home');
-    } catch (err) {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      const code = err?.response?.data?.code;
+      setError(
+        code === 'EMAIL_NOT_VERIFIED' && msg
+          ? msg
+          : msg || 'Invalid email or password'
+      );
     } finally {
       setLoading(false);
     }

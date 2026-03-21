@@ -1,13 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Clock, Bookmark, Send, CheckCircle2, UserPlus, Check, Building2, HardHat, User, Leaf, Shield } from 'lucide-react';
 import { ShareModal } from './ShareModal';
 import { useAuth } from '../contexts/AuthContext';
-import { mockPosts, mockThreads, currentUser, otherUsers } from '../data/centralMockData';
 import { VerifiedBadge } from './VerifiedBadge';
 import { SavedItem } from '../App';
+import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/posts';
+import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../shared/api/threads';
+import { getImageUrl } from '../shared/api/client';
 
 interface CombinedFeedProps {
   onSaveItem?: (item: any) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
   savedItems?: SavedItem[];
   onNavigateToBusiness?: (businessId: string) => void;
   onNavigateToUserProfile?: (userId: string) => void;
@@ -15,6 +18,10 @@ interface CombinedFeedProps {
   onNavigateToThreads?: () => void;
   followedBusinesses: any[];
   onFollowBusiness: (business: any) => void;
+  // For "Latest Updates": fetch newest posts/threads and interlace them.
+  maxPosts?: number;
+  maxThreads?: number;
+  // Legacy: if maxPosts/maxThreads are not provided, fall back to maxItems.
   maxItems?: number;
 }
 
@@ -44,103 +51,164 @@ type FeedItem = {
 
 export function CombinedFeed({ 
   onSaveItem, 
-  savedItems,
+  onRemoveSavedItem,
+  savedItems = [],
   onNavigateToBusiness, 
   onNavigateToUserProfile,
   onNavigateToPosts,
   onNavigateToThreads,
   followedBusinesses, 
   onFollowBusiness,
+  maxPosts,
+  maxThreads,
   maxItems = 10
 }: CombinedFeedProps) {
   const { user, isAuthenticated } = useAuth();
-  
-  // Combine and sort posts and threads by timestamp
-  const combinedItems = useMemo(() => {
-    console.log('CombinedFeed: mockPosts count:', mockPosts.length);
-    console.log('CombinedFeed: mockThreads count:', mockThreads.length);
-    
-    const posts: FeedItem[] = mockPosts.slice(0, 5).map(post => {
-      const author = post.authorId === 'me' ? currentUser : otherUsers.find(u => u.id === post.authorId) || currentUser;
-      return {
-        ...post,
-        type: 'post' as const,
-        comments: post.commentsCount,
-        author: {
-          id: author.id,
-          name: author.fullName,
-          avatar: author.avatar,
-          verified: author.verified,
-          type: author.role as any,
-          businessId: author.businessId
+  const [combinedItems, setCombinedItems] = useState<FeedItem[]>([]);
+
+  const safeTimeMs = (timestamp?: string) => {
+    if (!timestamp) return 0;
+    const t = new Date(timestamp).getTime();
+    return Number.isFinite(t) ? t : 0;
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const postsWanted = typeof maxPosts === 'number' ? maxPosts : null;
+        const threadsWanted = typeof maxThreads === 'number' ? maxThreads : null;
+
+        // If interlacing is requested, fetch more than we need because we filter to verified authors.
+        // Backend caps limit at 100, so aim for ~100 when we need 8+8.
+        const postFetchLimit = postsWanted != null ? Math.min(100, Math.max(20, postsWanted * 15)) : undefined;
+        const threadFetchLimit = threadsWanted != null ? Math.min(100, Math.max(20, threadsWanted * 15)) : undefined;
+
+        const [posts, threads] = await Promise.all([
+          fetchPosts(postFetchLimit != null ? { limit: postFetchLimit, skip: 0 } : undefined).catch(() => []),
+          fetchThreads(threadFetchLimit != null ? { limit: threadFetchLimit, skip: 0 } : undefined).catch(() => []),
+        ]);
+
+        const verifiedPostsAll = (posts as PostDto[])
+          .filter((p) => p?.author?.verified === true)
+          .sort((a, b) => safeTimeMs(b.timestamp) - safeTimeMs(a.timestamp));
+
+        const verifiedPosts = postsWanted != null ? verifiedPostsAll.slice(0, postsWanted) : verifiedPostsAll;
+
+        const verifiedThreadsAll = (threads as ThreadDto[])
+          .filter((t) => t?.author?.verified === true)
+          .sort((a, b) => safeTimeMs(b.timestamp) - safeTimeMs(a.timestamp));
+
+        const verifiedThreads = threadsWanted != null ? verifiedThreadsAll.slice(0, threadsWanted) : verifiedThreadsAll;
+
+        let interlaced: FeedItem[] = [];
+
+        // Interlaced 8-8 mode
+        if (postsWanted != null && threadsWanted != null) {
+          const postsLimit = Math.max(0, postsWanted);
+          const threadsLimit = Math.max(0, threadsWanted);
+
+          const maxLen = Math.max(postsLimit, threadsLimit);
+          for (let i = 0; i < maxLen; i++) {
+            if (i < postsLimit && verifiedPosts[i]) {
+              const post = verifiedPosts[i];
+              interlaced.push({
+                ...post,
+                type: 'post' as const,
+                comments: post.commentsCount,
+                author: post.author,
+              });
+            }
+            if (i < threadsLimit && verifiedThreads[i]) {
+              const thread = verifiedThreads[i];
+              interlaced.push({
+                ...thread,
+                type: 'thread' as const,
+                comments: thread.commentsCount,
+                author: thread.author,
+              });
+            }
+          }
+
+          setCombinedItems(interlaced);
+        } else {
+          // Legacy mode: simple unified feed slice.
+          const postItems: FeedItem[] = (posts as PostDto[]).map((post) => ({
+            ...post,
+            type: 'post' as const,
+            comments: post.commentsCount,
+            author: post.author,
+          }));
+
+          const threadItems: FeedItem[] = (threads as ThreadDto[]).map((thread) => ({
+            ...thread,
+            type: 'thread' as const,
+            comments: thread.commentsCount,
+            author: thread.author,
+          }));
+
+          const combined = [...postItems, ...threadItems]
+            .filter((x) => x?.author?.verified === true)
+            .sort((a, b) => safeTimeMs(b.timestamp) - safeTimeMs(a.timestamp));
+
+          setCombinedItems(combined.slice(0, maxItems));
         }
-      };
-    });
-    
-    const threads: FeedItem[] = mockThreads.slice(0, 5).map(thread => {
-      const author = thread.authorId === 'me' ? currentUser : otherUsers.find(u => u.id === thread.authorId) || currentUser;
-      return {
-        ...thread,
-        type: 'thread' as const,
-        comments: thread.commentsCount,
-        author: {
-          id: author.id,
-          name: author.fullName,
-          avatar: author.avatar,
-          verified: author.verified,
-          type: author.role as any,
-          businessId: author.businessId
-        }
-      };
-    });
-    
-    // Combine and shuffle for variety
-    const combined = [...posts, ...threads];
-    
-    // Sort by a pseudo-timestamp (using id as proxy for recency)
-    return combined
-      .sort((a, b) => {
-        // Mix posts and threads together, alternating when possible
-        const aNum = a.id.replace(/\D/g, '');
-        const bNum = b.id.replace(/\D/g, '');
-        return parseInt(bNum || '0') - parseInt(aNum || '0');
-      })
-      .slice(0, maxItems);
-  }, [maxItems]);
+      } catch (err) {
+        console.error('[CombinedFeed] Failed to load combined feed from backend:', err);
+        setCombinedItems([]);
+      }
+    };
+    load();
+  }, [maxItems, maxPosts, maxThreads]);
   
   const [items, setItems] = useState<FeedItem[]>(combinedItems);
+
+  useEffect(() => {
+    setItems(combinedItems);
+  }, [combinedItems]);
+
+  const displayItems = React.useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        isSaved: savedItems.some(
+          (i) => i.type === item.type && (i.itemId || (i as any).refId) === item.id
+        ),
+      })),
+    [items, savedItems]
+  );
+
+  const getSavedItemId = (type: string, itemId: string) =>
+    savedItems.find(
+      (i) => i.type === type && (i.itemId || (i as any).refId) === itemId
+    )?.id;
+
   const [shareModalItem, setShareModalItem] = useState<FeedItem | null>(null);
 
   const isFollowingBusiness = (businessId: string) => {
     return followedBusinesses.some(b => b.id === businessId);
   };
 
-  const handleLike = (itemId: string) => {
+  const handleLike = (item: FeedItem) => {
     if (!isAuthenticated) return;
-
-    setItems(items.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          isLiked: !item.isLiked,
-          likes: item.isLiked ? item.likes - 1 : item.likes + 1,
-        };
-      }
-      return item;
-    }));
+    const toggle = item.type === 'post' ? toggleLikePost(item.id) : toggleLikeThread(item.id);
+    toggle
+      .then((updated: any) => {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === item.id ? { ...i, likes: updated.likes, isLiked: updated.isLiked } : i
+          )
+        );
+      })
+      .catch((err) => console.error('[CombinedFeed] toggleLike error:', err));
   };
 
   const handleSave = (item: FeedItem) => {
     if (!isAuthenticated) return;
-
-    setItems(items.map(i => {
-      if (i.id === item.id) {
-        return { ...i, isSaved: !i.isSaved };
-      }
-      return i;
-    }));
-
-    if (onSaveItem && !item.isSaved) {
+    const isSaved = displayItems.find((i) => i.id === item.id && i.type === item.type)?.isSaved;
+    if (isSaved && onRemoveSavedItem) {
+      const savedId = getSavedItemId(item.type, item.id);
+      if (savedId) onRemoveSavedItem(savedId);
+    } else if (onSaveItem && !isSaved) {
       onSaveItem({
         id: Date.now().toString(),
         type: item.type,
@@ -151,6 +219,24 @@ export function CombinedFeed({
         savedAt: new Date(),
       });
     }
+  };
+
+  const handleShareAction = () => {
+    if (!shareModalItem) return;
+    const share = shareModalItem.type === 'post'
+      ? sharePost(shareModalItem.id)
+      : shareThread(shareModalItem.id);
+    share
+      .then((updated: any) => {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === shareModalItem.id && i.type === shareModalItem.type
+              ? { ...i, shares: updated.shares }
+              : i
+          )
+        );
+      })
+      .catch((err) => console.error('[CombinedFeed] share error:', err));
   };
 
   const handleItemClick = (item: FeedItem) => {
@@ -220,9 +306,15 @@ export function CombinedFeed({
           <p className="text-neutral-600">Be the first to share something with the community!</p>
         </div>
       ) : (
-        items.map((item) => {
+        displayItems.map((item) => {
           const isFollowing = isFollowingBusiness(item.author.id);
-          const isOwnBusiness = user?.businessId === item.author.id;
+          const currentBusinessId = user?.businessId || user?.id;
+          const authorBusinessId =
+            item.author.type === 'business'
+              ? item.author.businessId || item.author.id
+              : item.author.id || item.author.businessId;
+
+          const isOwnBusiness = Boolean(currentBusinessId) && authorBusinessId === currentBusinessId;
 
           return (
             <article 
@@ -234,13 +326,22 @@ export function CombinedFeed({
                 <div className="flex items-center gap-4 mb-4">
                   {/* Profile picture with role icon at bottom-right */}
                   <div className="relative flex-shrink-0">
-                    <img
-                      src={item.author.avatar}
-                      alt={item.author.name}
-                      onClick={(e) => handleAuthorClick(item, e)}
-                      draggable="false"
-                      className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
-                    />
+                    {getImageUrl(item.author.avatar) ? (
+                      <img
+                        src={getImageUrl(item.author.avatar)}
+                        alt={item.author.name}
+                        onClick={(e) => handleAuthorClick(item, e)}
+                        draggable="false"
+                        className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
+                      />
+                    ) : (
+                      <div
+                        onClick={(e) => handleAuthorClick(item, e)}
+                        className="w-14 h-14 rounded-full bg-neutral-200 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
+                      >
+                        <User className="w-7 h-7 text-neutral-500" />
+                      </div>
+                    )}
                     <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
                       {getRoleIcon(item.author.type)}
                     </div>
@@ -345,17 +446,20 @@ export function CombinedFeed({
               {/* Item Image */}
               {item.image && (
                 <div 
-                  className="relative h-80 overflow-hidden cursor-pointer"
+                  className="relative h-80 overflow-hidden cursor-pointer bg-neutral-100"
                   onClick={() => handleItemClick(item)}
                 >
                   <img
-                    src={item.image}
+                    src={getImageUrl(item.image)}
                     alt={item.title}
                     draggable="false"
                     className="w-full h-full object-cover select-none transition-transform hover:scale-105"
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       handleLike(item.id);
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
                 </div>
@@ -367,7 +471,7 @@ export function CombinedFeed({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleLike(item.id);
+                      handleLike(item);
                     }}
                     disabled={!isAuthenticated}
                     className={`flex items-center gap-2 transition-colors ${
@@ -417,9 +521,13 @@ export function CombinedFeed({
         <ShareModal
           isOpen={!!shareModalItem}
           onClose={() => setShareModalItem(null)}
-          postUrl={`${window.location.origin}/${shareModalItem.type}s/${shareModalItem.id}`}
+          postId={shareModalItem.id}
+          postUrl={`${window.location.origin}/${shareModalItem.type === 'post' ? 'post' : 'thread'}/${shareModalItem.id}`}
           postTitle={shareModalItem.title}
-          postImage={shareModalItem.image}
+          postImage={(shareModalItem?.image || shareModalItem?.images?.[0]) ? getImageUrl(shareModalItem?.image || shareModalItem?.images?.[0]) : undefined}
+          postOwnerName={shareModalItem.author?.name || shareModalItem.author?.fullName}
+          postOwnerAvatar={shareModalItem.author?.avatar ? getImageUrl(shareModalItem.author.avatar) : undefined}
+          onShare={handleShareAction}
         />
       )}
     </div>

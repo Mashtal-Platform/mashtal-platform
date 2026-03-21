@@ -1,47 +1,128 @@
-import React, { useState } from 'react';
-import { CreditCard, MapPin, User, Lock, CheckCircle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CreditCard, Lock, CheckCircle, ShoppingBag } from 'lucide-react';
 import { CartItem } from '../App';
+import { getImageUrl } from '../shared/api/client';
+import { Elements, CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { useAuth } from '../contexts/AuthContext';
+import { createStripePaymentIntent, fetchStripePaymentStatus } from '../shared/api/payments';
 
 interface CheckoutPageProps {
   cartItems: CartItem[];
   onSuccess: () => void;
 }
 
+function StripeConfirmButton({
+  clientSecret,
+  onConfirmed,
+  onError,
+}: {
+  clientSecret: string;
+  onConfirmed: () => void;
+  onError: (message: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!stripe || !elements) return;
+    const card = elements.getElement(CardElement);
+    if (!card) return;
+
+    setSubmitting(true);
+    try {
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card },
+      });
+
+      if (result.error) {
+        onError(result.error.message || 'Payment failed');
+        return;
+      }
+
+      // Order creation is done by webhook; we just trigger the polling flow.
+      onConfirmed();
+    } catch (e: any) {
+      onError(e?.message || 'Payment failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleConfirm}
+      disabled={!stripe || submitting}
+      className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
+    >
+      {submitting ? 'Processing payment...' : 'Complete Order'}
+    </button>
+  );
+}
+
 export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
-  const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
-  });
+  const [step, setStep] = useState<'payment' | 'success'>('payment');
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.15;
-  const shipping = subtotal > 200 ? 0 : 25;
-  const total = subtotal + tax + shipping;
+  const total = subtotal + tax;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const { isAuthenticated } = useAuth();
 
-  const handleContinueToPayment = () => {
-    setStep('payment');
-  };
+  const stripePublicKey = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+  const isStripeConfigured = Boolean(stripePublicKey);
+  const stripePromise = useMemo(() => {
+    if (!stripePublicKey) return null;
+    return loadStripe(stripePublicKey);
+  }, [stripePublicKey]);
 
-  const handleCompleteOrder = () => {
-    // In a real app, this would process the payment
-    setStep('success');
-    setTimeout(() => {
-      onSuccess();
-    }, 3000);
-  };
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentTotalFromServer, setPaymentTotalFromServer] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Create the PaymentIntent as soon as we enter the payment step.
+    if (step !== 'payment') return;
+    if (!isAuthenticated) return;
+    if (!stripePromise) {
+      setPaymentLoading(false);
+      setPaymentError('Payment is not configured yet. Please set VITE_STRIPE_PUBLISHABLE_KEY in client/.env and restart the client.');
+      return;
+    }
+    if (cartItems.length === 0) return;
+    if (clientSecret) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      setPaymentLoading(true);
+      setPaymentError('');
+      try {
+        const res = await createStripePaymentIntent({
+          items: cartItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+        });
+        if (cancelled) return;
+        setPaymentId(res.paymentId);
+        setClientSecret(res.clientSecret);
+        setPaymentTotalFromServer(res.amountTotal);
+      } catch (err: any) {
+        if (cancelled) return;
+        setPaymentError(err?.message || 'Failed to start payment');
+      } finally {
+        if (!cancelled) setPaymentLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, isAuthenticated, stripePromise, cartItems, clientSecret]);
 
   if (step === 'success') {
     return (
@@ -57,7 +138,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <div className="text-sm text-neutral-700 mb-1">Order Total</div>
-              <div className="text-2xl text-green-600">SR {total.toFixed(2)}</div>
+              <div className="text-2xl text-green-600">${(paymentTotalFromServer ?? total).toFixed(2)}</div>
             </div>
             <p className="text-sm text-neutral-500">
               Redirecting you back to home...
@@ -74,104 +155,13 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
         <div className="mb-8">
           <h1 className="text-3xl text-neutral-900 mb-2">Checkout</h1>
           <div className="flex items-center gap-2 text-sm">
-            <span className={step === 'info' ? 'text-green-600' : 'text-neutral-600'}>
-              1. Shipping Info
-            </span>
-            <span className="text-neutral-300">→</span>
-            <span className={step === 'payment' ? 'text-green-600' : 'text-neutral-600'}>
-              2. Payment
-            </span>
+            <span className="text-green-600 font-medium">Payment</span>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-2">
-            {step === 'info' && (
-              <div className="bg-white rounded-xl p-6 space-y-6">
-                <div className="flex items-center gap-3 pb-4 border-b border-neutral-200">
-                  <MapPin className="w-6 h-6 text-green-600" />
-                  <h2 className="text-xl text-neutral-900">Shipping Information</h2>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Full Name</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="+966 XX XXX XXXX"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">City</label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="Riyadh"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm text-neutral-700 mb-2">Address</label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="Street address"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Postal Code</label>
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="12345"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleContinueToPayment}
-                  className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Continue to Payment
-                </button>
-              </div>
-            )}
-
             {step === 'payment' && (
               <div className="bg-white rounded-xl p-6 space-y-6">
                 <div className="flex items-center gap-3 pb-4 border-b border-neutral-200">
@@ -180,55 +170,79 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Card Number</label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-neutral-700 mb-2">Cardholder Name</label>
-                    <input
-                      type="text"
-                      name="cardName"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                      placeholder="Name on card"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-neutral-700 mb-2">Expiry Date</label>
-                      <input
-                        type="text"
-                        name="expiryDate"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                      />
+                  {!isAuthenticated ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+                      Please sign in before completing checkout.
                     </div>
+                  ) : (
                     <div>
-                      <label className="block text-sm text-neutral-700 mb-2">CVV</label>
-                      <input
-                        type="text"
-                        name="cvv"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                        placeholder="123"
-                        maxLength={3}
-                      />
+                      <label className="block text-sm text-neutral-700 mb-2">Card Details</label>
+                      <div className="p-3 border border-neutral-200 rounded-lg bg-white">
+                        {stripePromise && clientSecret ? (
+                          <Elements stripe={stripePromise} options={{ clientSecret }}>
+                            <CardElement
+                              options={{
+                                hidePostalCode: true,
+                                style: {
+                                  base: {
+                                    fontSize: '14px',
+                                    color: '#111827',
+                                    '::placeholder': { color: '#6b7280' },
+                                  },
+                                },
+                              }}
+                            />
+                          <div className="mt-4">
+                            <StripeConfirmButton
+                              clientSecret={clientSecret}
+                              onError={(msg) => setPaymentError(msg)}
+                              onConfirmed={async () => {
+                                if (!paymentId) return;
+                                // Poll for webhook confirmation + order creation.
+                                const start = Date.now();
+                                const poll = async () => {
+                                  try {
+                                    const status = await fetchStripePaymentStatus(paymentId);
+                                    if (status.status === 'succeeded' && status.order) {
+                                      setStep('success');
+                                      setTimeout(() => onSuccess(), 1000);
+                                      return;
+                                    }
+                                    if (
+                                      status.status === 'failed' ||
+                                      status.status === 'canceled' ||
+                                      status.status === 'refunded'
+                                    ) {
+                                      setPaymentError(`Payment ${status.status}. Please try again.`);
+                                      return;
+                                    }
+                                  } catch {
+                                    // ignore transient polling errors
+                                  }
+
+                                  if (Date.now() - start > 60000) {
+                                    setPaymentError('Payment completed but order could not be confirmed in time.');
+                                    return;
+                                  }
+                                  setTimeout(poll, 1500);
+                                };
+                                void poll();
+                              }}
+                            />
+                          </div>
+                          </Elements>
+                        ) : (
+                          <div className="text-sm text-neutral-500">
+                            {paymentLoading
+                              ? 'Preparing secure payment...'
+                              : isStripeConfigured
+                                ? 'Loading payment form...'
+                                : 'Payment gateway is not configured.'}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
@@ -238,19 +252,31 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                   </div>
                 </div>
 
+                {paymentError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+                    {paymentError}
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setStep('info')}
+                    onClick={() => setStep('payment')}
+                    disabled={paymentLoading}
                     className="flex-1 border-2 border-neutral-200 text-neutral-700 py-3 rounded-lg hover:border-green-600 transition-colors"
                   >
                     Back
                   </button>
-                  <button
-                    onClick={handleCompleteOrder}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Complete Order
-                  </button>
+                  {clientSecret ? (
+                    <div className="flex-1" />
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex-1 bg-neutral-200 text-neutral-500 py-3 rounded-lg cursor-not-allowed"
+                      disabled
+                    >
+                      Complete Order
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -264,15 +290,21 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3">
-                    <img
-                      src={item.image}
-                      alt={item.productName}
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
+                    {getImageUrl(item.image) ? (
+                      <img
+                        src={getImageUrl(item.image)}
+                        alt={item.productName}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                        <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="text-sm text-neutral-900">{item.productName}</div>
                       <div className="text-xs text-neutral-600">Qty: {item.quantity}</div>
-                      <div className="text-sm text-green-600">SR {(item.price * item.quantity).toFixed(2)}</div>
+                      <div className="text-sm text-green-600">${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
                   </div>
                 ))}
@@ -281,20 +313,16 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
               <div className="space-y-3 pt-4 border-t border-neutral-200">
                 <div className="flex justify-between text-neutral-700">
                   <span>Subtotal</span>
-                  <span>SR {subtotal.toFixed(2)}</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-700">
                   <span>Tax (15%)</span>
-                  <span>SR {tax.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-700">
-                  <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free' : `SR ${shipping.toFixed(2)}`}</span>
+                  <span>${tax.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-neutral-200 pt-3">
                   <div className="flex justify-between text-lg">
                     <span className="text-neutral-900">Total</span>
-                    <span className="text-neutral-900">SR {total.toFixed(2)}</span>
+                    <span className="text-neutral-900">${(paymentTotalFromServer ?? total).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

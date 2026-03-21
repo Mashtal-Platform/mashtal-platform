@@ -1,19 +1,25 @@
 import React from 'react';
 import { ShoppingBag, ExternalLink } from 'lucide-react';
-import { mockPurchases, getPurchaseStats } from '../data/purchaseData';
+import { useEffect, useState } from 'react';
+import { fetchMyOrders, OrderDto } from '../shared/api/orders';
 
 interface PurchasesCardProps {
   onClick?: () => void;
-  userId?: string; // Optional: filter purchases by user
 }
 
-export function PurchasesCard({ onClick, userId }: PurchasesCardProps) {
-  // Filter purchases by user if userId is provided, otherwise show all
-  const userPurchases = userId 
-    ? mockPurchases.filter(p => p.userId === userId)
-    : mockPurchases;
+export function PurchasesCard({ onClick }: PurchasesCardProps) {
+  const [orders, setOrders] = useState<OrderDto[]>([]);
 
-  const stats = getPurchaseStats(userPurchases);
+  useEffect(() => {
+    fetchMyOrders()
+      .then(setOrders)
+      .catch((err) => {
+        console.error('[PurchasesCard] Failed to load orders from API:', err);
+      });
+  }, []);
+
+  const totalOrders = orders.length;
+  const totalSpent = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
 
   return (
     <div
@@ -30,7 +36,7 @@ export function PurchasesCard({ onClick, userId }: PurchasesCardProps) {
               Purchases
             </h3>
             <p className="text-sm text-neutral-500">
-              {stats.totalOrders} {stats.totalOrders === 1 ? 'order' : 'orders'} · ${stats.totalSpent.toFixed(2)}
+              {totalOrders} {totalOrders === 1 ? 'order' : 'orders'} · ${totalSpent.toFixed(2)}
             </p>
           </div>
         </div>

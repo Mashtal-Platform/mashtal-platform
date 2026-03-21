@@ -54,7 +54,9 @@ function AppContent() {
     );
   }
 
-  const unreadNotifications = state.notifications.filter(n => !n.read).length;
+  const unreadNotifications = state.notifications
+    .filter((n) => !n.read)
+    .reduce((acc, n) => acc + (n.messageCount ?? 1), 0);
   const showLayout = shouldShowLayout(state.currentPage);
   const showFooter = shouldShowFooter(state.currentPage);
 
@@ -75,6 +77,7 @@ function AppContent() {
             followedBusinesses={state.followedEntities}
             onFollowBusiness={actions.followEntity}
             onSaveItem={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
             savedItems={state.savedItems}
           />
         );
@@ -83,6 +86,7 @@ function AppContent() {
         return (
           <PostsPage
             onSavePost={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
             onNavigateToBusiness={actions.navigateToBusiness}
             onNavigateToUserProfile={actions.navigateToUserProfile}
             followedBusinesses={state.followedEntities}
@@ -102,6 +106,7 @@ function AppContent() {
         return (
           <ThreadsPage
             onSaveThread={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
             onNavigateToBusiness={actions.navigateToBusiness}
             onNavigateToUserProfile={actions.navigateToUserProfile}
             followedBusinesses={state.followedEntities}
@@ -134,6 +139,7 @@ function AppContent() {
       case 'business':
         return (
           <BusinessPage
+            key={`business-${state.selectedBusinessId || 'none'}`}
             businessId={state.selectedBusinessId}
             onAddToCart={actions.addToCart}
             onOpenChat={actions.navigateToChat}
@@ -144,6 +150,7 @@ function AppContent() {
             businessThreads={state.userThreads}
             savedItems={state.savedItems}
             onSaveItem={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
             onNavigateWithParams={actions.navigateWithParams}
           />
         );
@@ -235,6 +242,7 @@ function AppContent() {
           <ChatsPage
             onNavigateToProfile={actions.navigateToUserProfile}
             selectedProfileId={state.selectedChatProfileId}
+            onNavigateWithParams={actions.navigateWithParams}
           />
         );
 
@@ -243,6 +251,7 @@ function AppContent() {
           <NotificationsPage
             notifications={state.notifications}
             onMarkAsRead={actions.markNotificationAsRead}
+            onNavigateToUserProfile={actions.navigateToUserProfile}
             onClearAll={actions.clearAllNotifications}
             onMarkAllAsRead={actions.markAllNotificationsAsRead}
             onDeleteRead={actions.deleteReadNotifications}
@@ -324,36 +333,51 @@ function AppContent() {
       case 'engineer-profile':
         return (
           <EngineerProfilePage
+            key={`engineer-profile-${state.viewingUserId || 'none'}`}
             engineerId={state.viewingUserId}
             onOpenChat={actions.navigateToChat}
             onNavigateToBusiness={actions.navigateToBusiness}
             onNavigateToUserProfile={actions.navigateToUserProfile}
             onNavigate={actions.navigate}
+            onNavigateWithParams={actions.navigateWithParams}
             userThreads={state.userThreads}
+            allPosts={state.allPosts}
             followedEntities={state.followedEntities}
             onFollow={actions.followEntity}
             onUnfollow={actions.unfollowEntity}
             highlightPostId={state.highlightPostId}
             highlightCommentId={state.highlightCommentId}
             highlightThreadId={state.highlightThreadId}
+            savedItems={state.savedItems}
+            onSavePost={actions.addSavedItem}
+            onSaveThread={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
           />
         );
 
       case 'user-profile':
         return (
           <UserProfilePage
+            key={`user-profile-${state.viewingUserId || 'none'}`}
             userId={state.viewingUserId}
             onOpenChat={actions.navigateToChat}
             onNavigateToBusiness={actions.navigateToBusiness}
             onNavigateToUserProfile={actions.navigateToUserProfile}
             onNavigate={actions.navigate}
+            onNavigateWithParams={actions.navigateWithParams}
             userThreads={state.userThreads}
+            allPosts={state.allPosts}
+            allThreads={state.allThreads}
             followedEntities={state.followedEntities}
             onFollow={actions.followEntity}
             onUnfollow={actions.unfollowEntity}
             highlightPostId={state.highlightPostId}
             highlightCommentId={state.highlightCommentId}
             highlightThreadId={state.highlightThreadId}
+            savedItems={state.savedItems}
+            onSavePost={actions.addSavedItem}
+            onSaveThread={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
           />
         );
 
@@ -376,6 +400,7 @@ function AppContent() {
             followedBusinesses={state.followedEntities}
             onFollowBusiness={actions.followEntity}
             onSaveItem={actions.addSavedItem}
+            onRemoveSavedItem={actions.removeSavedItem}
             savedItems={state.savedItems}
           />
         );

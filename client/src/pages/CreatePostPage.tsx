@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { businesses } from '../data/businessData';
 
 interface CreatePostPageProps {
-  onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }) => void;
+  onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }, imageFile?: File) => void;
   onBack: () => void;
 }
 
@@ -40,6 +40,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const postImageFileRef = useRef<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Mention functionality
@@ -65,6 +66,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      postImageFileRef.current = file;
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
@@ -74,6 +76,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   };
 
   const handleRemoveImage = () => {
+    postImageFileRef.current = null;
     setImage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -166,20 +169,18 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
       return;
     }
 
-    if (!image) {
-      alert('Please upload an image for your post');
-      return;
-    }
-
-    onCreatePost({
-      title: title.trim(),
-      content: content.trim(),
-      image: image,
-      tags: hashtags,
-    });
+    onCreatePost(
+      {
+        title: title.trim(),
+        content: content.trim(),
+        image: image || '',
+        tags: hashtags,
+      },
+      postImageFileRef.current || undefined
+    );
   };
 
-  const isValid = content.trim() && image;
+  const isValid = !!content.trim();
 
   return (
     <div className="min-h-screen bg-neutral-50 py-8">

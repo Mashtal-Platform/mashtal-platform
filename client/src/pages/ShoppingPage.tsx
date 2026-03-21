@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   ShoppingBag,
   Search,
@@ -27,14 +27,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import {
-  shoppingProducts,
-  getUniqueBusinesses,
-  priceRanges,
-  ProductCategory,
-  PriceRangeId,
-  ShoppingProduct,
-} from '../data/shoppingData';
+import { fetchProducts, ShoppingProductDto } from '../shared/api/products';
+import { getImageUrl } from '../shared/api/client';
+import { ProductDetailModal } from '../components/ProductDetailModal';
+
+const productCategories = ['all', 'seeds', 'tools', 'fertilizers', 'plants', 'irrigation'] as const;
+type ProductCategory = (typeof productCategories)[number];
+const priceRanges = [
+  { id: 'all', label: 'All Prices', min: 0, max: Infinity },
+  { id: '0-100', label: 'Under $100', min: 0, max: 100 },
+  { id: '100-300', label: '$100 - $300', min: 100, max: 300 },
+  { id: '300-500', label: '$300 - $500', min: 300, max: 500 },
+  { id: '500+', label: '$500+', min: 500, max: Infinity },
+] as const;
+type PriceRangeId = (typeof priceRanges)[number]['id'];
+type ShoppingProduct = ShoppingProductDto;
 import { SavedItem } from '../App';
 
 interface ShoppingPageProps {
@@ -71,22 +78,82 @@ export function ShoppingPage({
   const [inStockOnly, setInStockOnly] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [backendProducts, setBackendProducts] = useState<ShoppingProduct[]>([]);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const [selectedProduct, setSelectedProduct] = useState<ShoppingProduct | null>(null);
 
-  const businesses = getUniqueBusinesses();
+  const businesses = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; avatar: string }>();
+    backendProducts.forEach((p) => {
+      if (p.businessId && !map.has(p.businessId)) {
+        map.set(p.businessId, {
+          id: p.businessId,
+          name: p.businessName ?? 'Unknown',
+          avatar: p.businessAvatar ?? '',
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [backendProducts]);
+
+  const [retryCount, setRetryCount] = useState(0);
+
+  const loadProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
+    setProductsError(null);
+    try {
+      // No businessId = all products from all businesses (shop catalog)
+      const apiProducts: ShoppingProductDto[] = await fetchProducts();
+      const list = Array.isArray(apiProducts) ? apiProducts : [];
+      const normalized = list.map((p) => ({
+        id: p?.id ?? '',
+        name: p?.name ?? '',
+        description: p?.description ?? '',
+        price: Number(p?.price) ?? 0,
+        image: p?.image ?? '',
+        category: (p?.category ?? 'plants') as ShoppingProduct['category'],
+        stock: Number(p?.stock) ?? 0,
+        rating: Number(p?.rating) ?? 0,
+        reviewsCount: Number(p?.reviewsCount) ?? 0,
+        businessId: p?.businessId ?? '',
+        businessName: p?.businessName ?? 'Unknown Business',
+        businessAvatar: p?.businessAvatar ?? '',
+        businessRole: 'business' as const,
+        businessVerified: Boolean(p?.businessVerified),
+        businessRating: p?.businessRating != null ? Number(p.businessRating) : undefined,
+        businessLocation: p?.businessLocation ?? 'Saudi Arabia',
+        inStock: (p?.inStock ?? (Number(p?.stock) > 0)),
+      }));
+      setBackendProducts(normalized);
+    } catch (err: any) {
+      console.error('[ShoppingPage] Failed to load products from API:', err);
+      setProductsError(err?.message || 'Failed to load products. Please try again.');
+      setBackendProducts([]);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts, retryCount]);
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    let filtered = [...shoppingProducts];
+    const sourceProducts = backendProducts;
+
+    let filtered = [...sourceProducts];
 
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query) ||
-          p.businessName.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query)
+          (p.name ?? '').toLowerCase().includes(query) ||
+          (p.description ?? '').toLowerCase().includes(query) ||
+          (p.businessName ?? '').toLowerCase().includes(query) ||
+          (p.category ?? '').toLowerCase().includes(query)
       );
     }
 
@@ -153,10 +220,11 @@ export function ShoppingPage({
     selectedPriceRange,
     sortBy,
     inStockOnly,
+    backendProducts,
   ]);
 
   const handleSaveProduct = (productId: string) => {
-    const product = shoppingProducts.find((p) => p.id === productId);
+    const product = filteredProducts.find((p) => p.id === productId) ?? backendProducts.find((p) => p.id === productId);
     if (!product) return;
 
     // Check if already saved
@@ -194,6 +262,17 @@ export function ShoppingPage({
         businessName: product.businessName,
       });
     }
+  };
+
+  const handleProductRated = (productId: string, averageRating: number, reviewsCount: number) => {
+    setBackendProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId ? { ...p, rating: averageRating, reviewsCount } : p
+      )
+    );
+    setSelectedProduct((prev) =>
+      prev?.id === productId ? { ...prev, rating: averageRating, reviewsCount } : prev
+    );
   };
 
   const getSortLabel = (option: SortOption) => {
@@ -514,7 +593,8 @@ export function ShoppingPage({
           {/* Results Summary */}
           <div className="mt-4 flex items-center justify-between text-sm text-neutral-600">
             <span>
-              Showing {filteredProducts.length} of {shoppingProducts.length} products
+              Showing {filteredProducts.length} of{' '}
+              {backendProducts.length} products
             </span>
             {activeFiltersCount > 0 && (
               <button
@@ -530,7 +610,24 @@ export function ShoppingPage({
 
       {/* Products Grid/List */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {filteredProducts.length === 0 ? (
+        {productsError && (
+          <Card className="mb-4">
+            <CardContent className="p-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200">
+              {productsError}
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoadingProducts ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-green-600 border-t-transparent" />
+                <p className="text-sm text-neutral-600">Loading products…</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredProducts.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <div className="flex flex-col items-center gap-3">
@@ -539,15 +636,25 @@ export function ShoppingPage({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-neutral-900 mb-1">
-                    No Products Found
+                    {backendProducts.length === 0
+                      ? 'No Products Available'
+                      : 'No Products Found'}
                   </h3>
                   <p className="text-sm text-neutral-600">
-                    Try adjusting your filters or search query
+                    {backendProducts.length === 0
+                      ? 'The catalog is empty or products could not be loaded. Try again in a moment.'
+                      : 'Try adjusting your filters or search query.'}
                   </p>
                 </div>
-                <Button onClick={clearAllFilters} className="mt-2">
-                  Clear All Filters
-                </Button>
+                {backendProducts.length === 0 ? (
+                  <Button onClick={() => setRetryCount((c) => c + 1)} className="mt-2">
+                    Retry
+                  </Button>
+                ) : (
+                  <Button onClick={clearAllFilters} className="mt-2">
+                    Clear All Filters
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -556,19 +663,23 @@ export function ShoppingPage({
             {filteredProducts.map((product) => (
               <Card
                 key={product.id}
-                className={`overflow-hidden hover:shadow-lg transition-all group ${
+                className={`overflow-hidden hover:shadow-lg transition-all group cursor-pointer ${
                   highlightProductId === product.id
                     ? 'ring-4 ring-green-500 ring-offset-2'
                     : ''
                 }`}
                 data-product-id={product.id}
+                onClick={() => setSelectedProduct(product)}
               >
                 <CardContent className="p-0">
                   {/* Product Image */}
-                  <div className="relative h-48 overflow-hidden bg-neutral-100">
+                  <div
+                    className="relative h-48 overflow-hidden bg-neutral-100 cursor-pointer"
+                    onClick={() => setSelectedProduct(product)}
+                  >
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={getImageUrl(product.image) || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400'}
+                      alt={product.name || 'Product'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     {product.inStock ? (
@@ -605,8 +716,8 @@ export function ShoppingPage({
                       onClick={() => onNavigateToBusiness?.(product.businessId)}
                     >
                       <img
-                        src={product.businessAvatar}
-                        alt={product.businessName}
+                        src={getImageUrl(product.businessAvatar) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'}
+                        alt={product.businessName || 'Business'}
                         className="w-6 h-6 rounded-full object-cover border border-neutral-200"
                       />
                       <span className="text-xs text-neutral-600 font-medium truncate">
@@ -617,8 +728,11 @@ export function ShoppingPage({
                       )}
                     </div>
 
-                    {/* Product Name */}
-                    <h3 className="text-base font-medium text-neutral-900 mb-2 line-clamp-2 min-h-[3rem]">
+                    {/* Product Name - click to view details & rate */}
+                    <h3
+                      className="text-base font-medium text-neutral-900 mb-2 line-clamp-2 min-h-[3rem] hover:text-green-600 transition-colors cursor-pointer"
+                      onClick={() => setSelectedProduct(product)}
+                    >
                       {product.name}
                     </h3>
 
@@ -632,7 +746,7 @@ export function ShoppingPage({
                       <div className="flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         <span className="text-sm font-medium text-neutral-900">
-                          {product.rating.toFixed(1)}
+                          {(Number(product.rating) || 0).toFixed(1)}
                         </span>
                       </div>
                       <span className="text-xs text-neutral-400">•</span>
@@ -649,7 +763,7 @@ export function ShoppingPage({
                     <div className="flex items-center justify-between pt-3 border-t">
                       <div>
                         <span className="text-2xl font-bold text-green-600">
-                          SR {product.price}
+                          $ {product.price}
                         </span>
                       </div>
                     </div>
@@ -657,7 +771,10 @@ export function ShoppingPage({
                     {/* Add to Cart Button */}
                     {isAuthenticated && (
                       <Button
-                        onClick={() => handleAddToCart(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product);
+                        }}
                         disabled={!product.inStock}
                         className="w-full mt-3 gap-2"
                       >
@@ -674,14 +791,18 @@ export function ShoppingPage({
           // List View
           <div className="space-y-4">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-all">
+              <Card
+                key={product.id}
+                className="overflow-hidden hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setSelectedProduct(product)}
+              >
                 <CardContent className="p-0">
                   <div className="flex gap-4 p-4">
                     {/* Product Image */}
                     <div className="relative w-32 h-32 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
                       <img
-                        src={product.image}
-                        alt={product.name}
+                        src={getImageUrl(product.image) || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400'}
+                        alt={product.name || 'Product'}
                         className="w-full h-full object-cover"
                       />
                       {product.inStock ? (
@@ -703,8 +824,8 @@ export function ShoppingPage({
                         onClick={() => onNavigateToBusiness?.(product.businessId)}
                       >
                         <img
-                          src={product.businessAvatar}
-                          alt={product.businessName}
+                          src={getImageUrl(product.businessAvatar) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'}
+                          alt={product.businessName || 'Business'}
                           className="w-5 h-5 rounded-full object-cover border border-neutral-200"
                         />
                         <span className="text-xs text-neutral-600 font-medium">
@@ -725,7 +846,7 @@ export function ShoppingPage({
                       <div className="flex flex-wrap items-center gap-3 text-sm">
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                          <span className="font-medium">{product.rating.toFixed(1)}</span>
+                          <span className="font-medium">{(Number(product.rating) || 0).toFixed(1)}</span>
                           <span className="text-neutral-400">
                             ({product.reviewsCount})
                           </span>
@@ -747,6 +868,7 @@ export function ShoppingPage({
                           handleSaveProduct(product.id);
                         }}
                         className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                        aria-label="Save product"
                       >
                         <Bookmark
                           className={`w-5 h-5 ${
@@ -759,11 +881,14 @@ export function ShoppingPage({
 
                       <div className="text-right">
                         <div className="text-2xl font-bold text-green-600 mb-3">
-                          SR {product.price}
+                          $ {product.price}
                         </div>
                         {isAuthenticated && (
                           <Button
-                            onClick={() => handleAddToCart(product)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(product);
+                            }}
                             disabled={!product.inStock}
                             className="gap-2"
                             size="sm"
@@ -780,6 +905,15 @@ export function ShoppingPage({
             ))}
           </div>
         )}
+
+        <ProductDetailModal
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          isAuthenticated={isAuthenticated}
+          onAddToCart={selectedProduct ? () => handleAddToCart(selectedProduct) : undefined}
+          onRated={handleProductRated}
+        />
       </div>
     </div>
   );

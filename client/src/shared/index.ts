@@ -7,9 +7,6 @@ export * from './types';
 // Utilities
 export * from './utils';
 
-// API
-export * from './api/mockData';
-
 // State Management
 export { useAppState, AppStateProvider } from './store/AppStateContext';
 

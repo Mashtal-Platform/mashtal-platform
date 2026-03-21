@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Bot, X, Send, Sparkles, Loader } from 'lucide-react';
 
 interface AIAssistantProps {
@@ -60,19 +61,14 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
       { role: 'user', parts: [{ text: userText }] },
     ];
 
-    const response = await fetch(
+    const { data } = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/${MODEL}:generateContent?key=${API_KEY}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: newHistory,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
-        }),
-      }
+        contents: newHistory,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
+      },
+      { headers: { "Content-Type": "application/json" } }
     );
-
-    const data = await response.json();
     console.log("API response:", data);
 
     // Get the raw AI text

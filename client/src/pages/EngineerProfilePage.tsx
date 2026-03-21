@@ -4,14 +4,20 @@ import {
   Calendar, X, Send, Edit, FileText, Briefcase, Award, Phone,
   MoreHorizontal, Edit2, Trash2, User, LogOut, RefreshCw, MoreVertical, ShoppingBag
 } from 'lucide-react';
-import { otherUsers, currentUser as mockCurrentUser, mockPosts, mockComments } from '../data/centralMockData';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { PostModal } from '../components/PostModal';
+import { ShareModal } from '../components/ShareModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { InteractiveRating } from '../components/InteractiveRating';
 import { SwitchUserModal } from '../components/SwitchUserModal';
 import { PurchasesCard } from '../components/PurchasesCard';
+import { getImageUrl } from '../shared/api/client';
+import { fetchUser } from '../shared/api/users';
+import { fetchComments, createComment, toggleLikeComment, deleteComment, type CommentDto } from '../shared/api/comments';
+import { toggleLikePost, sharePost } from '../shared/api/posts';
+import { toggleLikeThread, shareThread } from '../shared/api/threads';
+import { ThreadModal, type ThreadModalComment } from '../components/ThreadModal';
 
 interface EngineerProfilePageProps {
   engineerId: string | null;
@@ -21,12 +27,17 @@ interface EngineerProfilePageProps {
   onNavigate?: (page: string) => void;
   onNavigateWithParams?: (page: string, params?: any) => void;
   userThreads?: any[];
-  followedEntities: any[];
+  followedEntities?: any[];
   onFollow: (entity: any) => void;
   onUnfollow: (entityId: string) => void;
   highlightPostId?: string; // Post ID to auto-open
   highlightCommentId?: string; // Comment ID to auto-scroll to
   highlightThreadId?: string; // Thread ID to auto-open
+  allPosts?: any[];
+  savedItems?: { id: string; type: string; refId?: string; itemId?: string }[];
+  onSavePost?: (item: { type: 'post'; refId: string }) => void;
+  onSaveThread?: (item: any) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
 }
 
 export function EngineerProfilePage({ 
@@ -36,28 +47,95 @@ export function EngineerProfilePage({
   onNavigateToUserProfile, 
   onNavigate, 
   userThreads = [],
-  followedEntities,
+  followedEntities = [],
   onFollow,
   onUnfollow,
   highlightPostId,
   highlightCommentId,
-  highlightThreadId
+  highlightThreadId,
+  allPosts = [],
+  savedItems = [],
+  onSavePost,
+  onSaveThread,
+  onRemoveSavedItem,
 }: EngineerProfilePageProps) {
   const { user: currentUser, isAuthenticated, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'posts' | 'threads' | 'about'>('posts');
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
+  const [selectedThread, setSelectedThread] = useState<any | null>(null);
+  const [threadComments, setThreadComments] = useState<Record<string, ThreadModalComment[]>>({});
+  const [shareModalThread, setShareModalThread] = useState<any | null>(null);
+  const [shareModalPost, setShareModalPost] = useState<any | null>(null);
+  const [viewedEngineer, setViewedEngineer] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
-  // Find the engineer/agronomist by ID from centralized data
-  const engineer = [...otherUsers, mockCurrentUser].find(u => u.id === engineerId && (u.role === 'engineer' || u.role === 'agronomist')) || otherUsers.find(u => u.role === 'engineer');
+  const formatTimeAgo = (timestamp: string | undefined) => {
+    if (!timestamp) return '';
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  };
+
+  const mapCommentToModal = (dto: CommentDto): { id: string; userId: string; userName: string; userAvatar?: string; content: string; timeAgo: string; likes?: number; isLiked?: boolean; replies?: any[] } => ({
+    id: dto.id,
+    userId: dto.author?.id ?? '',
+    userName: dto.author?.name ?? 'Unknown',
+    userAvatar: dto.author?.avatar,
+    content: dto.content,
+    timeAgo: formatTimeAgo(dto.createdAt),
+    likes: dto.likes ?? 0,
+    isLiked: dto.isLiked ?? false,
+    replies: (dto.replies ?? []).map(mapCommentToModal),
+  });
+
+  // Fetch viewed engineer when engineerId is set and different from current user
+  useEffect(() => {
+    if (!engineerId) {
+      setProfileLoading(false);
+      setViewedEngineer(null);
+      return;
+    }
+    if (currentUser && engineerId === currentUser.id) {
+      setProfileLoading(false);
+      setViewedEngineer(null);
+      return;
+    }
+    let cancelled = false;
+    setProfileLoading(true);
+    setViewedEngineer(null);
+    fetchUser(engineerId)
+      .then((data: any) => {
+        if (cancelled) return;
+        setViewedEngineer({ ...data, id: data.id || (data._id && data._id.toString()) || engineerId });
+      })
+      .catch(() => {
+        if (!cancelled) setViewedEngineer(null);
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [engineerId, currentUser?.id]);
+
+  const engineer = (currentUser && engineerId === currentUser.id) ? currentUser : viewedEngineer;
 
   // Check if viewing own profile
   const isOwnProfile = currentUser?.id === engineerId;
-  
+
   // Check if following
-  const isFollowing = followedEntities.some(e => e.id === engineer?.id);
+  const isFollowing = (followedEntities || []).some((e: any) => (e?.id || e?._id) === engineer?.id);
 
   const handleLogout = async () => {
     await signOut();
@@ -101,25 +179,77 @@ export function EngineerProfilePage({
     }
   ];
 
-  // Get posts for this specific engineer/agronomist from centralized data
-  const engineerPosts = engineerId ? mockPosts.filter(post => post.authorId === engineerId).map(post => ({
-    ...post,
-    comments: [] // Managed by PostModal
-  })) : [];
+  const engineerPostsFromThreads = userThreads
+    .filter((t) => t.author?.id === engineerId && t.type === 'post')
+    .map((t) => ({ ...t, comments: [] }));
+  const engineerPostsFromFeed = (allPosts || []).filter(
+    (p: any) => p.author?.id === engineerId
+  ).map((p: any) => ({ ...p, comments: [] }));
+  const engineerPosts = engineerPostsFromFeed.length > 0 ? engineerPostsFromFeed : engineerPostsFromThreads;
 
-  // Get threads for this engineer/agronomist (filter from userThreads prop)
-  const filteredUserThreads = userThreads.filter(thread => thread.userId === engineerId);
+  const filteredUserThreads = userThreads.filter(
+    (thread) => thread.author?.id === engineerId && thread.type === 'thread',
+  );
 
-  // Auto-open post when highlightPostId is provided
+  const shapePostForModal = (post: any) => ({
+    id: post.id,
+    image: post.image,
+    title: post.title ?? post.content?.slice(0, 50) ?? '',
+    content: post.content ?? '',
+    likes: post.likes ?? 0,
+    isLiked: post.isLiked ?? likedPosts.has(post.id),
+    isSaved: post.isSaved ?? savedPosts.has(post.id),
+    comments: [] as any[],
+    timeAgo: formatTimeAgo(post.timestamp) || '',
+    authorName: post.author?.name ?? engineer?.fullName ?? 'Unknown',
+    authorAvatar: post.author?.avatar ?? engineer?.avatar,
+  });
+
+  // Lock body scroll when post modal is open
   useEffect(() => {
-    if (highlightPostId) {
-      const postToOpen = engineerPosts.find(post => post.id === highlightPostId);
-      if (postToOpen) {
-        setActiveTab('posts');
-        handlePostClick(postToOpen);
-      }
+    if (selectedPost) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
     }
-  }, [highlightPostId]);
+  }, [selectedPost]);
+
+  // Fetch comments when post modal opens
+  useEffect(() => {
+    if (!selectedPost?.id) return;
+    fetchComments('post', selectedPost.id)
+      .then((list) => {
+        const comments = list.map(mapCommentToModal);
+        setSelectedPost((prev) => (prev ? { ...prev, comments } : null));
+      })
+      .catch(() => {
+        setSelectedPost((prev) => (prev ? { ...prev, comments: [] } : null));
+      });
+  }, [selectedPost?.id]);
+
+  // Auto-open post when highlightPostId is provided (depend on allPosts/userThreads to avoid infinite loop from engineerPosts new ref each render)
+  useEffect(() => {
+    if (!highlightPostId || !engineerId) return;
+    const fromFeed = (allPosts || []).filter((p: any) => p.author?.id === engineerId).map((p: any) => ({ ...p, comments: [] }));
+    const fromThreads = userThreads.filter((t) => t.author?.id === engineerId && t.type === 'post').map((t) => ({ ...t, comments: [] }));
+    const posts = fromFeed.length > 0 ? fromFeed : fromThreads;
+    const postToOpen = posts.find((p: any) => p.id === highlightPostId);
+    if (postToOpen) {
+      setActiveTab('posts');
+      setSelectedPost(shapePostForModal(postToOpen));
+    }
+  }, [highlightPostId, engineerId, allPosts, userThreads, engineer]);
+
+  // Fetch comments when thread modal opens
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    fetchComments('thread', selectedThread.id)
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        const comments = arr.map((c: any) => mapCommentToModal(c)) as ThreadModalComment[];
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: comments }));
+      })
+      .catch(() => setThreadComments((prev) => ({ ...prev, [selectedThread.id]: [] })));
+  }, [selectedThread?.id]);
 
   // Auto-switch to threads tab when highlightThreadId is provided
   useEffect(() => {
@@ -139,49 +269,195 @@ export function EngineerProfilePage({
     }
   }, [highlightThreadId]);
 
+  if (profileLoading || (engineerId && engineerId !== currentUser?.id && !viewedEngineer && !engineer)) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <p className="text-neutral-600">{profileLoading ? 'Loading profile...' : 'Engineer not found'}</p>
+      </div>
+    );
+  }
   if (!engineer) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <p className="text-neutral-600">{engineer?.role === 'agronomist' ? 'Agronomist' : 'Engineer'} not found</p>
+        <p className="text-neutral-600">Engineer not found</p>
       </div>
     );
   }
 
   const handleLikePost = (postId: string) => {
     if (!isAuthenticated) return;
-    
-    setLikedPosts((prev) => {
-      const newLiked = new Set(prev);
-      if (newLiked.has(postId)) {
-        newLiked.delete(postId);
-      } else {
-        newLiked.add(postId);
-      }
-      return newLiked;
-    });
+    toggleLikePost(postId)
+      .then((updated) => {
+        setLikedPosts((prev) => {
+          const next = new Set(prev);
+          if (updated.isLiked) next.add(postId);
+          else next.delete(postId);
+          return next;
+        });
+        setSelectedPost((prev) =>
+          prev && prev.id === postId ? { ...prev, likes: updated.likes, isLiked: updated.isLiked } : prev
+        );
+      })
+      .catch((err) => console.error('[EngineerProfilePage] like error:', err));
   };
+
+  const getSavedItemId = (postId: string) =>
+    savedItems?.find((s) => s.type === 'post' && (s.refId === postId || s.itemId === postId))?.id;
 
   const handleSavePost = (postId: string) => {
     if (!isAuthenticated) return;
-    
-    setSavedPosts((prev) => {
-      const newSaved = new Set(prev);
-      if (newSaved.has(postId)) {
-        newSaved.delete(postId);
-      } else {
-        newSaved.add(postId);
+    const isSaved = savedPosts.has(postId) || !!getSavedItemId(postId);
+    if (isSaved && onRemoveSavedItem) {
+      const savedId = getSavedItemId(postId);
+      if (savedId) {
+        onRemoveSavedItem(savedId);
+        setSavedPosts((prev) => {
+          const next = new Set(prev);
+          next.delete(postId);
+          return next;
+        });
+        setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, isSaved: false } : prev));
       }
-      return newSaved;
-    });
+    } else if (onSavePost && !isSaved) {
+      onSavePost({ type: 'post', refId: postId });
+      setSavedPosts((prev) => new Set(prev).add(postId));
+      setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, isSaved: true } : prev));
+    }
+  };
+
+  const handleCommentPost = (postId: string, text: string, parentId?: string) => {
+    if (!isAuthenticated || !text?.trim()) return;
+    createComment({
+      targetType: 'post',
+      targetId: postId,
+      content: text.trim(),
+      parentCommentId: parentId,
+    })
+      .then(() =>
+        fetchComments('post', postId).then((list) => {
+          const arr = Array.isArray(list) ? list : [];
+          const comments = arr.map((c: any) => mapCommentToModal(c));
+          setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, comments } : prev));
+        })
+      )
+      .catch((err) => console.error('[EngineerProfilePage] comment error:', err));
+  };
+
+  const handleDeletePostComment = (commentId: string) => {
+    if (!selectedPost?.id || !isAuthenticated) return;
+    deleteComment(commentId)
+      .then(() => fetchComments('post', selectedPost.id))
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        const comments = arr.map((c: any) => mapCommentToModal(c));
+        setSelectedPost((prev) => (prev ? { ...prev, comments } : prev));
+      })
+      .catch((err) => console.error('[EngineerProfilePage] delete comment error:', err));
+  };
+
+  const handleSharePost = () => {
+    if (selectedPost) setShareModalPost(selectedPost);
+  };
+
+  const handleShareAction = () => {
+    if (!shareModalPost?.id) return;
+    sharePost(shareModalPost.id)
+      .then((updated) => {
+        setSelectedPost((prev) =>
+          prev && prev.id === shareModalPost.id ? { ...prev, shares: updated.shares } : prev
+        );
+        setShareModalPost(null);
+      })
+      .catch((err) => console.error('[EngineerProfilePage] share error:', err));
   };
 
   const handlePostClick = (post: any) => {
-    setSelectedPost({
-      ...post,
-      authorName: engineer.fullName,
-      authorAvatar: engineer.avatar,
-      authorVerified: engineer.verified,
-    });
+    setSelectedPost(shapePostForModal(post));
+  };
+
+  const getSavedThreadId = (threadId: string) =>
+    savedItems?.find((s) => s.type === 'thread' && (s.itemId === threadId || s.refId === threadId))?.id;
+
+  const handleThreadLike = () => {
+    if (!selectedThread?.id || !isAuthenticated) return;
+    toggleLikeThread(selectedThread.id)
+      .then((updated) => setSelectedThread((prev) => prev ? { ...prev, likes: updated.likes, isLiked: updated.isLiked } : null))
+      .catch((err) => console.error('[EngineerProfilePage] toggleLikeThread error:', err));
+  };
+
+  const handleThreadComment = (text: string, parentId?: string) => {
+    if (!selectedThread?.id || !isAuthenticated || !text?.trim()) return;
+    createComment({ targetType: 'thread', targetId: selectedThread.id, content: text.trim(), parentCommentId: parentId })
+      .then(() =>
+        fetchComments('thread', selectedThread.id).then((list) => {
+          const comments = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c)) as ThreadModalComment[];
+          setThreadComments((prev) => ({ ...prev, [selectedThread.id]: comments }));
+        })
+      )
+      .catch((err) => console.error('[EngineerProfilePage] thread comment error:', err));
+  };
+
+  const handleThreadSave = () => {
+    if (!selectedThread?.id || !isAuthenticated) return;
+    const savedId = getSavedThreadId(selectedThread.id);
+    if (savedId && onRemoveSavedItem) {
+      onRemoveSavedItem(savedId);
+      setSelectedThread((prev) => prev ? { ...prev, isSaved: false } : null);
+    } else if (onSaveThread && !savedId) {
+      onSaveThread({
+        id: `saved-${selectedThread.id}-${Date.now()}`,
+        type: 'thread',
+        itemId: selectedThread.id,
+        title: selectedThread.title || (selectedThread.content?.slice(0, 50) || '') + (selectedThread.content?.length > 50 ? '...' : ''),
+        image: selectedThread.author?.avatar ?? engineer?.avatar,
+        description: selectedThread.content,
+        savedAt: new Date(),
+      });
+      setSelectedThread((prev) => prev ? { ...prev, isSaved: true } : null);
+    }
+  };
+
+  const handleThreadShare = () => {
+    if (selectedThread) setShareModalThread(selectedThread);
+  };
+
+  const handleThreadShareAction = () => {
+    if (!shareModalThread?.id) return;
+    shareThread(shareModalThread.id)
+      .then((updated) => {
+        setSelectedThread((prev) => (prev && prev.id === shareModalThread.id ? { ...prev, shares: updated.shares } : prev));
+        setShareModalThread(null);
+      })
+      .catch((err) => console.error('[EngineerProfilePage] shareThread error:', err));
+  };
+
+  const handleThreadLikeComment = (commentId: string) => {
+    if (!selectedThread?.id || !isAuthenticated) return;
+    toggleLikeComment(commentId)
+      .then((updated) => {
+        setThreadComments((prev) => {
+          const list = prev[selectedThread.id] || [];
+          const updateOne = (arr: ThreadModalComment[]): ThreadModalComment[] =>
+            arr.map((c) =>
+              c.id === commentId
+                ? { ...c, likes: updated.likes ?? c.likes, isLiked: updated.isLiked ?? !c.isLiked }
+                : { ...c, replies: c.replies?.length ? updateOne(c.replies) : c.replies },
+            );
+          return { ...prev, [selectedThread.id]: updateOne(list) };
+        });
+      })
+      .catch((err) => console.error('[EngineerProfilePage] toggleLikeComment error:', err));
+  };
+
+  const handleDeleteThreadComment = (commentId: string) => {
+    if (!selectedThread?.id || !isAuthenticated) return;
+    deleteComment(commentId)
+      .then(() => fetchComments('thread', selectedThread.id))
+      .then((list) => {
+        const comments = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c)) as ThreadModalComment[];
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: comments }));
+      })
+      .catch((err) => console.error('[EngineerProfilePage] delete thread comment error:', err));
   };
 
   const handleSubmitReview = (rating: number, comment: string) => {
@@ -431,8 +707,8 @@ export function EngineerProfilePage({
                           onClick={() => handlePostClick(post)}
                         >
                           <img
-                            src={post.image}
-                            alt={post.title}
+                            src={getImageUrl(post.image) || post.image}
+                            alt={post.title || 'Post'}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 text-white font-bold">
@@ -442,7 +718,7 @@ export function EngineerProfilePage({
                             </div>
                             <div className="flex items-center gap-2">
                               <MessageCircle className="w-5 h-5 fill-current" />
-                              <span>{mockComments.filter(comment => comment.postId === post.id).length}</span>
+                              <span>{post.comments || 0}</span>
                             </div>
                           </div>
                           
@@ -489,11 +765,11 @@ export function EngineerProfilePage({
                         key={thread.id}
                         className="group border border-neutral-200 rounded-xl p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
                         id={`thread-${thread.id}`}
-                        onClick={() => onNavigate('threads', { highlightThreadId: thread.id })}
+                        onClick={() => setSelectedThread(thread)}
                       >
                         <div className="flex items-start gap-4">
                           <img
-                            src={engineer.avatar}
+                            src={getImageUrl(engineer.avatar) || engineer.avatar}
                             alt={engineer.fullName}
                             className="w-12 h-12 rounded-full object-cover"
                           />
@@ -506,13 +782,13 @@ export function EngineerProfilePage({
                               {thread.content}
                             </p>
                             <div className="flex items-center gap-6 text-sm text-neutral-400">
-                              <div className="flex items-center gap-1.5 group/btn cursor-pointer hover:text-red-500 transition-colors">
-                                <Heart className="w-4 h-4 group-hover/btn:fill-current" />
-                                <span className="font-medium">{thread.likes || 0}</span>
+                              <div className={`flex items-center gap-1.5 transition-colors ${thread.isLiked ? 'text-red-600' : ''}`}>
+                                <Heart className={`w-4 h-4 ${thread.isLiked ? 'fill-current' : ''}`} />
+                                <span className="font-medium">{thread.likes ?? 0}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 group/btn cursor-pointer hover:text-green-600 transition-colors">
+                              <div className="flex items-center gap-1.5">
                                 <MessageCircle className="w-4 h-4" />
-                                <span className="font-medium">{thread.comments || 0}</span>
+                                <span className="font-medium">{thread.commentsCount ?? thread.comments ?? 0}</span>
                               </div>
                             </div>
                           </div>
@@ -662,14 +938,77 @@ export function EngineerProfilePage({
           isOpen={!!selectedPost}
           onClose={() => setSelectedPost(null)}
           onLike={() => handleLikePost(selectedPost.id)}
-          onComment={(text) => console.log('comment', text)}
-          onShare={() => console.log('share')}
+          onComment={(text, parentId) => handleCommentPost(selectedPost.id, text, parentId)}
+          onDeleteComment={handleDeletePostComment}
+          onShare={handleSharePost}
           onSave={() => handleSavePost(selectedPost.id)}
-          isLiked={likedPosts.has(selectedPost.id)}
-          isSaved={savedPosts.has(selectedPost.id)}
+          onNavigateToBusiness={onNavigateToBusiness}
+          onNavigateToUserProfile={onNavigateToUserProfile}
+          isLiked={selectedPost.isLiked ?? likedPosts.has(selectedPost.id)}
+          isSaved={selectedPost.isSaved ?? savedPosts.has(selectedPost.id)}
           highlightCommentId={highlightCommentId}
         />
       )}
+
+      {/* Share Modal (post) */}
+      <ShareModal
+        isOpen={!!shareModalPost}
+        onClose={() => setShareModalPost(null)}
+        postId={shareModalPost?.id}
+        postUrl={shareModalPost ? `${typeof window !== 'undefined' ? window.location.origin : ''}/post/${shareModalPost.id}` : ''}
+        postTitle={shareModalPost?.title}
+        postImage={shareModalPost?.image ? getImageUrl(shareModalPost.image) : undefined}
+        postOwnerName={shareModalPost?.author?.name ?? shareModalPost?.authorName}
+        postOwnerAvatar={shareModalPost?.author?.avatar ? getImageUrl(shareModalPost.author.avatar) : shareModalPost?.authorAvatar ? getImageUrl(shareModalPost.authorAvatar) : undefined}
+        onShare={handleShareAction}
+      />
+
+      {/* Thread Modal */}
+      {selectedThread && (
+        <ThreadModal
+          thread={{
+            id: selectedThread.id,
+            title: selectedThread.title,
+            content: selectedThread.content ?? '',
+            tags: selectedThread.tags,
+            likes: selectedThread.likes ?? 0,
+            isLiked: selectedThread.isLiked,
+            commentsCount: selectedThread.commentsCount ?? selectedThread.comments,
+            shares: selectedThread.shares ?? 0,
+            timeAgo: selectedThread.timeAgo,
+            timestamp: selectedThread.timestamp,
+            author: selectedThread.author,
+            authorName: selectedThread.author?.name ?? engineer?.fullName,
+            authorAvatar: selectedThread.author?.avatar ?? engineer?.avatar,
+          }}
+          comments={threadComments[selectedThread.id] ?? []}
+          isOpen={!!selectedThread}
+          onClose={() => setSelectedThread(null)}
+          onLike={handleThreadLike}
+          onComment={handleThreadComment}
+          onLikeComment={handleThreadLikeComment}
+          onDeleteComment={handleDeleteThreadComment}
+          onNavigateToBusiness={onNavigateToBusiness}
+          onNavigateToUserProfile={onNavigateToUserProfile}
+          onSave={onSaveThread ? handleThreadSave : undefined}
+          onShare={handleThreadShare}
+          isLiked={selectedThread.isLiked ?? false}
+          isSaved={selectedThread.isSaved ?? !!getSavedThreadId(selectedThread.id)}
+        />
+      )}
+
+      {/* Thread Share Modal */}
+      <ShareModal
+        isOpen={!!shareModalThread}
+        onClose={() => setShareModalThread(null)}
+        postId={shareModalThread?.id}
+        postUrl={shareModalThread ? `${typeof window !== 'undefined' ? window.location.origin : ''}/threads` : ''}
+        postTitle={shareModalThread?.title || (shareModalThread?.content?.slice(0, 50) ?? '') + (shareModalThread?.content?.length > 50 ? '...' : '')}
+        postImage={shareModalThread?.author?.avatar ? getImageUrl(shareModalThread.author.avatar) : undefined}
+        postOwnerName={shareModalThread?.author?.name}
+        postOwnerAvatar={shareModalThread?.author?.avatar ? getImageUrl(shareModalThread.author.avatar) : undefined}
+        onShare={handleThreadShareAction}
+      />
 
       {/* Switch User Modal */}
       {showSwitchUserModal && (
