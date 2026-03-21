@@ -4,12 +4,16 @@ import { ShareModal } from './ShareModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { mockThreads as centralThreads, otherUsers, currentUser, threadComments as centralComments } from '../data/centralMockData';
-import { threadComments as detailedThreadComments, Comment, Reply } from '../data/threadsCommentsData';
 import { VerifiedBadge } from './VerifiedBadge';
+import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../shared/api/threads';
+import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
+import { getImageUrl } from '../shared/api/client';
+import { fetchMentionableProfiles } from '../shared/api/users';
 
 interface ThreadsFeedProps {
   onSaveThread?: (thread: any) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
+  savedItems?: { id: string; type: string; itemId?: string; refId?: string }[];
   onNavigateToBusiness?: (businessId: string) => void;
   onNavigateToUserProfile?: (userId: string) => void;
   followedBusinesses: any[];
@@ -27,15 +31,6 @@ interface MentionUser {
   verified?: boolean;
 }
 
-// Mock users/businesses for mentions - pull from central
-const mentionableUsers: MentionUser[] = [...otherUsers, currentUser].map(u => ({
-  id: u.id,
-  name: u.fullName,
-  avatar: u.avatar,
-  type: u.role || 'user',
-  verified: u.verified
-}));
-
 // Helper function to count total comments including replies
 const getTotalCommentCount = (comments: any[]): number => {
   return comments.reduce((total, comment) => {
@@ -43,133 +38,212 @@ const getTotalCommentCount = (comments: any[]): number => {
   }, 0);
 };
 
-export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight }: ThreadsFeedProps) {
+export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight }: ThreadsFeedProps) {
   const { user, isAuthenticated } = useAuth();
-  
-  // Highlight state
+  const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
+  const [backendThreads, setBackendThreads] = useState<any[]>([]);
+  const [threadsError, setThreadsError] = useState<string | null>(null);
+  const [isLoadingThreads, setIsLoadingThreads] = useState<boolean>(false);
   const [showHighlight, setShowHighlight] = useState(false);
   const highlightedThreadRef = useRef<HTMLDivElement>(null);
-  
-  // Format threads for the feed
-  const allThreads = centralThreads.map(t => {
-    const author = t.authorId === 'me' ? currentUser : otherUsers.find(u => u.id === t.authorId) || currentUser;
-    
-    // Safety check
-    if (!author) {
-      console.warn('[ThreadsFeed] Author not found for thread:', t.id);
-      return null;
-    }
-    
-    return {
-      ...t,
-      author: {
-        id: author.id,
-        name: author.fullName,
-        avatar: author.avatar,
-        verified: author.verified,
-        type: author.role,
-        businessId: author.businessId
-      },
-      comments: t.commentsCount
-    };
-  }).filter(Boolean); // Remove any null threads
 
-  // Combine user threads with all threads from centralized data
-  const combinedThreads = React.useMemo(() => {
-    const formattedUserThreads = userThreads
-      .filter(thread => thread && thread.id) // Filter out any invalid threads
-      .map(thread => ({
-        ...thread,
-        author: {
-          id: user?.id || 'me',
-          name: user?.fullName || 'User',
-          avatar: user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300',
-          verified: user?.verified || false,
-          type: user?.role || 'user',
-          businessId: user?.businessId,
-        },
-        likes: thread.likes || 0,
-        comments: thread.comments || 0,
-        shares: thread.shares || 0,
-        isLiked: false,
-        isSaved: false,
-      }));
-    
-    // Combine and sort by timestamp (newest first)
-    const centralThreadsFiltered = allThreads.filter(ct => !userThreads.some(ut => ut.id === ct.id));
-    let combined = [...formattedUserThreads, ...centralThreadsFiltered];
-    combined = combined.sort((a, b) => {
-      const timeA = new Date(a.timestamp).getTime();
-      const timeB = new Date(b.timestamp).getTime();
-      return timeB - timeA; // Sort descending (newest first)
-    });
-    
-    // If highlightThreadId is provided, move that thread to the top
-    if (highlightThreadId) {
-      const highlightedThreadIndex = combined.findIndex(t => t.id === highlightThreadId);
-      if (highlightedThreadIndex > -1) {
-        const [highlightedThread] = combined.splice(highlightedThreadIndex, 1);
-        combined = [highlightedThread, ...combined];
+  const PAGE_SIZE = 20;
+
+  // Load mentionable profiles once so @mentions can be rendered as green/clickable
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMentionable() {
+      try {
+        const profiles = await fetchMentionableProfiles().catch(() => []);
+        const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .map((u) => ({
+            id: u.id,
+            name: (u.fullName || u.companyName || '').trim(),
+            avatar: u.avatar || '',
+            type: u.role || 'business',
+            verified: !!u.verified,
+          }))
+          .filter((u) => u.name.length > 0);
+        if (isMounted) setMentionableUsers(mapped);
+      } catch {
+        // Non-fatal: mention dropdown/rendering just won't work.
       }
     }
-    
-    return combined;
-  }, [userThreads, user, highlightThreadId]);
-  
-  const [threads, setThreads] = useState(combinedThreads);
+    loadMentionable();
+    return () => { isMounted = false; };
+  }, []);
 
-  // Update threads when userThreads or combinedThreads change
+  // Load first page of threads (all users, newest first)
   useEffect(() => {
-    setThreads(combinedThreads);
-  }, [combinedThreads]);
-  
-  // Initialize comments from centralized data
-  const initialComments: { [key: string]: any[] } = {};
-  
-  // First, load detailed comments from threadsCommentsData
-  Object.keys(detailedThreadComments).forEach(threadId => {
-    const threadCommentsArray = detailedThreadComments[threadId];
-    if (!initialComments[threadId]) initialComments[threadId] = [];
-    
-    threadCommentsArray.forEach(comment => {
-      initialComments[threadId].push(comment);
-    });
-  });
-  
-  // Then, also load comments from centralComments for threads that don't have detailed comments
-  Object.keys(centralComments).forEach(threadId => {
-    // Only load if this thread doesn't already have detailed comments
-    if (!initialComments[threadId] || initialComments[threadId].length === 0) {
-      if (!initialComments[threadId]) initialComments[threadId] = [];
-      const threadCommentsArray = centralComments[threadId];
-      
-      threadCommentsArray.forEach(comment => {
-        const author = comment.userId === 'me' ? currentUser : otherUsers.find(u => u.id === comment.userId) || currentUser;
-        initialComments[threadId].push({
-          ...comment,
-          author: {
-            id: author.id,
-            name: author.fullName,
-            avatar: author.avatar,
-            verified: author.verified,
-            type: author.role,
-            businessId: author.businessId
-          },
-          content: comment.text,
-          replies: comment.replies || []
-        });
-      });
+    let isMounted = true;
+    async function loadInitial() {
+      setIsLoadingThreads(true);
+      setThreadsError(null);
+      try {
+        const apiThreads: ThreadDto[] = await fetchThreads({ limit: PAGE_SIZE, skip: 0 });
+        if (!isMounted) return;
+        const normalized = apiThreads.map((t) => ({
+          ...t,
+          comments: typeof t.commentsCount === 'number' ? t.commentsCount : 0,
+        }));
+        setBackendThreads(normalized);
+        nextSkipRef.current = normalized.length;
+        setHasMoreThreads(normalized.length === PAGE_SIZE);
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.error('[ThreadsFeed] Failed to load threads from API:', err);
+        setThreadsError('Failed to load latest threads.');
+        setBackendThreads([]);
+        setHasMoreThreads(false);
+      } finally {
+        if (isMounted) setIsLoadingThreads(false);
+      }
     }
+    loadInitial();
+    return () => { isMounted = false; };
+  }, []);
+
+  const allThreads = React.useMemo(() => backendThreads, [backendThreads]);
+
+  const [threads, setThreads] = useState<any[]>([]);
+  const [hasMoreThreads, setHasMoreThreads] = useState(true);
+  const [loadingMoreThreads, setLoadingMoreThreads] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+  const nextSkipRef = useRef(0);
+
+  useEffect(() => {
+    setThreads(allThreads);
+  }, [allThreads]);
+
+  // Merge isSaved from savedItems (DB) so Save button state is correct
+  const displayThreads = React.useMemo(
+    () =>
+      threads.map((t) => ({
+        ...t,
+        isSaved: savedItems.some(
+          (i) =>
+            i.type === 'thread' &&
+            (i.itemId || (i as any).refId) === t.id
+        ),
+      })),
+    [threads, savedItems]
+  );
+
+  const getSavedItemId = (threadId: string) =>
+    savedItems.find(
+      (i) =>
+        i.type === 'thread' && (i.itemId || (i as any).refId) === threadId
+    )?.id;
+
+  const loadMoreThreads = React.useCallback(async () => {
+    if (loadingMoreThreads || !hasMoreThreads) return;
+    const skip = nextSkipRef.current;
+    nextSkipRef.current += PAGE_SIZE;
+    setLoadingMoreThreads(true);
+    try {
+      const next = await fetchThreads({ limit: PAGE_SIZE, skip });
+      const normalized = next.map((t) => ({
+        ...t,
+        comments: typeof t.commentsCount === 'number' ? t.commentsCount : 0,
+      }));
+      setBackendThreads((prev) => {
+        const existingIds = new Set(prev.map((t) => t.id));
+        const toAppend = normalized.filter((t) => !existingIds.has(t.id));
+        return [...prev, ...toAppend];
+      });
+      setHasMoreThreads(normalized.length === PAGE_SIZE);
+    } catch {
+      setHasMoreThreads(false);
+    } finally {
+      setLoadingMoreThreads(false);
+    }
+  }, [loadingMoreThreads, hasMoreThreads]);
+
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreThreads();
+      },
+      { rootMargin: '200px', threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMoreThreads]);
+  
+  // Map API comment to UI shape (author as object for ThreadsFeed)
+  const mapCommentDtoToUi = (dto: CommentDto): any => ({
+    id: dto.id,
+    author: dto.author
+      ? {
+          id: dto.author.id,
+          name: dto.author.name,
+          avatar: dto.author.avatar,
+          verified: dto.author.verified,
+          type: dto.author.type,
+        }
+      : { id: '', name: 'Unknown', avatar: '', verified: false, type: 'user' },
+    content: dto.content,
+    createdAt: dto.createdAt,
+    likes: dto.likes ?? 0,
+    isLiked: dto.isLiked ?? false,
+    replies: (dto.replies ?? []).map(mapCommentDtoToUi),
   });
 
   const [commentsModalThread, setCommentsModalThread] = useState<string | null>(null);
-  const [comments, setComments] = useState<{ [key: string]: any[] }>(initialComments);
+  const [comments, setComments] = useState<{ [key: string]: any[] }>({});
+  const [commentsLoading, setCommentsLoading] = useState<Record<string, boolean>>({});
+
+  // Load comments from API when modal opens for a thread
+  useEffect(() => {
+    if (!commentsModalThread) return;
+    setCommentsLoading((prev) => ({ ...prev, [commentsModalThread]: true }));
+    fetchComments('thread', commentsModalThread)
+      .then((list) => {
+        const mapped = list.map(mapCommentDtoToUi);
+        setComments((prev) => ({ ...prev, [commentsModalThread]: mapped }));
+
+        // Add comment authors to mentionable users so @mentions from replies are clickable
+        const fromComments: MentionUser[] = [];
+        const walk = (arr: any[]) => {
+          for (const c of arr) {
+            if (c.author?.id) {
+              fromComments.push({
+                id: c.author.id,
+                name: (c.author.name || '').trim(),
+                avatar: c.author.avatar || '',
+                type: c.author.type || 'user',
+                verified: !!c.author.verified,
+              });
+            }
+            if (c.replies?.length) walk(c.replies);
+          }
+        };
+        walk(mapped as any[]);
+        if (fromComments.length) {
+          setMentionableUsers((prev) => {
+            const merged = [...prev];
+            for (const u of fromComments) {
+              if (!u.id || !u.name) continue;
+              if (!merged.some((x) => x.id === u.id)) merged.push(u);
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {
+        setComments((prev) => ({ ...prev, [commentsModalThread]: [] }));
+      })
+      .finally(() => {
+        setCommentsLoading((prev) => ({ ...prev, [commentsModalThread]: false }));
+      });
+  }, [commentsModalThread]);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string; author: string; parentId?: string } | null>(null);
   const [showAllComments, setShowAllComments] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [shareModalThread, setShareModalThread] = useState<any | null>(null);
-  const [visibleThreads, setVisibleThreads] = useState(isAuthenticated ? threads.length : 44);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   
@@ -219,49 +293,59 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
     }
   }, [editMentionSearch]);
 
-  // Handle highlighted thread from profile, notification, or direct link navigation
-  // This ensures the thread is loaded (even if not yet scrolled to) and highlighted
+  // Handle highlighted thread from profile, notification, or shared link navigation
   useEffect(() => {
     if (highlightThreadId) {
       setShowHighlight(true);
-      
-      // Scroll to top since highlighted thread is now moved to the top
       setTimeout(() => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     } else {
       setShowHighlight(false);
     }
   }, [highlightThreadId]);
 
-  const handleLike = (threadId: string) => {
-    if (!isAuthenticated) {
-      return; // Don't allow liking if not authenticated
+  // Auto-remove highlight after 3 seconds
+  useEffect(() => {
+    if (showHighlight && highlightThreadId) {
+      const timer = setTimeout(() => setShowHighlight(false), 3000);
+      return () => clearTimeout(timer);
     }
-    setThreads(threads.map(thread =>
-      thread.id === threadId
-        ? { ...thread, likes: thread.isLiked ? thread.likes - 1 : thread.likes + 1, isLiked: !thread.isLiked }
-        : thread
-    ));
+  }, [showHighlight, highlightThreadId]);
+
+  const [likingThreadId, setLikingThreadId] = useState<string | null>(null);
+  const handleLike = async (threadId: string) => {
+    if (!isAuthenticated || likingThreadId) return;
+    setLikingThreadId(threadId);
+    try {
+      const updated = await toggleLikeThread(threadId);
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, likes: updated.likes ?? t.likes, isLiked: updated.isLiked ?? !t.isLiked }
+            : t
+        )
+      );
+    } catch (err) {
+      console.error('[ThreadsFeed] toggleLike error:', err);
+    } finally {
+      setLikingThreadId(null);
+    }
   };
 
   const handleSave = (thread: any) => {
-    if (!isAuthenticated) {
-      return; // Don't allow saving if not authenticated
-    }
-    setThreads(threads.map(t =>
-      t.id === thread.id ? { ...t, isSaved: !t.isSaved } : t
-    ));
-    if (onSaveThread && !thread.isSaved) {
+    if (!isAuthenticated) return;
+    const isSaved = displayThreads.find((t) => t.id === thread.id)?.isSaved;
+    if (isSaved && onRemoveSavedItem) {
+      const savedId = getSavedItemId(thread.id);
+      if (savedId) onRemoveSavedItem(savedId);
+    } else if (onSaveThread && !isSaved) {
       onSaveThread({
         id: `saved-${thread.id}-${Date.now()}`,
         type: 'thread',
         itemId: thread.id,
         title: thread.title || thread.content.substring(0, 50) + (thread.content.length > 50 ? '...' : ''),
-        image: thread.author.avatar,
+        image: thread.author?.avatar,
         description: thread.content,
         savedAt: new Date(),
       });
@@ -270,6 +354,19 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
 
   const handleShare = (thread: any) => {
     setShareModalThread(thread);
+  };
+
+  const handleShareAction = () => {
+    if (!shareModalThread) return;
+    shareThread(shareModalThread.id)
+      .then((updated) => {
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === shareModalThread.id ? { ...t, shares: updated.shares } : t
+          )
+        );
+      })
+      .catch((err) => console.error('[ThreadsFeed] share error:', err));
   };
 
   const openCommentsModal = (threadId: string) => {
@@ -433,25 +530,25 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
           parts.push(text.substring(currentIndex, i));
         }
 
-        // Try to find the longest matching username after @
-        let matchedUser: typeof mentionableUsers[0] | null = null;
-        let matchedName = '';
-        
         // Get text after @
         const textAfterAt = text.substring(i + 1);
-        
-        // Try to match against mentionable users
+        const lowerAfterAt = textAfterAt.toLowerCase();
+
+        // 1) Prefer full match (supports multi-word names already inserted like "@Ali Smith").
+        let matchedUser: typeof mentionableUsers[0] | null = null;
+        let matchedFullName = '';
         for (const user of mentionableUsers) {
-          if (textAfterAt.toLowerCase().startsWith(user.name.toLowerCase())) {
-            if (user.name.length > matchedName.length) {
+          const lowerUserName = user.name.toLowerCase();
+          if (lowerAfterAt.startsWith(lowerUserName)) {
+            if (user.name.length > matchedFullName.length) {
               matchedUser = user;
-              matchedName = user.name;
+              matchedFullName = user.name;
             }
           }
         }
 
-        if (matchedUser && matchedName) {
-          // Found a match - render as clickable mention
+        if (matchedUser && matchedFullName) {
+          // Found a full match - render as clickable mention
           const mentionableUser = matchedUser as MentionUser;
           parts.push(
             <span
@@ -471,13 +568,64 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                 }
               }}
             >
-              @{matchedName}
+              @{matchedFullName}
             </span>
           );
-          currentIndex = i + 1 + matchedName.length;
+          currentIndex = i + 1 + matchedFullName.length;
           i = currentIndex - 1; // Skip past the mention
         } else {
-          // No match found, just add @ as regular text
+          // 2) Partial match: if the user typed only part of the name (e.g. "@Ali"),
+          // match the first whitespace-delimited token and still render it as green/clickable.
+          const tokenMatch = textAfterAt.match(/^[^\s]+/);
+          const token = tokenMatch?.[0] ?? '';
+          if (token) {
+            const lowerToken = token.toLowerCase();
+            let partialMatch: typeof mentionableUsers[0] | null = null;
+            let bestPartialName = '';
+
+            for (const user of mentionableUsers) {
+              const lowerUserName = user.name.toLowerCase();
+              if (lowerUserName.startsWith(lowerToken)) {
+                if (user.name.length > bestPartialName.length) {
+                  partialMatch = user;
+                  bestPartialName = user.name;
+                }
+              }
+            }
+
+            if (partialMatch) {
+              const mentionableUser = partialMatch as MentionUser;
+              parts.push(
+                <span
+                  key={`mention-${i}`}
+                  className="text-green-600 font-medium cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCommentsModalThread(null);
+
+                    if (mentionableUser.type === 'business' && onNavigateToBusiness) {
+                      onNavigateToBusiness(mentionableUser.id);
+                    } else if (
+                      (mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') &&
+                      onNavigateToBusiness
+                    ) {
+                      onNavigateToBusiness(mentionableUser.id);
+                    } else if (onNavigateToUserProfile) {
+                      onNavigateToUserProfile(mentionableUser.id);
+                    }
+                  }}
+                >
+                  @{token}
+                </span>,
+              );
+
+              currentIndex = i + 1 + token.length;
+              i = currentIndex - 1;
+              continue;
+            }
+          }
+
+          // No match found at all
           parts.push('@');
           currentIndex = i + 1;
         }
@@ -534,99 +682,69 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
     console.warn('[ThreadsFeed] No navigation performed for:', commentAuthor);
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim() || !commentsModalThread) return;
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !commentsModalThread || !user) return;
 
-    const thread = threads.find(t => t.id === commentsModalThread);
-    if (!thread) return;
-
-    const newCommentObj: Comment = {
-      id: Date.now().toString(),
-      author: {
-        id: user?.id,
-        name: user?.fullName || 'User',
-        avatar: user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300',
-        verified: user?.verified || false,
-        type: user?.role || 'user',
-        businessId: user?.businessId,
-      },
-      content: newComment,
-      timeAgo: 'Just now',
-      likes: 0,
-      isLiked: false,
-      replies: [],
-    };
-
-    if (replyingTo) {
-      const reply: Reply = {
-        id: Date.now().toString(),
-        author: {
-          id: user?.id,
-          name: user?.fullName || 'User',
-          avatar: user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300',
-          verified: user?.verified || false,
-          type: user?.role || 'user',
-          businessId: user?.businessId,
-        },
-        content: `@${replyingTo.author} ${newComment}`,
-        timeAgo: 'Just now',
-        likes: 0,
-        isLiked: false,
-      };
-
-      setComments(prev => ({
-        ...prev,
-        [commentsModalThread]: prev[commentsModalThread]?.map(comment => {
-          if (comment.id === (replyingTo.parentId || replyingTo.id)) {
-            return {
-              ...comment,
-              replies: [...comment.replies, reply],
-            };
+    const trimmed = newComment.trim();
+    const content = replyingTo
+      ? (() => {
+          const prefix = `@${replyingTo.author}`.trim();
+          const lowerTrimmed = trimmed.toLowerCase();
+          const lowerPrefix = prefix.toLowerCase();
+          if (lowerTrimmed.startsWith(lowerPrefix)) {
+            const rest = trimmed.slice(prefix.length).trim();
+            return rest ? `${prefix} ${rest}` : prefix;
           }
-          return comment;
-        }) || [],
-      }));
+          return `${prefix} ${trimmed}`.trim();
+        })()
+      : trimmed;
+    const parentCommentId = replyingTo?.id;
 
-      setExpandedReplies(prev => new Set([...prev, replyingTo.parentId || replyingTo.id]));
-    } else {
-      setComments(prev => ({
-        ...prev,
-        [commentsModalThread]: [...(prev[commentsModalThread] || []), newCommentObj],
-      }));
+    try {
+      await createComment({
+        targetType: 'thread',
+        targetId: commentsModalThread,
+        content,
+        parentCommentId,
+      });
+      const list = await fetchComments('thread', commentsModalThread);
+      const mapped = list.map(mapCommentDtoToUi);
+      setComments((prev) => ({ ...prev, [commentsModalThread]: mapped }));
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === commentsModalThread ? { ...t, comments: (t.comments ?? 0) + 1 } : t
+        )
+      );
+      if (replyingTo) {
+        setExpandedReplies((prev) => new Set([...prev, replyingTo.parentId || replyingTo.id]));
+      }
+    } catch (err) {
+      console.error('[ThreadsFeed] Failed to add comment:', err);
     }
-
-    setThreads(threads.map(t =>
-      t.id === commentsModalThread ? { ...t, comments: t.comments + 1 } : t
-    ));
-
     setNewComment('');
     setReplyingTo(null);
   };
 
   const handleLikeComment = (threadId: string, commentId: string, isReply: boolean = false, parentId?: string) => {
-    setComments(prev => ({
-      ...prev,
-      [threadId]: prev[threadId]?.map(comment => {
-        if (isReply && comment.id === parentId) {
-          return {
-            ...comment,
-            replies: comment.replies.map(reply =>
-              reply.id === commentId
-                ? { ...reply, likes: reply.isLiked ? reply.likes - 1 : reply.likes + 1, isLiked: !reply.isLiked }
-                : reply
-            ),
-          };
-        }
-        if (comment.id === commentId) {
-          return {
-            ...comment,
-            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
-            isLiked: !comment.isLiked,
-          };
-        }
-        return comment;
-      }) || [],
-    }));
+    if (!isAuthenticated) return;
+    toggleLikeComment(commentId)
+      .then((updated) => {
+        setComments(prev => {
+          const threadComments = prev[threadId] || [];
+          const updateOne = (list: any[]): any[] =>
+            list.map((c: any) => {
+              if (c.id === commentId) {
+                return { ...c, likes: updated.likes ?? c.likes, isLiked: updated.isLiked ?? !c.isLiked };
+              }
+              if (c.replies?.length) {
+                return { ...c, replies: updateOne(c.replies) };
+              }
+              return c;
+            });
+          return { ...prev, [threadId]: updateOne(threadComments) };
+        });
+      })
+      .catch((err) => console.error('[ThreadsFeed] toggleLikeComment error:', err));
   };
 
   const toggleReplies = (commentId: string) => {
@@ -641,30 +759,21 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
     });
   };
 
-  const handleDeleteComment = (threadId: string, commentId: string, isReply: boolean = false, parentId?: string) => {
-    if (isReply && parentId) {
-      setComments(prev => ({
-        ...prev,
-        [threadId]: prev[threadId]?.map(comment => {
-          if (comment.id === parentId) {
-            return {
-              ...comment,
-              replies: comment.replies.filter(reply => reply.id !== commentId),
-            };
-          }
-          return comment;
-        }) || [],
-      }));
-    } else {
-      setComments(prev => ({
-        ...prev,
-        [threadId]: prev[threadId]?.filter(comment => comment.id !== commentId) || [],
-      }));
+  const handleDeleteComment = async (threadId: string, commentId: string) => {
+    if (!isAuthenticated) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('thread', threadId);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToUi);
+      setComments((prev) => ({ ...prev, [threadId]: mapped }));
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId ? { ...t, comments: Math.max(0, (t.comments ?? 0) - 1) } : t
+        )
+      );
+    } catch (err) {
+      console.error('[ThreadsFeed] Failed to delete comment:', err);
     }
-
-    setThreads(threads.map(t =>
-      t.id === threadId ? { ...t, comments: Math.max(0, t.comments - 1) } : t
-    ));
   };
 
   const handleEditComment = (commentId: string, currentContent: string) => {
@@ -785,7 +894,13 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
   // Check if thread is by current user
   const isOwnThread = (author: any) => {
     if (!user) return false;
-    return user.id === author.id || user.businessId === author.id;
+    const currentBusinessId = user.businessId || user.id;
+    const authorBusinessId =
+      author.type === 'business'
+        ? author.businessId || author.id
+        : author.id || author.businessId;
+
+    return author.id === user.id || (currentBusinessId && authorBusinessId === currentBusinessId);
   };
 
   const getRoleIcon = (type: string) => {
@@ -803,22 +918,16 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
     }
   };
 
-  // Prepare displayed threads with highlighted thread at top if needed
   const displayedThreads = React.useMemo(() => {
-    const slicedThreads = threads.slice(0, visibleThreads);
-    
-    // If there's a highlighted thread, ensure it's visible and at the top
     if (highlightThreadId) {
-      const highlightedThread = threads.find(t => t.id === highlightThreadId);
+      const highlightedThread = displayThreads.find(t => t.id === highlightThreadId);
       if (highlightedThread) {
-        // Either way, we want it at the top for visibility and highlighting
-        const filteredThreads = slicedThreads.filter(t => t.id !== highlightThreadId);
-        return [highlightedThread, ...filteredThreads];
+        const rest = displayThreads.filter(t => t.id !== highlightThreadId);
+        return [highlightedThread, ...rest];
       }
     }
-    
-    return slicedThreads;
-  }, [threads, visibleThreads, highlightThreadId]);
+    return displayThreads;
+  }, [displayThreads, highlightThreadId]);
   
   const currentModalThread = threads.find(t => t.id === commentsModalThread);
   const threadComments = comments[commentsModalThread || ''] || [];
@@ -828,8 +937,15 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
   return (
     <>
       <div className="space-y-6">
+        {threadsError && (
+          <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
+            {threadsError}
+          </div>
+        )}
         {displayedThreads.map((thread) => {
-          const totalComments = getTotalCommentCount(comments[thread.id] || []);
+          const totalComments = comments[thread.id]
+            ? getTotalCommentCount(comments[thread.id])
+            : (thread.commentsCount ?? (typeof thread.comments === 'number' ? thread.comments : 0));
           const isHighlighted = highlightThreadId === thread.id && showHighlight;
           
           return (
@@ -837,10 +953,10 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
               key={thread.id} 
               id={`thread-${thread.id}`} 
               ref={isHighlighted ? highlightedThreadRef : null}
-              className={`bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-all duration-500 ${
+              className={`rounded-xl border overflow-hidden hover:shadow-lg transition-colors duration-500 ${
                 isHighlighted 
-                  ? 'border-green-500 shadow-xl ring-4 ring-green-500 ring-offset-2' 
-                  : 'border-neutral-200'
+                  ? 'bg-green-100 border-green-300 shadow-lg' 
+                  : 'bg-white border-neutral-200'
               }`}
             >
               {/* Thread Header */}
@@ -853,7 +969,7 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                       className="block"
                     >
                       <img
-                        src={thread.author.avatar}
+                        src={getImageUrl(thread.author.avatar)}
                         alt={thread.author.name}
                         className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
                       />
@@ -941,15 +1057,15 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                 <div className="flex items-center gap-6 pt-4 border-t border-neutral-100">
                   <button
                     onClick={() => handleLike(thread.id)}
-                    disabled={!isAuthenticated}
+                    disabled={!isAuthenticated || likingThreadId === thread.id}
                     className={`flex items-center gap-2 transition-colors ${
-                      !isAuthenticated 
+                      !isAuthenticated || likingThreadId === thread.id
                         ? 'cursor-not-allowed opacity-50' 
                         : thread.isLiked 
                         ? 'text-red-600' 
                         : 'text-neutral-600 hover:text-red-600'
                     }`}
-                    title={!isAuthenticated ? 'Sign in to like threads' : ''}
+                    title={!isAuthenticated ? 'Sign in to like threads' : likingThreadId === thread.id ? 'Updating...' : ''}
                   >
                     <Heart className={`w-5 h-5 ${thread.isLiked ? 'fill-current' : ''}`} />
                     <span className="text-sm font-medium">{thread.likes}</span>
@@ -996,16 +1112,15 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
           );
         })}
         
-        {/* Load More Threads */}
-        {visibleThreads < threads.length && (
-          <div className="text-center mt-8">
-            <button
-              onClick={() => setVisibleThreads(prev => Math.min(prev + 10, threads.length))}
-              className="px-8 py-3 bg-white border-2 border-neutral-200 text-neutral-700 rounded-lg hover:border-green-600 hover:text-green-600 transition-colors"
-            >
-              {isAuthenticated ? 'Load More Threads' : 'Sign in to view more'}
-            </button>
+        <div ref={loadMoreSentinelRef} className="h-4" aria-hidden />
+        {loadingMoreThreads && (
+          <div className="text-center py-6">
+            <span className="inline-block w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+            <p className="mt-2 text-neutral-500 text-sm">Loading more threads...</p>
           </div>
+        )}
+        {!hasMoreThreads && threads.length > 0 && (
+          <p className="text-center py-6 text-neutral-500 text-sm">You&apos;ve seen all threads.</p>
         )}
       </div>
 
@@ -1052,7 +1167,7 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                             className="block"
                           >
                             <img
-                              src={comment.author.avatar}
+                              src={getImageUrl(comment.author.avatar)}
                               alt={comment.author.name}
                               className="w-11 h-11 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
                             />
@@ -1099,7 +1214,7 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                                           }`}
                                         >
                                           <img
-                                            src={mentionUser.avatar}
+                                            src={getImageUrl(mentionUser.avatar)}
                                             alt={mentionUser.name}
                                             className="w-8 h-8 rounded-full object-cover"
                                           />
@@ -1175,6 +1290,15 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                                   Edit
                                 </button>
                               )}
+                              {comment.author.id && user?.id === comment.author.id && (
+                                <button
+                                  onClick={() => handleDeleteComment(commentsModalThread, comment.id)}
+                                  className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
+                                  type="button"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                           )}
 
@@ -1187,7 +1311,7 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                                   {/* Profile picture with role icon at bottom-right */}
                                   <div className="relative flex-shrink-0">
                                     <img
-                                      src={reply.author.avatar}
+                                      src={getImageUrl(reply.author.avatar)}
                                       alt={reply.author.name}
                                       onClick={() => handleProfileClick(reply.author)}
                                       draggable="false"
@@ -1233,6 +1357,15 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                                         >
                                           <ReplyIcon className="w-3 h-3" />
                                           <span>Reply</span>
+                                        </button>
+                                      )}
+                                      {reply.author.id && user?.id === reply.author.id && (
+                                        <button
+                                          onClick={() => handleDeleteComment(commentsModalThread, reply.id)}
+                                          className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
+                                          type="button"
+                                        >
+                                          Delete
                                         </button>
                                       )}
                                     </div>
@@ -1301,33 +1434,39 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
                   )}
                   
                   {/* Mention Dropdown */}
-                  {showMentions && filteredMentions.length > 0 && (
+                  {showMentions && (
                     <div className="absolute bottom-full left-6 right-6 mb-2 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-64 overflow-y-auto z-10">
-                      {filteredMentions.map((mentionUser, index) => (
-                        <button
-                          key={mentionUser.id}
-                          onClick={() => insertMention(mentionUser)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${
-                            index === selectedMentionIndex ? 'bg-green-50' : ''
-                          }`}
-                        >
-                          <img
-                            src={mentionUser.avatar}
-                            alt={mentionUser.name}
-                            draggable="false"
-                            className="w-8 h-8 rounded-full object-cover select-none"
-                          />
-                          <div className="flex-1 text-left">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-neutral-900">{mentionUser.name}</span>
-                              {mentionUser.verified && (
-                                <CheckCircle2 className="w-3 h-3 text-green-600 fill-current" />
-                              )}
+                      {filteredMentions.length > 0 ? (
+                        filteredMentions.map((mentionUser, index) => (
+                          <button
+                            key={mentionUser.id}
+                            onClick={() => insertMention(mentionUser)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors ${
+                              index === selectedMentionIndex ? 'bg-green-50' : ''
+                            }`}
+                          >
+                            <img
+                              src={getImageUrl(mentionUser.avatar)}
+                              alt={mentionUser.name}
+                              draggable="false"
+                              className="w-8 h-8 rounded-full object-cover select-none"
+                            />
+                            <div className="flex-1 text-left">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-green-700">@{mentionUser.name}</span>
+                                {mentionUser.verified && (
+                                  <CheckCircle2 className="w-3 h-3 text-green-600 fill-current" />
+                                )}
+                              </div>
+                              <span className="text-xs text-neutral-500 capitalize">{mentionUser.type}</span>
                             </div>
-                            <span className="text-xs text-neutral-500 capitalize">{mentionUser.type}</span>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-neutral-500">
+                          No matches
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-3">
@@ -1369,8 +1508,12 @@ export function ThreadsFeed({ onSaveThread, onNavigateToBusiness, onNavigateToUs
         <ShareModal
           isOpen={!!shareModalThread}
           onClose={() => setShareModalThread(null)}
-          postUrl={`/threads/${shareModalThread.id}`}
-          postTitle={shareModalThread.title || shareModalThread.content.substring(0, 50)}
+          postId={shareModalThread.id}
+          postUrl={typeof window !== 'undefined' ? `${window.location.origin}/thread/${shareModalThread.id}` : undefined}
+          postTitle={shareModalThread.title || shareModalThread.content?.substring(0, 50)}
+          postOwnerName={shareModalThread.author?.name || shareModalThread.author?.fullName}
+          postOwnerAvatar={shareModalThread.author?.avatar ? getImageUrl(shareModalThread.author.avatar) : undefined}
+          onShare={handleShareAction}
         />
       )}
     </>

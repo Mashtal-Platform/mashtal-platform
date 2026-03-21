@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Heart, MapPin, Star, ExternalLink, X, Building2, Leaf, HardHat, Shield, Users, MessageCircle, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { getImageUrl } from '../shared/api/client';
 
 interface FollowersPageProps {
   onViewBusiness: (businessId: string) => void;
@@ -116,8 +117,8 @@ export function FollowersPage({
                 {/* Enhanced Professional Photo Section */}
                 <div className="relative h-80 overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
                   <img
-                    src={follower.avatar || follower.image || 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800'}
-                    alt={follower.name || follower.fullName}
+                    src={getImageUrl(follower.avatar || follower.image) || follower.avatar || follower.image || 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800'}
+                    alt={follower.name || follower.fullName || 'Profile'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     style={{ 
                       objectPosition: 'center 25%',

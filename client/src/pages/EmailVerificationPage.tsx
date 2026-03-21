@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, CheckCircle, Loader2, Link2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,48 +9,67 @@ interface EmailVerificationPageProps {
   onNavigate: (page: Page) => void;
 }
 
+function getTokenFromHash(): string | null {
+  const hash = window.location.hash || '';
+  const match = hash.match(/verify-email\?token=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** Extract token from pasted URL or use raw string as token */
+function parseTokenFromInput(value: string): string {
+  const trimmed = value.trim();
+  const urlMatch = trimmed.match(/token=([^&\s]+)/);
+  if (urlMatch) return decodeURIComponent(urlMatch[1]);
+  return trimmed;
+}
+
 export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps) {
   const { verifyEmail } = useAuth();
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [linkOrToken, setLinkOrToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [checkedHash, setCheckedHash] = useState(false);
 
-  const handleCodeChange = (index: number, value: string) => {
-    if (value.length <= 1 && /^\d*$/.test(value)) {
-      const newCode = [...code];
-      newCode[index] = value;
-      setCode(newCode);
+  useEffect(() => {
+    if (checkedHash) return;
+    setCheckedHash(true);
+    const tokenFromUrl = getTokenFromHash();
+    if (!tokenFromUrl) return;
 
-      // Auto-focus next input
-      if (value && index < 5) {
-        const nextInput = document.getElementById(`code-${index + 1}`);
-        nextInput?.focus();
-      }
-    }
-  };
+    setLoading(true);
+    setError('');
+    verifyEmail(tokenFromUrl)
+      .then((ok) => {
+        if (ok) {
+          setSuccess(true);
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          setTimeout(() => onNavigate('home'), 2000);
+        } else {
+          setError('Invalid or expired verification link. Please request a new one.');
+        }
+      })
+      .catch(() => setError('Verification failed. Please try again.'))
+      .finally(() => setLoading(false));
+  }, [checkedHash, verifyEmail, onNavigate]);
 
-  const handleVerify = async () => {
-    const verificationCode = code.join('');
-    if (verificationCode.length !== 6) {
-      setError('Please enter the complete 6-digit code');
+  const handleVerifyByPaste = async () => {
+    const token = parseTokenFromInput(linkOrToken);
+    if (!token) {
+      setError('Please paste the verification link from your email.');
       return;
     }
-
     setError('');
     setLoading(true);
-
     try {
-      const verified = await verifyEmail(verificationCode);
+      const verified = await verifyEmail(token);
       if (verified) {
         setSuccess(true);
-        setTimeout(() => {
-          onNavigate('home');
-        }, 2000);
+        setTimeout(() => onNavigate('home'), 2000);
       } else {
-        setError('Invalid verification code. Please try again.');
+        setError('Invalid or expired link. Please use the latest link from your email.');
       }
-    } catch (err) {
+    } catch {
       setError('Verification failed. Please try again.');
     } finally {
       setLoading(false);
@@ -58,8 +77,8 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
   };
 
   const handleResend = () => {
-    // TODO: Implement resend verification email
-    alert('Verification code resent!');
+    // TODO: Implement resend verification email API
+    alert('If you did not receive the email, check your spam folder. You can sign up again with the same email to receive a new link.');
   };
 
   if (success) {
@@ -71,8 +90,8 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
             <h1 className="text-2xl font-bold text-neutral-900 mb-2">Email Verified!</h1>
-            <p className="text-neutral-600">Your account has been successfully verified.</p>
-            <p className="text-sm text-neutral-500 mt-4">Redirecting to home page...</p>
+            <p className="text-neutral-600">Your account is now verified. You can use all features.</p>
+            <p className="text-sm text-neutral-500 mt-4">Redirecting to home...</p>
           </div>
         </div>
       </div>
@@ -83,45 +102,41 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Verify Your Email</h1>
             <p className="text-neutral-600">
-              We've sent a 6-digit verification code to your email address. Please enter it below.
+              We sent a verification link to your email. Click the link in the message to verify your account and sign in.
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
-          {/* Code Input */}
-          <div className="flex gap-2 justify-center mb-6">
-            {code.map((digit, index) => (
-              <Input
-                key={index}
-                id={`code-${index}`}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleCodeChange(index, e.target.value)}
-                className="w-12 h-14 text-center text-xl font-semibold"
-              />
-            ))}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              <Link2 className="w-4 h-4 inline-block mr-1 align-middle" />
+              Or paste the verification link here
+            </label>
+            <Input
+              type="text"
+              value={linkOrToken}
+              onChange={(e) => setLinkOrToken(e.target.value)}
+              placeholder="Paste link from email"
+              className="w-full"
+              disabled={loading}
+            />
           </div>
 
-          {/* Verify Button */}
           <Button
-            onClick={handleVerify}
+            onClick={handleVerifyByPaste}
             className="w-full mb-4"
-            disabled={loading || code.some((d) => !d)}
+            disabled={loading || !linkOrToken.trim()}
           >
             {loading ? (
               <>
@@ -129,20 +144,19 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
                 Verifying...
               </>
             ) : (
-              'Verify Email'
+              'Verify email'
             )}
           </Button>
 
-          {/* Resend Link */}
           <div className="text-center">
             <p className="text-sm text-neutral-600">
-              Didn't receive the code?{' '}
+              Didn&apos;t receive the email?{' '}
               <button
                 type="button"
                 onClick={handleResend}
                 className="text-green-600 hover:text-green-700 font-medium"
               >
-                Resend
+                Get help
               </button>
             </p>
           </div>

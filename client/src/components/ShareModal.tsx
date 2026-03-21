@@ -1,38 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { X, Link as LinkIcon, Download, Check, Share2, MessageCircle, Send, Mail, Linkedin, Twitter, Facebook } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { X, Link as LinkIcon, Download, Check, Share2, MessageCircle, Send, Mail, Linkedin, Twitter, Facebook, Search } from 'lucide-react';
+import { getConversations, createOrGetConversation, sendMessage as sendChatMessage } from '../shared/api/chat';
+import { searchShareRecipients } from '../shared/api/users';
+import { getImageUrl } from '../shared/api/client';
 
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
+  postId?: string;
   postUrl?: string;
   postTitle?: string;
   postImage?: string;
+  /** Display name of the post/thread OWNER (uploader), NOT the person sharing. */
+  postOwnerName?: string;
+  /** Avatar URL of the post/thread owner. */
+  postOwnerAvatar?: string;
+  /** @deprecated use postOwnerName */
+  postAuthorName?: string;
+  /** Called when user performs a share action (copy link, external share, etc.) so the app can record the share. */
+  onShare?: () => void;
 }
 
-interface ChatContact {
+export interface ChatContact {
   id: string;
   name: string;
   avatar?: string;
   lastMessage?: string;
   lastActive?: string;
+  role?: string;
 }
 
-// Mock recent contacts - in real app, this would come from chat history
-const mockContacts: ChatContact[] = [
-  { id: '1', name: 'Ahmed Al-Saudi', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', lastMessage: 'Thanks for the info!', lastActive: '2m ago' },
-  { id: '2', name: 'Fatima Hassan', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', lastMessage: 'See you tomorrow', lastActive: '5m ago' },
-  { id: '3', name: 'Mohammed Ali', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100', lastMessage: 'Perfect!', lastActive: '10m ago' },
-  { id: '4', name: 'Sara Abdullah', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100', lastMessage: 'Got it', lastActive: '15m ago' },
-  { id: '5', name: 'Khalid Ibrahim', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100', lastMessage: 'Will do', lastActive: '20m ago' },
-  { id: '6', name: 'Nora Hassan', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100', lastMessage: 'Thanks!', lastActive: '25m ago' },
-  { id: '7', name: 'Omar Saleh', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100', lastMessage: 'See you soon', lastActive: '30m ago' },
-  { id: '8', name: 'Layla Ahmed', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', lastMessage: 'Great!', lastActive: '35m ago' },
-  { id: '9', name: 'Youssef Ali', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100', lastMessage: 'Understood', lastActive: '40m ago' },
-];
+function formatLastActive(iso: string): string {
+  if (!iso) return '';
+  try {
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  } catch {
+    return '';
+  }
+}
 
-export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: ShareModalProps) {
+const RECENT_CONVERSATIONS_LIMIT = 9;
+
+export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postImage, postOwnerName, postOwnerAvatar, postAuthorName, onShare }: ShareModalProps) {
+  const ownerName = postOwnerName ?? postAuthorName;
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [copiedLink, setCopiedLink] = useState(false);
+  const [recentContacts, setRecentContacts] = useState<ChatContact[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ChatContact[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [shareCount, setShareCount] = useState(0);
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -46,6 +77,61 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
     };
   }, [isOpen]);
 
+  // Load last 9 people the user has messaged (from chat conversations)
+  useEffect(() => {
+    if (!isOpen) return;
+    setRecentLoading(true);
+    getConversations()
+      .then((list) => {
+        const recent = list.slice(0, RECENT_CONVERSATIONS_LIMIT).map((c) => ({
+          id: c.profileId,
+          name: c.profileName || 'User',
+          avatar: getImageUrl(c.profileAvatar) || c.profileAvatar,
+          lastMessage: c.lastMessage,
+          lastActive: formatLastActive(c.lastMessageTime),
+          role: c.profileType,
+        }));
+        setRecentContacts(recent);
+      })
+      .catch(() => setRecentContacts([]))
+      .finally(() => setRecentLoading(false));
+  }, [isOpen]);
+
+  // Search for business, agronomist, engineer (debounced)
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearchLoading(true);
+      searchShareRecipients(searchQuery)
+        .then((users) => {
+          const list: ChatContact[] = users.map((u) => ({
+            id: u.id,
+            name: u.fullName || '',
+            avatar: getImageUrl(u.avatar) || u.avatar,
+            role: u.role,
+          }));
+          setSearchResults(list);
+        })
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const allContacts = useCallback(() => {
+    const seen = new Set(recentContacts.map((c) => c.id));
+    const fromSearch = searchResults.filter((s) => !seen.has(s.id));
+    return [...recentContacts, ...fromSearch];
+  }, [recentContacts, searchResults]);
+
+  const getContactById = useCallback(
+    (id: string) => allContacts().find((c) => c.id === id),
+    [allContacts]
+  );
+
   if (!isOpen) return null;
 
   const currentUrl = postUrl || window.location.href;
@@ -56,6 +142,7 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
       await navigator.clipboard.writeText(currentUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
+      onShare?.();
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -68,8 +155,8 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
     }
 
     try {
-      const response = await fetch(postImage);
-      const blob = await response.blob();
+      const response = await axios.get(postImage, { responseType: 'blob' });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -96,58 +183,93 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
     });
   };
 
-  const handleSend = () => {
-    if (selectedContacts.size === 0) {
-      alert('Please select at least one contact');
-      return;
+  const handleSend = async () => {
+    if (selectedContacts.size === 0) return;
+    const currentUrl = postUrl || (typeof window !== 'undefined' ? window.location.href : '');
+    const shareText = postTitle
+      ? `Shared with you: ${postTitle}\n${currentUrl}`
+      : `Check this out on Mashtal: ${currentUrl}`;
+    const sharedPost =
+      (postTitle || postUrl) && currentUrl
+        ? {
+            postId: postId ?? undefined,
+            postTitle: postTitle ?? undefined,
+            postImage: postImage ?? undefined,
+            postUrl: currentUrl,
+            postOwnerName: ownerName ?? undefined,
+            postOwnerAvatar: postOwnerAvatar ?? undefined,
+          }
+        : undefined;
+    setSending(true);
+    let successCount = 0;
+    try {
+      const ids = Array.from(selectedContacts);
+      for (const recipientId of ids) {
+        try {
+          const conv = await createOrGetConversation(recipientId);
+          await sendChatMessage(conv.id, shareText, sharedPost);
+          successCount += 1;
+        } catch {
+          // Skip failed recipient, continue with others
+        }
+      }
+      setShareSuccess(true);
+      setShareCount(successCount);
+      setSelectedContacts(new Set());
+      onShare?.();
+    } finally {
+      setSending(false);
     }
-    
-    const contactNames = Array.from(selectedContacts)
-      .map(id => mockContacts.find(c => c.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
-    
-    alert(`Post shared with: ${contactNames}`);
-    setSelectedContacts(new Set());
+  };
+
+  const handleClose = () => {
+    setShareSuccess(false);
+    setShareCount(0);
     onClose();
   };
 
-  // External share handlers
+  // External share handlers – notify parent so share count can be recorded
   const handleWhatsAppShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + currentUrl)}`;
     window.open(whatsappUrl, '_blank');
+    onShare?.();
   };
 
   const handleTwitterShare = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`;
     window.open(twitterUrl, '_blank');
+    onShare?.();
   };
 
   const handleFacebookShare = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
     window.open(facebookUrl, '_blank');
+    onShare?.();
   };
 
   const handleLinkedInShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
     window.open(linkedInUrl, '_blank');
+    onShare?.();
   };
 
   const handleEmailShare = () => {
     const emailSubject = encodeURIComponent(postTitle || 'Check this out on Mashtal');
     const emailBody = encodeURIComponent(`${shareText}\n\n${currentUrl}`);
     window.location.href = `mailto:?subject=${emailSubject}&body=${emailBody}`;
+    onShare?.();
   };
 
   const handleTelegramShare = () => {
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareText)}`;
     window.open(telegramUrl, '_blank');
+    onShare?.();
   };
 
   return (
     <div 
       className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div 
         className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
@@ -157,8 +279,9 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-semibold text-neutral-900">Share</h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 hover:bg-neutral-100 rounded-full transition-colors"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -267,71 +390,157 @@ export function ShareModal({ isOpen, onClose, postUrl, postTitle, postImage }: S
           </div>
         </div>
 
-        {/* Send to Contacts - Scrollable */}
+        {/* Send to Mashtal users - Recent (9 last messaged) + Search (hidden after successful share) */}
+        {!shareSuccess && (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="p-4">
             <h4 className="text-sm font-semibold text-neutral-900 mb-3">Send to Mashtal users</h4>
-            
-            {/* Contacts Grid - 3 per row */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {mockContacts.map((contact) => {
-                const isSelected = selectedContacts.has(contact.id);
-                
-                return (
-                  <button
-                    key={contact.id}
-                    onClick={() => toggleContactSelection(contact.id)}
-                    className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-neutral-50 transition-colors relative"
-                  >
-                    <div className="relative">
-                      <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-colors ${
-                        isSelected ? 'border-green-600' : 'border-transparent'
-                      }`}>
-                        {contact.avatar ? (
-                          <img 
-                            src={contact.avatar} 
-                            alt={contact.name} 
-                            draggable="false"
-                            className="w-full h-full object-cover select-none" 
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
-                            <span className="text-neutral-600 font-medium text-lg">
-                              {contact.name[0]}
-                            </span>
+
+            {/* Recent: last 9 people the user has messaged */}
+            <p className="text-xs text-neutral-500 mb-2">Recent conversations</p>
+            {recentLoading ? (
+              <div className="flex justify-center py-6">
+                <span className="inline-block w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {recentContacts.map((contact) => {
+                  const isSelected = selectedContacts.has(contact.id);
+                  return (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onClick={() => toggleContactSelection(contact.id)}
+                      className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-neutral-50 transition-colors relative"
+                    >
+                      <div className="relative">
+                        <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-colors ${isSelected ? 'border-green-600' : 'border-transparent'}`}>
+                          {contact.avatar ? (
+                            <img src={contact.avatar} alt={contact.name} draggable="false" className="w-full h-full object-cover select-none" />
+                          ) : (
+                            <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
+                              <span className="text-neutral-600 font-medium text-lg">{contact.name[0] || '?'}</span>
+                            </div>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center border-2 border-white">
+                            <Check className="w-3 h-3 text-white" />
                           </div>
                         )}
                       </div>
-                      {isSelected && (
-                        <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center border-2 border-white">
-                          <Check className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-xs text-neutral-700 text-center line-clamp-1 max-w-full">
-                      {contact.name.split(' ')[0]}
-                    </span>
-                  </button>
-                );
-              })}
+                      <span className="text-xs text-neutral-700 text-center line-clamp-1 max-w-full">{contact.name.split(' ')[0] || contact.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!recentLoading && recentContacts.length === 0 && (
+              <p className="text-xs text-neutral-500 mb-4">No recent conversations. Search below to find someone.</p>
+            )}
+
+            {/* Search for business, agronomist or engineer */}
+            <p className="text-xs text-neutral-500 mb-2 mt-4">Search business, agronomist or engineer</p>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name..."
+                className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg outline-none focus:border-green-600 text-sm"
+              />
             </div>
+            {searchLoading && (
+              <div className="flex justify-center py-4">
+                <span className="inline-block w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {searchQuery.trim() && !searchLoading && (
+              <div className="grid grid-cols-3 gap-3">
+                {searchResults.filter((s) => !recentContacts.some((r) => r.id === s.id)).map((contact) => {
+                  const isSelected = selectedContacts.has(contact.id);
+                  return (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onClick={() => toggleContactSelection(contact.id)}
+                      className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-neutral-50 transition-colors relative"
+                    >
+                      <div className="relative">
+                        <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-colors ${isSelected ? 'border-green-600' : 'border-transparent'}`}>
+                          {contact.avatar ? (
+                            <img src={contact.avatar} alt={contact.name} draggable="false" className="w-full h-full object-cover select-none" />
+                          ) : (
+                            <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
+                              <span className="text-neutral-600 font-medium text-lg">{contact.name[0] || '?'}</span>
+                            </div>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center border-2 border-white">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-neutral-700 text-center line-clamp-1 max-w-full">{contact.name.split(' ')[0] || contact.name}</span>
+                      {contact.role && (
+                        <span className="text-[10px] text-neutral-400 capitalize">{contact.role}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {searchQuery.trim() && !searchLoading && searchResults.length === 0 && (
+              <p className="text-xs text-neutral-500 py-2">No results found.</p>
+            )}
           </div>
         </div>
+        )}
 
-        {/* Bottom Actions - Fixed */}
-        <div className="border-t border-neutral-200 flex-shrink-0 bg-white">
-          {/* Selected Counter & Send Button */}
-          {selectedContacts.size > 0 && (
-            <div className="px-4 py-3 bg-green-50 border-b border-green-100">
-              <button
-                onClick={handleSend}
-                className="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                Send to {selectedContacts.size} {selectedContacts.size === 1 ? 'person' : 'people'}
-              </button>
+        {/* Success state: post sent to chats */}
+        {shareSuccess && (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <Check className="w-8 h-8 text-green-600" />
             </div>
-          )}
-        </div>
+            <h4 className="text-lg font-semibold text-neutral-900 mb-1">Shared successfully</h4>
+            <p className="text-sm text-neutral-600 mb-6">
+              The post has been sent to {shareCount} {shareCount === 1 ? 'conversation' : 'conversations'}. Recipients will see it in their chats.
+            </p>
+            <button
+              onClick={handleClose}
+              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        {/* Bottom Actions - Fixed (only when not in success state) */}
+        {!shareSuccess && (
+          <div className="border-t border-neutral-200 flex-shrink-0 bg-white">
+            {selectedContacts.size > 0 && (
+              <div className="px-4 py-3 bg-green-50 border-b border-green-100">
+                <button
+                  onClick={handleSend}
+                  disabled={sending}
+                  className="w-full bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {sending ? (
+                    <>
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    `Send to ${selectedContacts.size} ${selectedContacts.size === 1 ? 'person' : 'people'}`
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

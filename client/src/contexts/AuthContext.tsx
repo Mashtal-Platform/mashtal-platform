@@ -1,7 +1,47 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { currentUser, otherUsers } from '../data/centralMockData';
+import { apiGet, apiPost, apiPut } from '../shared/api/client';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
-export type UserRole = 'user' | 'agronomist' | 'engineer' | 'business' | 'admin' | null;
+function normalizeUser(apiUser: any): User {
+  if (!apiUser) return apiUser;
+  const businessProfile = apiUser.businessProfile || {};
+  const professionalProfile = apiUser.professionalProfile || {};
+  const isVisitor = apiUser.role === 'visitor';
+
+  return {
+    id: apiUser.id || apiUser._id,
+    email: apiUser.email,
+    fullName: apiUser.fullName,
+    role: apiUser.role,
+    avatar: apiUser.avatar,
+    verified: apiUser.verified,
+    phone: isVisitor
+      ? apiUser.phone || businessProfile.phone || professionalProfile.phone
+      : businessProfile.phone || professionalProfile.phone || apiUser.phone,
+    location: isVisitor
+      ? apiUser.location || businessProfile.location || professionalProfile.location
+      : businessProfile.location || professionalProfile.location || apiUser.location,
+    // Visitors should not have bio in the UI.
+    bio: isVisitor ? undefined : businessProfile.bio || professionalProfile.bio || apiUser.bio,
+    companyName: businessProfile.companyName || apiUser.companyName,
+    businessType: apiUser.businessType,
+    subscriptionStatus: apiUser.subscriptionStatus,
+    businessId: apiUser.businessId,
+    hours: businessProfile.hours,
+    about: businessProfile.about && typeof businessProfile.about === 'object' && !Array.isArray(businessProfile.about)
+      ? businessProfile.about
+      : undefined,
+    businessProfile: apiUser.businessProfile,
+  };
+}
+
+export type UserRole =
+  | 'visitor'
+  | 'agronomist'
+  | 'engineer'
+  | 'business'
+  | 'admin'
+  | null;
 
 export interface User {
   id: string;
@@ -18,6 +58,9 @@ export interface User {
   verified?: boolean;
   subscriptionStatus?: 'active' | 'inactive';
   businessId?: string;
+  hours?: Array<{ day?: string; closed?: boolean; open?: Array<{ from?: string; to?: string }> }>;
+  about?: Record<string, string>;
+  businessProfile?: Record<string, unknown>;
 }
 
 interface AuthContextType {
@@ -25,9 +68,31 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, role: UserRole) => Promise<void>;
+  signUp: (input: {
+    email: string;
+    password: string;
+    fullName: string;
+    role: Exclude<UserRole, null>;
+    avatar?: string;
+    businessProfile?: {
+      bio?: string;
+      location?: string;
+      phone?: string;
+      companyName?: string;
+      specialties?: string[];
+    };
+    professionalProfile?: {
+      bio?: string;
+      location?: string;
+      phone?: string;
+      specialization?: string;
+      yearsExperience?: number;
+      specialties?: string[];
+    };
+  }) => Promise<{ requiresVerification?: boolean; user?: any }>;
   signOut: () => Promise<void>;
-  verifyEmail: (code: string) => Promise<boolean>;
+  /** Verify email via link token (from email). Returns true if verified and logged in. */
+  verifyEmail: (token: string) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   switchUser: (userId: string) => void;
   availableUsers: User[];
@@ -41,119 +106,172 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingVerification, setPendingVerification] = useState<string | null>(null);
 
-  // Get available users for switching (excluding current user)
-  const availableUsers = [currentUser, ...otherUsers].filter(u => u.id !== user?.id).map(u => ({
-    id: u.id,
-    email: u.email,
-    fullName: u.fullName,
-    role: u.role,
-    avatar: u.avatar,
-    phone: u.phone,
-    location: u.location,
-    bio: u.bio,
-    companyName: u.companyName,
-    businessType: u.businessType,
-    verified: u.verified,
-    businessId: u.businessId,
-  }));
+  const availableUsers: User[] = [];
 
   useEffect(() => {
-    // Check for existing session
-    const storedUser = localStorage.getItem('mashtal_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      // Default to the mock current user for demonstration purposes
-      setUser(currentUser as User);
-    }
-    setLoading(false);
+    const boot = async () => {
+      try {
+        const token = localStorage.getItem('mashtal_token');
+        const storedUser = localStorage.getItem('mashtal_user');
+        if (storedUser) setUser(normalizeUser(JSON.parse(storedUser)));
+        if (!token) return;
+        const me = await apiGet<any>('/auth/me');
+        const normalized = normalizeUser(me);
+        setUser(normalized);
+        localStorage.setItem('mashtal_user', JSON.stringify(normalized));
+      } catch {
+        localStorage.removeItem('mashtal_token');
+        localStorage.removeItem('mashtal_user');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    boot();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    // TODO: Call Supabase backend for authentication
-    // For now, simulate sign in
-    const mockUser: User = {
-      id: '1',
-      email,
-      fullName: 'Ahmed Al-Mansour',
-      role: 'user',
-      avatar: '',
-      phone: '+966 50 123 4567',
-      location: 'Riyadh, Saudi Arabia',
-      bio: 'Farmer & Agricultural Enthusiast',
-    };
-    setUser(mockUser);
-    localStorage.setItem('mashtal_user', JSON.stringify(mockUser));
+    const data = await apiPost<{ token: string; user: any }>('/auth/login', { email, password });
+    localStorage.setItem('mashtal_token', data.token);
+    const nextUser = normalizeUser(data.user);
+    localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
+    setUser(nextUser);
   };
 
   const signInWithGoogle = async () => {
-    // TODO: Implement Google OAuth via Supabase
-    const mockUser: User = {
-      id: '2',
-      email: 'user@gmail.com',
-      fullName: 'John Doe',
-      role: 'user',
+    throw new Error('Google sign-in is not implemented yet');
+  };
+
+  const signUp = async (input: {
+    email: string;
+    password: string;
+    fullName: string;
+    role: Exclude<UserRole, null>;
+    avatar?: string;
+    businessProfile?: {
+      bio?: string;
+      location?: string;
+      phone?: string;
+      companyName?: string;
+      specialties?: string[];
     };
-    setUser(mockUser);
-    localStorage.setItem('mashtal_user', JSON.stringify(mockUser));
-  };
-
-  const signUp = async (email: string, password: string, fullName: string, role: UserRole) => {
-    // TODO: Call Supabase backend for user creation
-    // Set pending verification
-    setPendingVerification(email);
-  };
-
-  const verifyEmail = async (code: string): Promise<boolean> => {
-    // TODO: Verify code with backend
-    // For now, simulate verification
-    if (code.length === 6) {
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email: pendingVerification || '',
-        fullName: 'New User',
-        role: 'user',
-      };
-      setUser(mockUser);
-      localStorage.setItem('mashtal_user', JSON.stringify(mockUser));
-      setPendingVerification(null);
-      return true;
+    professionalProfile?: {
+      bio?: string;
+      location?: string;
+      phone?: string;
+      specialization?: string;
+      yearsExperience?: number;
+      specialties?: string[];
+    };
+  }): Promise<{ requiresVerification?: boolean; user?: any }> => {
+    const data = await apiPost<{ token?: string; user: any; requiresVerification?: boolean }>('/auth/register', input);
+    if (data.requiresVerification) {
+      setPendingVerification(input.email);
+      return { requiresVerification: true, user: data.user };
     }
-    return false;
+    if (data.token) {
+      localStorage.setItem('mashtal_token', data.token);
+      const nextUser = normalizeUser(data.user);
+      localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
+      setUser(nextUser);
+    }
+    return { requiresVerification: false, user: data.user };
+  };
+
+  const verifyEmail = async (token: string): Promise<boolean> => {
+    if (!token || !token.trim()) return false;
+    try {
+      const data = await apiGet<{ token: string; user: any }>(
+        `/auth/verify-email?token=${encodeURIComponent(token.trim())}`
+      );
+      if (data.token && data.user) {
+        localStorage.setItem('mashtal_token', data.token);
+        const nextUser = normalizeUser(data.user);
+        localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
+        setUser(nextUser);
+        setPendingVerification(null);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const signOut = async () => {
     setUser(null);
     localStorage.removeItem('mashtal_user');
+    localStorage.removeItem('mashtal_token');
   };
 
   const updateProfile = async (updates: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('mashtal_user', JSON.stringify(updatedUser));
+    const normalizePhoneForServer = (value: unknown) => {
+      if (!value || typeof value !== 'string') return value;
+      const cleaned = value
+        .replace(/[()]/g, '')
+        .replace(/[–—]/g, '-')
+        .replace(/[^\d+\-\s]/g, '')
+        .trim();
+      if (!cleaned) return cleaned;
+      try {
+        const parsed = parsePhoneNumberFromString(cleaned, 'LB');
+        if (parsed?.number) return parsed.number; // E.164: +{country}{national}
+      } catch {
+        // ignore; fall back to cleaned string
+      }
+      return cleaned;
+    };
+
+    // Do not depend on `user` state being loaded:
+    // the server update is authenticated via token (req.user), so even if `user` is null
+    // we should still attempt the request and let backend auth/validation handle it.
+    const nextUpdates: Partial<User> = {
+      ...updates,
+      phone: normalizePhoneForServer((updates as any).phone),
+      businessProfile: updates.businessProfile
+        ? {
+            ...(updates.businessProfile as any),
+            phone: normalizePhoneForServer((updates.businessProfile as any).phone),
+          }
+        : updates.businessProfile,
+      professionalProfile: updates.professionalProfile
+        ? {
+            ...(updates.professionalProfile as any),
+            phone: normalizePhoneForServer((updates.professionalProfile as any).phone),
+          }
+        : updates.professionalProfile,
+    };
+
+    console.log('[AuthContext] updateProfile payload -> PUT /users/me', {
+      ...nextUpdates,
+      // Avoid noisy logs; keep readable and safe.
+      professionalProfile: nextUpdates.professionalProfile
+        ? { ...nextUpdates.professionalProfile, about: '[Map/obj]' }
+        : undefined,
+      businessProfile: nextUpdates.businessProfile
+        ? { ...nextUpdates.businessProfile, about: '[Map/obj]' }
+        : undefined,
+    });
+
+    const updatedUser = await apiPut<any>('/users/me', nextUpdates);
+    // Normalize the response from PUT, then re-fetch /auth/me to ensure we reflect the DB
+    // (important if the PUT response is missing nested fields).
+    const normalizedFromPut = normalizeUser(updatedUser);
+    try {
+      const me = await apiGet<any>('/auth/me');
+      const normalizedFromMe = normalizeUser(me);
+      setUser(normalizedFromMe);
+      localStorage.setItem('mashtal_user', JSON.stringify(normalizedFromMe));
+      return normalizedFromMe;
+    } catch {
+      setUser(normalizedFromPut);
+      localStorage.setItem('mashtal_user', JSON.stringify(normalizedFromPut));
+      return normalizedFromPut;
     }
   };
 
   const switchUser = (userId: string) => {
-    const selectedUser = [currentUser, ...otherUsers].find(u => u.id === userId);
-    if (selectedUser) {
-      const newUser: User = {
-        id: selectedUser.id,
-        email: selectedUser.email,
-        fullName: selectedUser.fullName,
-        role: selectedUser.role,
-        avatar: selectedUser.avatar,
-        phone: selectedUser.phone,
-        location: selectedUser.location,
-        bio: selectedUser.bio,
-        companyName: selectedUser.companyName,
-        verified: selectedUser.verified,
-        businessId: selectedUser.businessId,
-      };
-      setUser(newUser);
-      localStorage.setItem('mashtal_user', JSON.stringify(newUser));
-    }
+    void userId;
   };
 
   return (

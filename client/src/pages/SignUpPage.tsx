@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, HardHat, Building2, Mail, Lock, Phone, MapPin, CheckCircle2, Eye, EyeOff, Users, Tractor, Store, Loader2, Leaf, Shield } from 'lucide-react';
+import { ArrowLeft, User, HardHat, Building2, Mail, Lock, MapPin, CheckCircle2, Eye, EyeOff, Users, Tractor, Store, Loader2, Leaf, Shield, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { Page } from '../App';
+import { PhoneInput } from '../components/PhoneInput';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
 
 interface SignUpPageProps {
   onNavigate: (page: Page) => void;
@@ -23,6 +26,13 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
+    location: '',
+    bio: '',
+    companyName: '',
+    businessType: '',
+    specialization: '',
+    yearsExperience: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,20 +56,73 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
       return;
     }
 
+    const phone = formData.phone?.trim() ?? '';
+    if (phone) {
+      const parsed = parsePhoneNumberFromString(phone, 'LB');
+      if (!parsed?.isValid()) {
+        setError('Please enter a valid phone number (example: +961 70 123 456).');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.fullName, selectedRole);
+      if (!selectedRole) throw new Error('Role is required');
+
+      const base = {
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        role: selectedRole,
+      } as const;
+
+      const input =
+        selectedRole === 'business'
+          ? {
+              ...base,
+              businessProfile: {
+                phone: formData.phone || undefined,
+                location: formData.location || undefined,
+                bio: formData.bio || undefined,
+                companyName: formData.companyName || undefined,
+                specialties: [],
+              },
+            }
+          : selectedRole === 'engineer' || selectedRole === 'agronomist'
+            ? {
+                ...base,
+                professionalProfile: {
+                  phone: formData.phone || undefined,
+                  location: formData.location || undefined,
+                  bio: formData.bio || undefined,
+                  specialization: formData.specialization || undefined,
+                  yearsExperience: formData.yearsExperience
+                    ? Number(formData.yearsExperience)
+                    : undefined,
+                  specialties: [],
+                },
+              }
+            : base;
+
+      const result = await signUp(input as any);
       
-      // If Engineer or Business, redirect to payment
+      // Paid roles should always see payment form immediately after signup.
+      // Verification can still be completed after payment.
       if (selectedRole === 'engineer' || selectedRole === 'business') {
         onPaymentNeeded(selectedRole);
+        return;
+      }
+
+      // Free roles continue to email verification flow.
+      if (result?.requiresVerification) {
+        onVerificationNeeded();
       } else {
-        // If Visitor, go to email verification
         onVerificationNeeded();
       }
-    } catch (err) {
-      setError('Failed to create account. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to create account. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -298,6 +361,114 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 />
               </div>
             </div>
+
+            {/* Role-specific profile fields */}
+            {(selectedRole === 'business' || selectedRole === 'engineer' || selectedRole === 'agronomist') && (
+              <>
+                <PhoneInput
+                  label="Phone"
+                  value={formData.phone}
+                  required={selectedRole === 'business'}
+                  defaultCountry="LB"
+                  placeholder="e.g. +961 70 123 456"
+                  onChange={(v) => setFormData({ ...formData, phone: v })}
+                />
+
+                <div>
+                  <LebanonLocationPicker
+                    label="Location"
+                    value={formData.location}
+                    required={selectedRole === 'business'}
+                    placeholder="Search city or village in Lebanon…"
+                    onChange={(v) => setFormData({ ...formData, location: v })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder={
+                      selectedRole === 'business'
+                        ? 'Tell customers about your business...'
+                        : 'Tell others about your experience...'
+                    }
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    rows={3}
+                    required={selectedRole === 'business'}
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedRole === 'business' && (
+              <>
+                <div>
+                  <Label htmlFor="companyName">Business Name</Label>
+                  <div className="relative mt-1">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Input
+                      id="companyName"
+                      type="text"
+                      placeholder="Green Valley Nursery"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="businessType">Business Type</Label>
+                  <div className="relative mt-1">
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Input
+                      id="businessType"
+                      type="text"
+                      placeholder="Nursery / Tools / Services..."
+                      value={formData.businessType}
+                      onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {(selectedRole === 'engineer' || selectedRole === 'agronomist') && (
+              <>
+                <div>
+                  <Label htmlFor="specialization">Specialization</Label>
+                  <div className="relative mt-1">
+                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Input
+                      id="specialization"
+                      type="text"
+                      placeholder="Irrigation / Plant diseases / Soil..."
+                      value={formData.specialization}
+                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="yearsExperience">Years of Experience</Label>
+                  <Input
+                    id="yearsExperience"
+                    type="number"
+                    min={0}
+                    placeholder="3"
+                    value={formData.yearsExperience}
+                    onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
+                    required
+                  />
+                </div>
+              </>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (

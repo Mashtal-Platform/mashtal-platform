@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface ThreadsPageProps {
   onSaveThread: (item: SavedItem) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
   onNavigateToBusiness: (businessId: string) => void;
   onNavigateToUserProfile: (userId: string) => void;
   followedBusinesses: any[];
@@ -23,6 +24,7 @@ interface ThreadsPageProps {
 
 export function ThreadsPage({ 
   onSaveThread, 
+  onRemoveSavedItem,
   onNavigateToBusiness, 
   onNavigateToUserProfile, 
   followedBusinesses, 
@@ -385,6 +387,8 @@ export function ThreadsPage({
         <div ref={firstThreadRef}>
           <ThreadsFeed
             onSaveThread={onSaveThread}
+            onRemoveSavedItem={onRemoveSavedItem}
+            savedItems={savedItems}
             onNavigateToBusiness={onNavigateToBusiness}
             onNavigateToUserProfile={onNavigateToUserProfile}
             followedBusinesses={followedBusinesses}

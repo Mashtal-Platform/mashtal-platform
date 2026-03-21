@@ -5,11 +5,9 @@ import { EditPostModal } from "./EditPostModal";
 import { EditThreadModal } from "./EditThreadModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { PurchasesCard } from "./PurchasesCard";
-import {
-  getTotalCommentCount,
-  mockComments,
-  mockProducts as centralProducts,
-} from "../data/centralMockData";
+import { fetchProducts } from "../shared/api/products";
+import { getImageUrl } from "../shared/api/client";
+import { filterOutOrphanSavedItems } from "../shared/utils/saved";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,8 +49,73 @@ import {
 } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { SwitchUserModal } from './SwitchUserModal';
+import { ThreadModal, type ThreadModalComment } from './ThreadModal';
+import {
+  fetchComments,
+  createComment,
+  deleteComment,
+  updateComment,
+  toggleLikeComment,
+  type CommentDto,
+} from '../shared/api/comments';
+import {
+  fetchPostById,
+  toggleLikePost,
+  sharePost,
+} from '../shared/api/posts';
+import {
+  fetchThreadById,
+  toggleLikeThread,
+  shareThread,
+} from '../shared/api/threads';
 
 
+
+const DAY_LABELS: Record<string, string> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
+
+function formatTime(t: string): string {
+  if (!t || typeof t !== 'string') return '—';
+  const [h, m] = t.split(':').map(Number);
+  const h12 = h % 12 || 12;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return `${h12}:${String(m ?? 0).padStart(2, '0')} ${ampm}`;
+}
+
+function formatTimeAgo(timestamp?: string): string {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString();
+}
+
+const mapCommentToModal = (dto: CommentDto): ThreadModalComment | any => ({
+  id: dto.id,
+  userId: dto.author?.id ?? '',
+  userName: dto.author?.name ?? 'Unknown',
+  userAvatar: dto.author?.avatar,
+  content: dto.content,
+  timeAgo: formatTimeAgo(dto.createdAt),
+  likes: dto.likes ?? 0,
+  isLiked: dto.isLiked ?? false,
+  replies: (dto.replies ?? []).map(mapCommentToModal),
+});
 
 interface UserProfile {
   avatar?: string;
@@ -63,6 +126,10 @@ interface UserProfile {
   phone?: string;
   email?: string;
   verified?: boolean;
+  rating?: number;
+  reviewsCount?: number;
+  hours?: Array<{ day?: string; closed?: boolean; open?: Array<{ from?: string; to?: string }> }>;
+  about?: Record<string, string>;
 }
 
 interface BusinessProfileViewProps {
@@ -70,16 +137,20 @@ interface BusinessProfileViewProps {
   userPosts?: any[];
   userThreads?: any[];
   isOwnProfile: boolean;
+  followersCount?: number;
+  followingCount?: number;
   onEditProfile: () => void;
   onPostClick?: (post: any) => void;
   onThreadClick?: (thread: any) => void;
   onDeletePost?: (postId: string, e?: React.MouseEvent) => void;
   onEditPost?: (post: any, e?: React.MouseEvent) => void;
+  onUpdatePost?: (postId: string, updatedData: any) => void;
   onDeleteThread?: (
     threadId: string,
     e?: React.MouseEvent,
   ) => void;
   onEditThread?: (thread: any, e?: React.MouseEvent) => void;
+  onUpdateThread?: (threadId: string, updatedData: any) => void;
   onAvatarChange?: (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => void;
@@ -96,13 +167,17 @@ export function BusinessProfileView({
   userPosts = [],
   userThreads = [],
   isOwnProfile,
+  followersCount = 0,
+  followingCount = 0,
   onEditProfile,
   onPostClick,
   onThreadClick,
   onDeletePost,
   onEditPost,
+  onUpdatePost,
   onDeleteThread,
   onEditThread,
+  onUpdateThread,
   onAvatarChange,
   avatarFileInputRef,
   onNavigate,
@@ -127,6 +202,10 @@ export function BusinessProfileView({
   const [selectedPost, setSelectedPost] = useState<any | null>(
     null,
   );
+  const [selectedThread, setSelectedThread] = useState<any | null>(null);
+  const [threadComments, setThreadComments] = useState<
+    Record<string, ThreadModalComment[]>
+  >({});
   const [showEditPostModal, setShowEditPostModal] =
     useState(false);
   const [productRefreshKey, setProductRefreshKey] = useState(0);
@@ -165,40 +244,63 @@ export function BusinessProfileView({
     }
   };
 
-  // Get products from localStorage or centralMockData filtered by businessId
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const getBusinessProducts = () => {
-    const storageKey = `business_products_${user?.businessId || user?.id}`;
-    const stored = localStorage.getItem(storageKey);
-    
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error('Failed to parse stored products', e);
-      }
+  const [businessProducts, setBusinessProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const bid = user?.businessId || user?.id;
+    if (!bid) return;
+    fetchProducts({ businessId: bid })
+      .then(setBusinessProducts)
+      .catch(() => setBusinessProducts([]));
+  }, [user?.businessId, user?.id, productRefreshKey]);
+
+  // Fetch post comments whenever a post modal is opened.
+  useEffect(() => {
+    if (!selectedPost?.id) return;
+    fetchComments('post', selectedPost.id)
+      .then((list) => {
+        const mapped = (Array.isArray(list) ? list : []).map(mapCommentToModal);
+        setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+      })
+      .catch(() => {
+        setSelectedPost((prev) => (prev ? { ...prev, comments: [] } : prev));
+      });
+  }, [selectedPost?.id]);
+
+  // Fetch thread comments whenever a thread modal is opened.
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    fetchComments('thread', selectedThread.id)
+      .then((list) => {
+        const mapped = (Array.isArray(list) ? list : []).map(mapCommentToModal) as ThreadModalComment[];
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+      })
+      .catch(() => {
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: [] }));
+      });
+  }, [selectedThread?.id]);
+
+  // Lock body scroll while modals are open.
+  useEffect(() => {
+    if (selectedPost || selectedThread) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
-    
-    // Fallback to centralProducts filtered by businessId
-    return centralProducts.filter(
-      product => product.businessId === user?.businessId
-    );
-  };
+    return;
+  }, [selectedPost, selectedThread]);
 
-  // Use productRefreshKey to trigger re-evaluation
-  const businessProducts = React.useMemo(() => getBusinessProducts(), [productRefreshKey, user]);
-
-  // Format products to match the component's expected format
-  const displayProducts = businessProducts.map(product => ({
-    id: product.id,
-    name: product.name,
-    price: `SR ${product.price}`,
-    priceNum: product.price,
-    description: product.description,
-    image: product.image,
-    inStock: product.stock > 0,
-    stock: product.stock,
-    category: product.category,
+  const displayProducts = (Array.isArray(businessProducts) ? businessProducts : []).map((product: any) => ({
+    id: product.id ?? '',
+    name: product.name ?? '',
+    price: `$${Number(product.price) || 0}`,
+    priceNum: Number(product.price) || 0,
+    description: product.description ?? '',
+    image: product.image ?? '',
+    inStock: (product.stock ?? 0) > 0,
+    stock: Number(product.stock) ?? 0,
+    category: product.category ?? '',
   }));
 
   // Mock products data
@@ -295,16 +397,207 @@ export function BusinessProfileView({
     }
   };
 
-  const handleLikePost = (postId: string) => {
-    setLikedPosts((prev) => {
-      const newLiked = new Set(prev);
-      if (newLiked.has(postId)) {
-        newLiked.delete(postId);
-      } else {
-        newLiked.add(postId);
-      }
-      return newLiked;
-    });
+  const handleLikePost = async (postId: string) => {
+    if (!user) return;
+    try {
+      const updated = await toggleLikePost(postId);
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (updated.isLiked) next.add(postId);
+        else next.delete(postId);
+        return next;
+      });
+      setSelectedPost((prev) => {
+        if (!prev || prev.id !== postId) return prev;
+        return { ...prev, likes: updated.likes, isLiked: updated.isLiked };
+      });
+    } catch (err) {
+      console.error('[BusinessProfileView] toggleLikePost failed:', err);
+    }
+  };
+
+  const handleSharePost = async (postId: string) => {
+    try {
+      const updated = await sharePost(postId);
+      setSelectedPost((prev) => {
+        if (!prev || prev.id !== postId) return prev;
+        return { ...prev, shares: updated.shares };
+      });
+    } catch (err) {
+      console.error('[BusinessProfileView] sharePost failed:', err);
+    }
+  };
+
+  const handleSavePost = async (postId: string) => {
+    // Saved-view: allow removing from saved (adding requires another callback).
+    if (!onRemoveSavedItem) return;
+    const savedId = savedItems?.find((s: any) => s.type === 'post' && (s.itemId === postId || s.refId === postId))?.id;
+    if (!savedId) return;
+
+    try {
+      onRemoveSavedItem(savedId);
+      setSelectedPost((prev) => {
+        if (!prev || prev.id !== postId) return prev;
+        return { ...prev, isSaved: false };
+      });
+    } catch (err) {
+      console.error('[BusinessProfileView] remove saved post failed:', err);
+    }
+  };
+
+  const handleCommentPost = async (postId: string, text: string, parentId?: string) => {
+    if (!user) return;
+    try {
+      await createComment({
+        targetType: 'post',
+        targetId: postId,
+        content: text.trim(),
+        parentCommentId: parentId,
+      });
+
+      const list = await fetchComments('post', postId);
+      const comments = (Array.isArray(list) ? list : []).map((c: any) =>
+        mapCommentToModal(c),
+      );
+      setSelectedPost((prev) => (prev ? { ...prev, comments } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] comment on post failed:', err);
+    }
+  };
+
+  const handleDeletePostComment = async (commentId: string) => {
+    if (!selectedPost?.id) return;
+    if (!user) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('post', selectedPost.id);
+      const comments = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setSelectedPost((prev) => (prev ? { ...prev, comments } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] delete post comment failed:', err);
+    }
+  };
+
+  const handleLikePostComment = async (commentId: string) => {
+    if (!selectedPost?.id) return;
+    if (!user) return;
+    try {
+      await toggleLikeComment(commentId);
+      const list = await fetchComments('post', selectedPost.id);
+      const comments = (Array.isArray(list) ? list : []).map((c: any) =>
+        mapCommentToModal(c),
+      );
+      setSelectedPost((prev) => (prev ? { ...prev, comments } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] like post comment failed:', err);
+    }
+  };
+
+  const handleEditPostComment = async (commentId: string, content: string) => {
+    if (!user) return;
+    if (!selectedPost?.id) return;
+    try {
+      await updateComment(commentId, content);
+      const list = await fetchComments('post', selectedPost.id);
+      const comments = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setSelectedPost((prev) => (prev ? { ...prev, comments } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] edit post comment failed:', err);
+    }
+  };
+
+  const handleThreadLike = async () => {
+    if (!selectedThread?.id) return;
+    if (!user) return;
+    const threadId = selectedThread.id;
+    try {
+      const updated = await toggleLikeThread(threadId);
+      setSelectedThread((prev) => (prev ? { ...prev, likes: updated.likes, isLiked: updated.isLiked } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] toggleLikeThread failed:', err);
+    }
+  };
+
+  const handleThreadComment = async (text: string, parentId?: string) => {
+    if (!selectedThread?.id) return;
+    if (!user) return;
+    try {
+      await createComment({
+        targetType: 'thread',
+        targetId: selectedThread.id,
+        content: text.trim(),
+        parentCommentId: parentId,
+      });
+
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[BusinessProfileView] comment on thread failed:', err);
+    }
+  };
+
+  const handleThreadLikeComment = async (commentId: string) => {
+    if (!selectedThread?.id) return;
+    if (!user) return;
+    try {
+      await toggleLikeComment(commentId);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[BusinessProfileView] like thread comment failed:', err);
+    }
+  };
+
+  const handleDeleteThreadComment = async (commentId: string) => {
+    if (!selectedThread?.id) return;
+    if (!user) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[BusinessProfileView] delete thread comment failed:', err);
+    }
+  };
+
+  const handleEditThreadComment = async (commentId: string, content: string) => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      await updateComment(commentId, content);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map((c: any) => mapCommentToModal(c));
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[BusinessProfileView] edit thread comment failed:', err);
+    }
+  };
+
+  const handleThreadSave = async () => {
+    if (!selectedThread?.id || !onRemoveSavedItem) return;
+    const threadId = selectedThread.id;
+    const savedId = savedItems?.find((s: any) => s.type === 'thread' && (s.itemId === threadId || s.refId === threadId))?.id;
+    if (!savedId) return;
+
+    try {
+      onRemoveSavedItem(savedId);
+      setSelectedThread((prev) => (prev ? { ...prev, isSaved: false } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] remove saved thread failed:', err);
+    }
+  };
+
+  const handleThreadShare = async () => {
+    if (!selectedThread?.id) return;
+    try {
+      const updated = await shareThread(selectedThread.id);
+      setSelectedThread((prev) => (prev ? { ...prev, shares: updated.shares } : prev));
+    } catch (err) {
+      console.error('[BusinessProfileView] share thread failed:', err);
+    }
   };
 
   const handlePostClick = (post: any) => {
@@ -358,7 +651,7 @@ export function BusinessProfileView({
                 >
                   {userProfile.avatar ? (
                     <img
-                      src={userProfile.avatar}
+                      src={getImageUrl(userProfile.avatar)}
                       alt={
                         userProfile.companyName ||
                         userProfile.fullName
@@ -408,7 +701,7 @@ export function BusinessProfileView({
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 text-neutral-600 mb-4">
+                      <div className="flex flex-wrap items-center gap-4 text-neutral-600 mb-4">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 text-neutral-400" />
                         <span>
@@ -416,10 +709,15 @@ export function BusinessProfileView({
                             "Location not set"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-4 h-4 text-amber-500 fill-current" />
-                        <span>4.8</span>
-                      </div>
+                      {(typeof userProfile.rating === 'number' || userProfile.reviewsCount != null) && (
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-amber-500 fill-current" />
+                          <span>{typeof userProfile.rating === 'number' ? userProfile.rating.toFixed(1) : '—'}</span>
+                          {userProfile.reviewsCount != null && userProfile.reviewsCount > 0 && (
+                            <span className="text-neutral-500 text-sm">({userProfile.reviewsCount} reviews)</span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <p className="text-neutral-700 max-w-2xl leading-relaxed">
@@ -462,7 +760,7 @@ export function BusinessProfileView({
                 <div className="grid grid-cols-3 gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">
-                      1,243
+                      {followersCount.toLocaleString()}
                     </div>
                     <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">
                       Followers
@@ -510,7 +808,7 @@ export function BusinessProfileView({
                       Following
                     </h3>
                     <p className="text-sm text-neutral-500">
-                      145 accounts
+                      {followingCount.toLocaleString()} accounts
                     </p>
                   </div>
                 </div>
@@ -535,7 +833,7 @@ export function BusinessProfileView({
                       Followers
                     </h3>
                     <p className="text-sm text-neutral-500">
-                      1,243 followers
+                      {followersCount.toLocaleString()} followers
                     </p>
                   </div>
                 </div>
@@ -734,12 +1032,18 @@ export function BusinessProfileView({
                         isOwnProfile ? 'cursor-pointer hover:shadow-xl hover:border-green-500 hover:-translate-y-1' : 'hover:shadow-lg'
                       }`}
                     >
-                      <div className="relative h-48">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="relative h-48 bg-neutral-100">
+                        {getImageUrl(product.image) ? (
+                          <img
+                            src={getImageUrl(product.image)}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                            <Package className="w-16 h-16" />
+                          </div>
+                        )}
                         {product.inStock && (
                           <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-xs">
                             In Stock
@@ -814,11 +1118,17 @@ export function BusinessProfileView({
                             onPostClick && onPostClick(post)
                           }
                         >
-                          <img
-                            src={post.image}
-                            alt={post.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                          />
+                          {getImageUrl(post.image) ? (
+                            <img
+                              src={getImageUrl(post.image)}
+                              alt={post.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                              <Camera className="w-12 h-12" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 text-white font-bold">
                             <div className="flex items-center gap-2">
                               <Heart className="w-5 h-5 fill-current" />
@@ -826,11 +1136,7 @@ export function BusinessProfileView({
                             </div>
                             <div className="flex items-center gap-2">
                               <MessageCircle className="w-5 h-5 fill-current" />
-                              <span>
-                                {getTotalCommentCount(
-                                  post.id,
-                                ) || 0}
-                              </span>
+                              <span>{post.commentsCount ?? post.comments ?? 0}</span>
                             </div>
                           </div>
                           {isOwnProfile && (
@@ -903,17 +1209,17 @@ export function BusinessProfileView({
                           }
                         >
                           <div className="flex items-start gap-4">
-                            <img
-                              src={
-                                userProfile.avatar ||
-                                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"
-                              }
-                              alt={
-                                userProfile.companyName ||
-                                userProfile.fullName
-                              }
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
+                            {getImageUrl(userProfile.avatar) ? (
+                              <img
+                                src={getImageUrl(userProfile.avatar)}
+                                alt={userProfile.companyName || userProfile.fullName || ''}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                                <User className="w-6 h-6 text-neutral-500" />
+                              </div>
+                            )}
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <h3 className="font-bold text-neutral-900 text-sm">
@@ -1169,42 +1475,77 @@ export function BusinessProfileView({
                     </h3>
                     <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-6">
                       <div className="space-y-3">
-                        {[
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                          "Sunday",
-                        ].map((day, index) => (
-                          <div
-                            key={day}
-                            className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-0"
-                          >
-                            <span className="text-neutral-700 font-medium">
-                              {day}
-                            </span>
-                            <span className="text-neutral-900 font-semibold">
-                              {index < 5
-                                ? "8:00 AM - 6:00 PM"
-                                : index === 5
-                                  ? "9:00 AM - 2:00 PM"
-                                  : "Closed"}
-                            </span>
-                          </div>
-                        ))}
+                        {(
+                          userProfile.hours && userProfile.hours.length > 0
+                            ? userProfile.hours
+                            : [
+                                { day: 'monday', closed: false, open: [{ from: '08:00', to: '18:00' }] },
+                                { day: 'tuesday', closed: false, open: [{ from: '08:00', to: '18:00' }] },
+                                { day: 'wednesday', closed: false, open: [{ from: '08:00', to: '18:00' }] },
+                                { day: 'thursday', closed: false, open: [{ from: '08:00', to: '18:00' }] },
+                                { day: 'friday', closed: false, open: [{ from: '08:00', to: '18:00' }] },
+                                { day: 'saturday', closed: false, open: [{ from: '09:00', to: '14:00' }] },
+                                { day: 'sunday', closed: true, open: [] },
+                              ]
+                        ).map((h: any) => {
+                          const dayLabel = DAY_LABELS[(h.day || '').toLowerCase()] || (h.day || '');
+                          const timeStr = h.closed
+                            ? 'Closed'
+                            : h.open?.length && h.open[0]?.from && h.open[0]?.to
+                              ? `${formatTime(h.open[0].from)} – ${formatTime(h.open[0].to)}`
+                              : '—';
+                          return (
+                            <div
+                              key={h.day || dayLabel}
+                              className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-0"
+                            >
+                              <span className="text-neutral-700 font-medium">{dayLabel}</span>
+                              <span className="text-neutral-900 font-semibold">{timeStr}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </section>
+
+                  {/* Custom about fields - from Edit profile → About section */}
+                  {userProfile.about &&
+                    typeof userProfile.about === 'object' &&
+                    Object.keys(userProfile.about).length > 0 && (
+                    <section>
+                      <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
+                        <div className="w-1.5 h-6 bg-green-600 rounded-full" />
+                        More information
+                      </h3>
+                      <div className="space-y-4">
+                        {Object.entries(userProfile.about).map(
+                          ([title, content]) =>
+                            title && (
+                              <div
+                                key={title}
+                                className="p-5 bg-white rounded-xl border border-neutral-200 shadow-sm"
+                              >
+                                <div className="text-xs font-bold uppercase tracking-wider text-green-700 mb-2">
+                                  {title}
+                                </div>
+                                <div className="text-neutral-800 whitespace-pre-wrap leading-relaxed">
+                                  {content || '—'}
+                                </div>
+                              </div>
+                            )
+                        )}
+                      </div>
+                    </section>
+                  )}
                 </div>
               )}
 
               {/* Saved Tab - Only visible for own profile */}
               {activeTab === "saved" && isOwnProfile && (() => {
+                const validItems = filterOutOrphanSavedItems(savedItems);
                 const filteredItems = savedItemsFilter === 'all' 
-                  ? savedItems 
-                  : savedItems.filter(item => item.type === savedItemsFilter);
+                  ? validItems 
+                  : validItems.filter(item => item.type === savedItemsFilter);
 
                 return (
                   <div className="p-6">
@@ -1233,8 +1574,8 @@ export function BusinessProfileView({
                         {filteredItems.map((item) => (
                           <div key={item.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
                             <div className="relative h-48 bg-gradient-to-br from-neutral-50 to-neutral-100">
-                              {item.image ? (
-                                <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              {getImageUrl(item.image) ? (
+                                <img src={getImageUrl(item.image)} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-neutral-300">
                                   {item.type === 'thread' ? <MessageCircle className="w-16 h-16" /> : 
@@ -1262,10 +1603,10 @@ export function BusinessProfileView({
                             </div>
                             <div className="p-5">
                               <h3 className="font-bold text-neutral-900 mb-2 line-clamp-2 group-hover:text-green-600 transition-colors text-lg">
-                                {item.title}
+                                {item.title || 'Untitled'}
                               </h3>
                               <p className="text-neutral-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-                                {item.description}
+                                {item.description || 'No description'}
                               </p>
                               <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                                 <div className="flex items-center gap-2">
@@ -1278,14 +1619,66 @@ export function BusinessProfileView({
                                   className="text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors"
                                   onClick={() => {
                                     // Navigate to item based on type
-                                    if (item.type === 'product' && (item as any).businessId) {
-                                      // Could add navigation logic here if needed
-                                    } else if (item.type === 'post' && item.itemId) {
-                                      // Navigate to posts
-                                    } else if (item.type === 'thread' && item.itemId) {
-                                      // Navigate to threads
-                                    } else if (item.type === 'business' && (item as any).businessId) {
-                                      // Navigate to business
+                                    if (item.type === 'post' && item.itemId) {
+                                      void (async () => {
+                                        try {
+                                          const post = await fetchPostById(item.itemId);
+                                          setSelectedPost({
+                                            id: post.id,
+                                            image: post.image || '',
+                                            title: post.title || 'Untitled',
+                                            content: post.content || '',
+                                            likes: post.likes ?? 0,
+                                            comments: [],
+                                            timeAgo: formatTimeAgo(post.timestamp),
+                                            authorName: post.author?.name ?? 'Unknown',
+                                            authorAvatar: post.author?.avatar ?? '',
+                                          });
+                                        } catch (err) {
+                                          console.error('[BusinessProfileView] fetchPostById failed:', err);
+                                        }
+                                      })();
+                                      return;
+                                    }
+
+                                    if (item.type === 'thread' && item.itemId) {
+                                      void (async () => {
+                                        try {
+                                          const thread = await fetchThreadById(item.itemId);
+                                          setSelectedThread({
+                                            id: thread.id,
+                                            title: thread.title || '',
+                                            content: thread.content || '',
+                                            likes: thread.likes ?? 0,
+                                            isLiked: thread.isLiked ?? false,
+                                            commentsCount: thread.commentsCount ?? 0,
+                                            shares: thread.shares ?? 0,
+                                            timeAgo: formatTimeAgo(thread.timestamp),
+                                            timestamp: thread.timestamp,
+                                            tags: thread.tags ?? [],
+                                            author: {
+                                              id: thread.author?.id ?? '',
+                                              name: thread.author?.name ?? 'Unknown',
+                                              avatar: thread.author?.avatar ?? '',
+                                            },
+                                          });
+                                        } catch (err) {
+                                          console.error('[BusinessProfileView] fetchThreadById failed:', err);
+                                        }
+                                      })();
+                                      return;
+                                    }
+
+                                    if (item.type === 'product' && item.itemId && onNavigateWithParams) {
+                                      // Reuse the same dashboard/product highlighting behavior as product cards.
+                                      onNavigateWithParams('dashboard', { productId: item.itemId });
+                                      return;
+                                    }
+
+                                    if (item.type === 'business' && item.itemId && onNavigateWithParams) {
+                                      // Navigate to the business/profile that owns this saved item.
+                                      onNavigateWithParams('user-profile', { userId: item.itemId });
+                                      return;
                                     }
                                   }}
                                 >
@@ -1329,9 +1722,54 @@ export function BusinessProfileView({
       {selectedPost && (
         <PostModal
           post={selectedPost}
+          isOpen={!!selectedPost}
           onClose={() => setSelectedPost(null)}
+          onLike={() => handleLikePost(selectedPost.id)}
+          onComment={(text, parentId) => handleCommentPost(selectedPost.id, text, parentId)}
+          onDeleteComment={handleDeletePostComment}
+          onEditComment={handleEditPostComment}
+          onLikeComment={handleLikePostComment}
+          onShare={() => handleSharePost(selectedPost.id)}
+          onSave={() => handleSavePost(selectedPost.id)}
+          onNavigateToBusiness={(businessId) => onNavigateWithParams?.('user-profile', { userId: businessId })}
+          onNavigateToUserProfile={(userId) => onNavigateWithParams?.('user-profile', { userId })}
+          isLiked={selectedPost.isLiked ?? likedPosts.has(selectedPost.id)}
+          isSaved={!!savedItems.find((s: any) => s.type === 'post' && (s.itemId === selectedPost.id || s.refId === selectedPost.id))}
         />
       )}
+
+      {selectedThread && (
+        <ThreadModal
+          thread={{
+            id: selectedThread.id,
+            title: selectedThread.title,
+            content: selectedThread.content || '',
+            tags: selectedThread.tags || [],
+            likes: selectedThread.likes ?? 0,
+            isLiked: selectedThread.isLiked ?? false,
+            commentsCount: selectedThread.commentsCount ?? 0,
+            shares: selectedThread.shares ?? 0,
+            timeAgo: selectedThread.timeAgo,
+            timestamp: selectedThread.timestamp,
+            author: selectedThread.author,
+          }}
+          comments={threadComments[selectedThread.id] ?? []}
+          isOpen={!!selectedThread}
+          onClose={() => setSelectedThread(null)}
+          onLike={handleThreadLike}
+          onComment={handleThreadComment}
+          onLikeComment={handleThreadLikeComment}
+          onDeleteComment={handleDeleteThreadComment}
+          onEditComment={handleEditThreadComment}
+          onNavigateToBusiness={(businessId) => onNavigateWithParams?.('user-profile', { userId: businessId })}
+          onNavigateToUserProfile={(userId) => onNavigateWithParams?.('user-profile', { userId })}
+          onSave={onRemoveSavedItem ? handleThreadSave : undefined}
+          onShare={handleThreadShare}
+          isLiked={selectedThread.isLiked ?? false}
+          isSaved={!!savedItems.find((s: any) => s.type === 'thread' && (s.itemId === selectedThread.id || s.refId === selectedThread.id))}
+        />
+      )}
+
       {showEditPostModal && postToEdit && (
         <EditPostModal
           post={postToEdit}
@@ -1341,8 +1779,8 @@ export function BusinessProfileView({
             setPostToEdit(null);
           }}
           onSave={(postId, updatedData) => {
-            if (onEditPost) {
-              onEditPost({ ...postToEdit, ...updatedData }, undefined);
+            if (onUpdatePost) {
+              onUpdatePost(postId, updatedData);
             }
             setShowEditPostModal(false);
             setPostToEdit(null);
@@ -1358,8 +1796,8 @@ export function BusinessProfileView({
             setThreadToEdit(null);
           }}
           onSave={(threadId, updatedData) => {
-            if (onEditThread) {
-              onEditThread({ ...threadToEdit, ...updatedData }, undefined);
+            if (onUpdateThread) {
+              onUpdateThread(threadId, updatedData);
             }
             setShowEditThreadModal(false);
             setThreadToEdit(null);

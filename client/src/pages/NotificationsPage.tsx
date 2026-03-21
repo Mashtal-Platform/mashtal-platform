@@ -22,17 +22,19 @@ interface NotificationsPageProps {
   onMarkAllAsRead?: () => void;
   onDeleteRead?: () => void;
   onNavigate?: (page: string, params?: any) => void;
-  currentUserId?: string; // Add current user ID to determine if post is own
+  onNavigateToUserProfile?: (userId: string) => void;
+  currentUserId?: string;
 }
 
-export function NotificationsPage({ 
-  notifications, 
-  onMarkAsRead, 
-  onClearAll, 
+export function NotificationsPage({
+  notifications,
+  onMarkAsRead,
+  onClearAll,
   onMarkAllAsRead,
   onDeleteRead,
   onNavigate,
-  currentUserId
+  onNavigateToUserProfile,
+  currentUserId,
 }: NotificationsPageProps) {
   const getIcon = (type: string) => {
     switch (type) {
@@ -118,14 +120,20 @@ export function NotificationsPage({
         });
       } 
       else if (notification.type === 'follow' && notification.relatedUserId) {
-        // Navigate to the follower's profile
-        onNavigate('user-profile', { userId: notification.relatedUserId });
+        // Navigate to the follower's profile (fetches user, opens business profile if they're a business)
+        if (onNavigateToUserProfile) {
+          onNavigateToUserProfile(notification.relatedUserId);
+        } else {
+          onNavigate('user-profile', { userId: notification.relatedUserId });
+        }
       }
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const readCount = notifications.filter(n => n.read).length;
+  const unreadCount = notifications
+    .filter((n) => !n.read)
+    .reduce((acc, n) => acc + (n.messageCount ?? 1), 0);
+  const readCount = notifications.filter((n) => n.read).length;
 
   return (
     <div className="min-h-screen bg-neutral-50 py-8">

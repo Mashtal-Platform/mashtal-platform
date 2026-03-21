@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  TrendingUp, Users, Eye, ShoppingBag, Package, 
+  TrendingUp, Users, ShoppingBag, Package, 
   BarChart3, Calendar, DollarSign, Plus, Trash2, Edit, X, Upload, Save,
   AlertTriangle, ArrowUpRight, Activity, Percent, Store, Crown, Medal, Award
 } from 'lucide-react';
@@ -10,30 +10,18 @@ import { Card } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { analyticsData, mockProducts as centralProducts } from '../data/centralMockData';
+import { fetchProducts, createProduct, updateProduct } from '../shared/api/products';
+import { fetchBusinessDashboardAnalytics, type DashboardPeriod, type BusinessDashboardDto } from '../shared/api/dashboard';
+import { getImageUrl } from '../shared/api/client';
 
 interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
-  views: number;
-  sold: number;
-  revenue: number;
   image: string;
   description: string;
   category: string;
-}
-
-interface PeriodData {
-  totalRevenue: number;
-  totalSold: number;
-  totalViews: number;
-  conversionRate: number;
-  revenueGrowth: number;
-  soldGrowth: number;
-  viewsGrowth: number;
-  conversionGrowth: number;
 }
 
 const PREDEFINED_CATEGORIES = ['Seeds', 'Plants', 'Fertilizers', 'Tools', 'Equipment'];
@@ -46,39 +34,43 @@ interface DashboardPageProps {
 
 export function DashboardPage({ targetSection, highlightProductId, onClearHighlight }: DashboardPageProps = {}) {
   const { user } = useAuth();
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('month');
   const [activeTab, setActiveTab] = useState<'analytics' | 'products'>('analytics');
   
-  // Initialize products from localStorage or centralProducts
-  const getInitialProducts = (): Product[] => {
-    const storageKey = `business_products_${user?.businessId || user?.id}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error('Failed to parse stored products', e);
-      }
-    }
-    // Filter centralProducts by businessId and format them
-    return centralProducts
-      .filter(p => p.businessId === user?.businessId)
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        stock: p.stock,
-        views: Math.floor(Math.random() * 1000) + 500,
-        sold: Math.floor(Math.random() * 100) + 20,
-        revenue: 0, // calculated below
-        image: p.image,
-        description: p.description,
-        category: p.category.charAt(0).toUpperCase() + p.category.slice(1)
-      }))
-      .map(p => ({ ...p, revenue: p.price * p.sold }));
-  };
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
-  const [products, setProducts] = useState<Product[]>(getInitialProducts());
+  useEffect(() => {
+    const businessId = user?.businessId || user?.id;
+    if (!businessId) {
+      setProducts([]);
+      setProductsLoading(false);
+      return;
+    }
+    setProductsLoading(true);
+    fetchProducts({ businessId })
+      .then((apiProducts) => {
+        if (!Array.isArray(apiProducts)) {
+          setProducts([]);
+          return;
+        }
+        const mapped: Product[] = apiProducts.map((p: any) => ({
+          id: p.id ?? '',
+          name: p.name ?? '',
+          price: Number(p.price) ?? 0,
+          stock: Number(p.stock) ?? 0,
+          image: p.image ?? '',
+          description: p.description ?? '',
+          category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
+        }));
+        setProducts(mapped);
+      })
+      .catch((err) => {
+        console.error('[Dashboard] fetchProducts failed:', err);
+        setProducts([]);
+      })
+      .finally(() => setProductsLoading(false));
+  }, [user?.id, user?.businessId]);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -101,14 +93,13 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
   
   const [imagePreview, setImagePreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const productImageFileRef = useRef<File | null>(null);
+  const onClearHighlightRef = useRef(onClearHighlight);
+  const highlightedProductIdHandledRef = useRef<string | null>(null);
 
-  // Save products to localStorage whenever they change
   useEffect(() => {
-    if (user?.businessId || user?.id) {
-      const storageKey = `business_products_${user?.businessId || user?.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(products));
-    }
-  }, [products, user]);
+    onClearHighlightRef.current = onClearHighlight;
+  }, [onClearHighlight]);
 
   // Handle initial scroll to product management section if targetSection is 'products'
   useEffect(() => {
@@ -156,114 +147,78 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
     }
   }, [targetSection]);
 
-  // Handle highlighting a specific product
+  // Handle highlighting a specific product (run only when highlightProductId changes, not when parent re-renders)
   useEffect(() => {
-    if (highlightProductId) {
-      // Ensure products tab is active
-      setActiveTab('products');
-      
-      // Wait for DOM to be ready
-      const timer = setTimeout(() => {
-        const productElement = document.querySelector(`[data-product-id="${highlightProductId}"]`);
-        if (productElement) {
-          // Scroll to the product with offset
-          const yOffset = -100;
-          const y = productElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-          
-          // Add highlight effect
-          productElement.classList.add('ring-4', 'ring-green-600', 'ring-offset-4', 'scale-105');
-          setTimeout(() => {
-            productElement.classList.remove('ring-4', 'ring-green-600', 'ring-offset-4', 'scale-105');
-            if (onClearHighlight) {
-              onClearHighlight();
-            }
-          }, 2500);
-        }
-      }, 500);
-      
-      return () => clearTimeout(timer);
+    if (!highlightProductId) {
+      highlightedProductIdHandledRef.current = null;
+      return;
     }
-  }, [highlightProductId, onClearHighlight]);
+    // Only run once per distinct highlight (avoid re-running when parent passes new onClearHighlight)
+    if (highlightedProductIdHandledRef.current === highlightProductId) return;
+    highlightedProductIdHandledRef.current = highlightProductId;
 
-  // Period-specific data
-  const periodData: Record<'week' | 'month' | 'year', PeriodData> = {
-    week: {
-      totalRevenue: 15420,
-      totalSold: 127,
-      totalViews: 1048,
-      conversionRate: 12.1,
-      revenueGrowth: 18.5,
-      soldGrowth: 12.3,
-      viewsGrowth: 9.8,
-      conversionGrowth: 5.2,
-    },
-    month: {
-      totalRevenue: 59730,
-      totalSold: 511,
-      totalViews: 4194,
-      conversionRate: 12.2,
-      revenueGrowth: 22.1,
-      soldGrowth: 15.2,
-      viewsGrowth: 12.5,
-      conversionGrowth: 8.3,
-    },
-    year: {
-      totalRevenue: 687450,
-      totalSold: 5823,
-      totalViews: 48762,
-      conversionRate: 11.9,
-      revenueGrowth: 35.7,
-      soldGrowth: 28.4,
-      viewsGrowth: 31.2,
-      conversionGrowth: 14.6,
-    },
+    setActiveTab('products');
+    const timer = setTimeout(() => {
+      const productElement = document.querySelector(`[data-product-id="${highlightProductId}"]`);
+      if (productElement) {
+        const yOffset = -100;
+        const y = productElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+        productElement.classList.add('ring-4', 'ring-green-600', 'ring-offset-4', 'scale-105');
+        setTimeout(() => {
+          productElement.classList.remove('ring-4', 'ring-green-600', 'ring-offset-4', 'scale-105');
+          onClearHighlightRef.current?.();
+        }, 2500);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [highlightProductId]);
+
+  const [dashboardData, setDashboardData] = useState<BusinessDashboardDto | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  useEffect(() => {
+    const businessId = user?.businessId || user?.id;
+    if (!businessId) {
+      setDashboardData(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDashboardLoading(true);
+    fetchBusinessDashboardAnalytics({ businessId, period: selectedPeriod })
+      .then((data) => {
+        if (!cancelled) setDashboardData(data);
+      })
+      .catch((err) => {
+        console.error('[Dashboard] fetchBusinessDashboardAnalytics failed:', err);
+        if (!cancelled) setDashboardData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDashboardLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.businessId, selectedPeriod]);
+
+  const currentData = dashboardData?.stats ?? {
+    totalRevenue: 0,
+    totalSold: 0,
+    averageUnitsPerOrder: 0,
+    revenueGrowth: 0,
+    soldGrowth: 0,
+    conversionGrowth: 0,
   };
 
-  const currentData = periodData[selectedPeriod];
+  // Sorted by revenue in the backend.
+  const sortedProducts = dashboardData?.topProducts ?? [];
+  const salesByProduct = dashboardData?.salesByProduct ?? [];
+  const revenueByProduct = dashboardData?.revenueByProduct ?? [];
+  const monthlyData = dashboardData?.monthlySeries ?? [];
 
-  // Calculate product stats based on period
-  const getProductStatsForPeriod = () => {
-    const multiplier = selectedPeriod === 'week' ? 0.25 : selectedPeriod === 'month' ? 1 : 12;
-    return products.map(p => ({
-      ...p,
-      sold: Math.floor(p.sold * multiplier),
-      revenue: Math.floor(p.revenue * multiplier),
-      views: Math.floor(p.views * multiplier),
-    }));
-  };
-
-  const periodProducts = getProductStatsForPeriod();
-  const sortedProducts = [...periodProducts].sort((a, b) => b.revenue - a.revenue);
-
-  // Calculate actual totals from products
-  const actualTotalSold = sortedProducts.reduce((sum, p) => sum + p.sold, 0);
   const actualTotalRevenue = sortedProducts.reduce((sum, p) => sum + p.revenue, 0);
-
-  // Sales data by product (for pie chart)
-  const salesByProduct = sortedProducts.map(p => ({
-    name: p.name,
-    value: p.sold,
-    revenue: p.revenue,
-    percentage: actualTotalSold > 0 ? ((p.sold / actualTotalSold) * 100).toFixed(1) : '0.0'
-  }));
-
-  // Revenue by product (for pie chart)
-  const revenueByProduct = sortedProducts.map(p => ({
-    name: p.name,
-    value: p.revenue,
-    percentage: actualTotalRevenue > 0 ? ((p.revenue / actualTotalRevenue) * 100).toFixed(1) : '0.0'
-  }));
-
-  // Monthly data for line chart
-  const monthlyData = [
-    { month: 'Jan', sales: 45, revenue: 6750, views: 2400, orders: 38 },
-    { month: 'Feb', sales: 52, revenue: 7800, views: 3200, orders: 45 },
-    { month: 'Mar', sales: 48, revenue: 7200, views: 2800, orders: 41 },
-    { month: 'Apr', sales: 61, revenue: 9150, views: 4100, orders: 52 },
-    { month: 'May', sales: 70, revenue: 10500, views: 3900, orders: 61 },
-    { month: 'Jun', sales: 85, revenue: 12750, views: 4800, orders: 73 },
-  ];
 
   // Colors for charts - Professional palette
   const COLORS = ['#16a34a', '#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
@@ -271,11 +226,11 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      productImageFileRef.current = file;
       const reader = new FileReader();
       reader.onloadend = () => {
-        const result = reader.result as string;
-        setImagePreview(result);
-        setNewProduct({ ...newProduct, image: result });
+        setImagePreview(reader.result as string);
+        setNewProduct((prev) => ({ ...prev, image: '' }));
       };
       reader.readAsDataURL(file);
     }
@@ -288,38 +243,75 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
     return categorySelectValue;
   };
 
-  const handleAddProduct = () => {
+  const [productSubmitError, setProductSubmitError] = useState<string | null>(null);
+
+  const mapCategoryToApi = (cat: string): 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' => {
+    const m: Record<string, 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation'> = {
+      Seeds: 'seeds',
+      Plants: 'plants',
+      Fertilizers: 'fertilizers',
+      Tools: 'tools',
+      Equipment: 'tools',
+    };
+    return m[cat] ?? 'plants';
+  };
+
+  const handleAddProduct = async () => {
     const finalCategory = getFinalCategory();
-    
-    // Validation
-    if (!newProduct.name || !newProduct.price || !finalCategory || !newProduct.image) {
-      // You might want to show an error toast here
+    const businessId = user?.businessId || user?.id;
+
+    if (!newProduct.name || !newProduct.price || !finalCategory) {
+      setProductSubmitError('Please fill in name, price, and category.');
+      return;
+    }
+    if (!businessId) {
+      setProductSubmitError('You must be logged in as a business to add products.');
       return;
     }
 
-    const product: Product = {
-      id: Date.now().toString(),
-      name: newProduct.name,
-      price: newProduct.price,
-      stock: newProduct.stock || 0,
-      description: newProduct.description || '',
-      category: finalCategory,
-      image: newProduct.image, // removed default image
-      views: 0,
-      sold: 0,
-      revenue: 0,
-    };
-    setProducts([...products, product]);
-    resetProductForm();
-    setShowAddProductModal(false);
+    setProductSubmitError(null);
+    try {
+      const imageFile = productImageFileRef.current;
+      await createProduct(
+        {
+          name: newProduct.name,
+          description: newProduct.description || '',
+          price: Number(newProduct.price),
+          image: imageFile ? undefined : newProduct.image || undefined,
+          category: mapCategoryToApi(finalCategory),
+          stock: Number(newProduct.stock) || 0,
+          businessId,
+        },
+        imageFile || undefined
+      );
+      setProductsLoading(true);
+      const apiProducts = await fetchProducts({ businessId });
+      const mapped: Product[] = (Array.isArray(apiProducts) ? apiProducts : []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        stock: p.stock,
+        image: p.image ?? '',
+        description: p.description ?? '',
+        category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
+      }));
+      setProducts(mapped);
+      resetProductForm();
+      setShowAddProductModal(false);
+    } catch (err: any) {
+      setProductSubmitError(err?.message || 'Failed to add product. Please try again.');
+    } finally {
+      setProductsLoading(false);
+    }
   };
 
   const handleEditProduct = (product: Product) => {
+    productImageFileRef.current = null;
     setEditingProduct(product);
-    setNewProduct(product);
-    setImagePreview(product.image);
-    
-    // Set category logic
+    setNewProduct({ ...product, image: product.image ?? '' });
+    setImagePreview(product.image ? getImageUrl(product.image) || product.image : '');
+    setProductSubmitError(null);
+
     if (PREDEFINED_CATEGORIES.includes(product.category)) {
       setCategorySelectValue(product.category);
       setCustomCategory('');
@@ -327,21 +319,53 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
       setCategorySelectValue('Other');
       setCustomCategory(product.category);
     }
-    
+
     setShowAddProductModal(true);
   };
 
-  const handleUpdateProduct = () => {
+  const handleUpdateProduct = async () => {
     const finalCategory = getFinalCategory();
+    const businessId = user?.businessId || user?.id;
 
-    if (editingProduct && newProduct.name && newProduct.price && finalCategory && newProduct.image) {
-      setProducts(products.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, ...newProduct, category: finalCategory } as Product
-          : p
-      ));
+    if (!editingProduct || !newProduct.name || newProduct.price == null || !finalCategory) {
+      setProductSubmitError('Please fill in name, price, and category.');
+      return;
+    }
+    if (!businessId) {
+      setProductSubmitError('You must be logged in as a business to update products.');
+      return;
+    }
+
+    setProductSubmitError(null);
+    try {
+      setProductsLoading(true);
+      const imageFile = productImageFileRef.current;
+      const payload = {
+        name: newProduct.name,
+        description: newProduct.description || '',
+        price: Number(newProduct.price),
+        category: mapCategoryToApi(finalCategory),
+        stock: Number(newProduct.stock) ?? 0,
+        image: imageFile ? undefined : (newProduct.image ?? editingProduct.image),
+      };
+      await updateProduct(editingProduct.id, payload, imageFile || undefined);
+      const apiProducts = await fetchProducts({ businessId });
+      const mapped: Product[] = (Array.isArray(apiProducts) ? apiProducts : []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        stock: p.stock,
+        image: p.image ?? '',
+        description: p.description ?? '',
+        category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
+      }));
+      setProducts(mapped);
       resetProductForm();
       setShowAddProductModal(false);
+    } catch (err: any) {
+      setProductSubmitError(err?.message || 'Failed to update product. Please try again.');
+    } finally {
+      setProductsLoading(false);
     }
   };
 
@@ -359,11 +383,14 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
   };
 
   const resetProductForm = () => {
+    productImageFileRef.current = null;
+    setImagePreview('');
     setNewProduct({ name: '', price: 0, stock: 0, description: '', image: '', category: '' });
     setImagePreview('');
     setCategorySelectValue('');
     setCustomCategory('');
     setEditingProduct(null);
+    setProductSubmitError(null);
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -372,7 +399,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
         <div className="bg-white p-4 rounded-lg shadow-xl border border-neutral-200">
           <p className="font-semibold text-neutral-900 mb-1">{payload[0].payload.name}</p>
           <p className="text-sm text-green-600 font-medium">
-            {payload[0].name === 'value' ? `${payload[0].value} units` : `SR ${payload[0].value.toLocaleString()}`}
+            {payload[0].name === 'value' ? `${payload[0].value} units` : `$${payload[0].value.toLocaleString()}`}
           </p>
           <p className="text-xs text-neutral-600 mt-1">
             {payload[0].payload.percentage}% of total
@@ -448,10 +475,10 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
         </div>
 
         {/* Stats Cards - Redesigned */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatsCard 
             title="Total Revenue" 
-            value={`SR ${currentData.totalRevenue.toLocaleString()}`} 
+            value={`$${currentData.totalRevenue.toLocaleString()}`} 
             growth={currentData.revenueGrowth}
             trend={currentData.revenueGrowth}
             icon={DollarSign}
@@ -468,17 +495,8 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
             bgClass="bg-orange-50"
           />
           <StatsCard 
-            title="Total Views" 
-            value={currentData.totalViews.toLocaleString()} 
-            growth={currentData.viewsGrowth}
-            trend={currentData.viewsGrowth}
-            icon={Eye}
-            colorClass="text-blue-600"
-            bgClass="bg-blue-50"
-          />
-          <StatsCard 
-            title="Conversion Rate" 
-            value={`${currentData.conversionRate}%`} 
+            title="Avg Units / Order" 
+            value={currentData.averageUnitsPerOrder.toFixed(2)} 
             growth={currentData.conversionGrowth}
             trend={currentData.conversionGrowth}
             icon={Percent}
@@ -583,7 +601,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                         <span className="text-sm font-medium text-neutral-700">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-bold text-green-600">SR {item.value.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-green-600">${item.value.toLocaleString()}</span>
                         <p className="text-xs text-neutral-500">{item.percentage}%</p>
                       </div>
                     </div>
@@ -628,7 +646,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                     dataKey="revenue" 
                     stroke="#16a34a" 
                     strokeWidth={3} 
-                    name="Revenue (SR)"
+                    name="Revenue ($)"
                     dot={{ fill: '#16a34a', r: 5 }}
                     activeDot={{ r: 7 }}
                   />
@@ -661,6 +679,18 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
               </div>
 
               <div className="overflow-hidden rounded-xl border border-neutral-200">
+                {productsLoading || dashboardLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                    <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
+                    <p>Loading products...</p>
+                  </div>
+                ) : sortedProducts.length === 0 ? (
+                  <div className="text-center py-16 text-neutral-500">
+                    <Package className="w-14 h-14 mx-auto mb-4 text-neutral-300" />
+                    <p className="font-medium text-neutral-600">No products yet</p>
+                    <p className="text-sm mt-1">Add products in the Product Inventory tab to see performance here.</p>
+                  </div>
+                ) : (
                 <table className="w-full">
                   <thead>
                     <tr className="bg-neutral-50 border-b border-neutral-200">
@@ -669,7 +699,6 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                       <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Category</th>
                       <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Units Sold</th>
                       <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Revenue</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Views</th>
                       <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">% of Total</th>
                     </tr>
                   </thead>
@@ -696,13 +725,13 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-4">
                               <ImageWithFallback 
-                                src={product.image} 
+                                src={getImageUrl(product.image)} 
                                 alt={product.name} 
                                 className="w-14 h-14 rounded-lg object-cover border-2 border-neutral-100"
                               />
                               <div>
                                 <p className="font-semibold text-neutral-900">{product.name}</p>
-                                <p className="text-sm text-neutral-500">SR {product.price}</p>
+                                <p className="text-sm text-neutral-500">${product.price}</p>
                               </div>
                             </div>
                           </td>
@@ -716,10 +745,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                             <p className="text-xs text-neutral-500">units</p>
                           </td>
                           <td className="px-6 py-5 text-right">
-                            <p className="font-bold text-green-600">SR {product.revenue.toLocaleString()}</p>
-                          </td>
-                          <td className="px-6 py-5 text-right">
-                            <p className="font-semibold text-blue-600">{product.views.toLocaleString()}</p>
+                            <p className="font-bold text-green-600">${product.revenue.toLocaleString()}</p>
                           </td>
                           <td className="px-6 py-5 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -737,6 +763,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                     })}
                   </tbody>
                 </table>
+                )}
               </div>
             </Card>
           </TabsContent>
@@ -761,13 +788,32 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                 </Button>
               </div>
               
+              {productsLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                  <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
+                  <p>Loading products...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-16 text-neutral-500 border border-dashed border-neutral-200 rounded-2xl">
+                  <Package className="w-14 h-14 mx-auto mb-4 text-neutral-300" />
+                  <p className="font-medium text-neutral-600">No products yet</p>
+                  <p className="text-sm mt-1">Add your first product to get started.</p>
+                  <Button
+                    onClick={() => { resetProductForm(); setShowAddProductModal(true); }}
+                    className="mt-4 bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+              ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {products.map((product) => (
                   <div key={product.id} className="group relative bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-green-500 transition-all duration-300" data-product-id={product.id}>
                     {/* Product Image */}
                     <div className="relative h-52 overflow-hidden bg-neutral-100">
                       <ImageWithFallback 
-                        src={product.image} 
+                        src={getImageUrl(product.image)} 
                         alt={product.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                       />
@@ -805,7 +851,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                       {/* Price */}
                       <div className="flex items-center justify-between mb-4 p-3 bg-green-50 rounded-xl">
                         <span className="text-sm text-neutral-700 font-medium">Price</span>
-                        <span className="text-xl font-bold text-green-600">SR {product.price}</span>
+                        <span className="text-xl font-bold text-green-600">${product.price}</span>
                       </div>
 
                       {/* Stats Grid */}
@@ -823,6 +869,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                   </div>
                 ))}
               </div>
+              )}
             </Card>
           </TabsContent>
         </Tabs>
@@ -861,11 +908,13 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                   <div className="flex gap-4">
                     {imagePreview ? (
                       <div className="relative w-48 h-48 rounded-xl overflow-hidden border-2 border-green-500 shadow-lg shrink-0">
-                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(imagePreview) || imagePreview} alt="Preview" className="w-full h-full object-cover" />
                         <button
+                          type="button"
                           onClick={() => {
+                            productImageFileRef.current = null;
                             setImagePreview('');
-                            setNewProduct({ ...newProduct, image: '' });
+                            setNewProduct((prev) => ({ ...prev, image: '' }));
                           }}
                           className="absolute top-2 right-2 p-1.5 bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                         >
@@ -967,9 +1016,9 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Price (SR) *</label>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Price ($) *</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-medium">SR</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-medium">$</span>
                       <input
                         type="number"
                         value={newProduct.price || ''}
@@ -994,12 +1043,16 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
               </div>
             </div>
 
+            {productSubmitError && (
+              <div className="px-8 py-2 text-red-600 text-sm">{productSubmitError}</div>
+            )}
             {/* Footer - Fixed */}
             <div className="flex-none border-t border-neutral-200 px-8 py-6 bg-neutral-50 flex gap-4 rounded-b-2xl">
               <Button
                 variant="outline"
                 className="flex-1 border-2 h-11"
                 onClick={() => {
+                  setProductSubmitError(null);
                   setShowAddProductModal(false);
                   resetProductForm();
                 }}
@@ -1008,7 +1061,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
               </Button>
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700 h-11"
-                disabled={!newProduct.name || !newProduct.price || !getFinalCategory() || !newProduct.image}
+                disabled={!newProduct.name || !newProduct.price || !getFinalCategory()}
                 onClick={editingProduct ? handleUpdateProduct : handleAddProduct}
               >
                 <Save className="w-5 h-5 mr-2" />
@@ -1042,7 +1095,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
               
               <div className="bg-neutral-50 border-2 border-neutral-200 rounded-xl p-4 flex items-center gap-4 mb-6">
                 <ImageWithFallback 
-                  src={productToDelete.image} 
+                  src={getImageUrl(productToDelete.image)} 
                   alt={productToDelete.name} 
                   className="w-20 h-20 rounded-lg object-cover"
                 />

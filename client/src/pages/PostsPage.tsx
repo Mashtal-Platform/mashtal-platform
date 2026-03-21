@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface PostsPageProps {
   onSavePost: (item: SavedItem) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
   onNavigateToBusiness: (businessId: string) => void;
   onNavigateToUserProfile: (userId: string) => void;
   followedBusinesses: any[];
@@ -23,6 +24,7 @@ interface PostsPageProps {
 
 export function PostsPage({ 
   onSavePost, 
+  onRemoveSavedItem,
   onNavigateToBusiness, 
   onNavigateToUserProfile, 
   followedBusinesses, 
@@ -398,7 +400,9 @@ export function PostsPage({
         {/* Posts Feed with ref to first post */}
         <div ref={firstPostRef}>
           <PostsFeed 
-            onSavePost={onSavePost} 
+            onSavePost={onSavePost}
+            onRemoveSavedItem={onRemoveSavedItem}
+            savedItems={savedItems}
             onNavigateToBusiness={onNavigateToBusiness} 
             onNavigateToUserProfile={onNavigateToUserProfile}
             followedBusinesses={followedBusinesses} 

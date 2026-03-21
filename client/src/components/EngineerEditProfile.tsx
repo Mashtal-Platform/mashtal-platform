@@ -1,6 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { User, Camera, Save, X, Plus, Trash2 } from 'lucide-react';
 import { UserProfile } from '../App';
+import { LebanonLocationPicker } from './LebanonLocationPicker';
+import { PhoneInput } from './PhoneInput';
+
+// Backend validation compatibility (server/src/controllers/userController.js)
+function isServerPhoneCompatible(phone: string) {
+  const trimmed = String(phone || '').trim();
+  if (!trimmed) return true;
+  if (!/^\+?[\d\s\-]*$/.test(trimmed)) return false;
+  const digits = trimmed.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15;
+}
 
 interface EngineerEditProfileProps {
   profile: UserProfile;
@@ -17,6 +28,8 @@ interface CustomField {
 export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditProfileProps) {
   const [editedProfile, setEditedProfile] = useState(profile);
   const [customFields, setCustomFields] = useState<CustomField[]>(profile.customFields || []);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -59,8 +72,23 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
     ));
   };
 
-  const handleSave = () => {
-    onSave({ ...editedProfile, customFields });
+  const handleSave = async () => {
+    const phone = editedProfile.phone ?? '';
+    setPhoneError(null);
+    if (phone.trim()) {
+      if (!isServerPhoneCompatible(phone)) {
+        setPhoneError('Please enter a valid phone number (digits with optional +, spaces/dashes; e.g. +961 70 123 456).');
+        return;
+      }
+    }
+    try {
+      setSaving(true);
+      await onSave({ ...editedProfile, customFields });
+    } catch (err) {
+      // ProfilePage shows the error banner; suppress unhandled promise rejection here.
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -140,24 +168,28 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">Phone *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={editedProfile.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
+                <PhoneInput
+                  label="Phone"
+                  value={editedProfile.phone ?? ''}
+                  defaultCountry="LB"
+                  placeholder="e.g. +961 70 123 456"
+                  onChange={(v) => {
+                    setPhoneError(null);
+                    setEditedProfile({ ...editedProfile, phone: v });
+                  }}
                 />
+                {phoneError && (
+                  <div className="mt-1 text-xs text-red-600">{phoneError}</div>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">Location *</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={editedProfile.location}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
+                <LebanonLocationPicker
+                  label="Location"
+                  value={editedProfile.location ?? ''}
+                  required
+                  placeholder="Search city or village in Lebanon…"
+                  onChange={(v) => setEditedProfile({ ...editedProfile, location: v })}
                 />
               </div>
             </div>
@@ -361,7 +393,8 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors"
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
                 <span>Save Changes</span>

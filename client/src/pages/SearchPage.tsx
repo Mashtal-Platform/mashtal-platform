@@ -1,7 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, MapPin, Star, X, CheckCircle, Package, FileText, MessageCircle, Building2, Award } from 'lucide-react';
-import { otherUsers, mockPosts, mockThreads, mockProducts } from '../data/centralMockData';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchBusinesses, UserDto } from '../shared/api/users';
+import { fetchProducts, ShoppingProductDto } from '../shared/api/products';
+import { fetchPosts, PostDto } from '../shared/api/posts';
+import { fetchThreads, ThreadDto } from '../shared/api/threads';
+import { getImageUrl } from '../shared/api/client';
 
 // Unified search result type
 interface SearchResult {
@@ -35,115 +39,143 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [location, setLocation] = useState('all');
+  const [businesses, setBusinesses] = useState<UserDto[]>([]);
+  const [products, setProducts] = useState<ShoppingProductDto[]>([]);
+  const [posts, setPosts] = useState<PostDto[]>([]);
+  const [threads, setThreads] = useState<ThreadDto[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [biz, prods, postList, threadList] = await Promise.all([
+          fetchBusinesses().catch(() => []),
+          fetchProducts().catch(() => []),
+          fetchPosts().catch(() => []),
+          fetchThreads().catch(() => []),
+        ]);
+        setBusinesses(biz as UserDto[]);
+        setProducts(prods as ShoppingProductDto[]);
+        setPosts(postList as PostDto[]);
+        setThreads(threadList as ThreadDto[]);
+      } catch (err) {
+        console.error('[SearchPage] Failed to load search data from backend:', err);
+      }
+    };
+    load();
+  }, []);
 
   // Build unified search results
   const allResults: SearchResult[] = useMemo(() => {
     const results: SearchResult[] = [];
 
     // Add businesses
-    otherUsers
-      .filter(u => u.role === 'business')
-      .forEach(business => {
+    businesses
+      .filter((u) => u.role === 'business')
+      .forEach((business) => {
         results.push({
           id: business.id,
           type: 'business',
           title: business.fullName,
-          description: business.bio,
-          image: business.avatar,
+          description: business.bio || '',
+          image: business.avatar || '',
           verified: business.verified,
           rating: business.rating,
           location: business.location,
-          data: business
+          data: business,
         });
       });
 
     // Add engineers
-    otherUsers
-      .filter(u => u.role === 'engineer')
-      .forEach(engineer => {
+    businesses
+      .filter((u) => u.role === 'engineer')
+      .forEach((engineer) => {
         results.push({
           id: engineer.id,
           type: 'engineer',
           title: engineer.fullName,
-          subtitle: engineer.title || 'Agricultural Engineer',
-          description: engineer.bio,
-          image: engineer.avatar,
+          subtitle: 'Agricultural Engineer',
+          description: engineer.bio || '',
+          image: engineer.avatar || '',
           verified: engineer.verified,
           location: engineer.location,
-          data: engineer
+          data: engineer,
         });
       });
 
     // Add agronomists
-    otherUsers
-      .filter(u => u.role === 'agronomist')
-      .forEach(agronomist => {
+    businesses
+      .filter((u) => u.role === 'agronomist')
+      .forEach((agronomist) => {
         results.push({
           id: agronomist.id,
           type: 'agronomist',
           title: agronomist.fullName,
           subtitle: 'Agricultural Expert',
-          description: agronomist.bio,
-          image: agronomist.avatar,
+          description: agronomist.bio || '',
+          image: agronomist.avatar || '',
           verified: agronomist.verified,
           location: agronomist.location,
-          data: agronomist
+          data: agronomist,
         });
       });
 
     // Add products
-    mockProducts.forEach(product => {
-      const business = otherUsers.find(u => u.id === product.businessId || u.businessId === product.businessId);
+    products.forEach((product) => {
+      const business = businesses.find(
+        (u) => u.id === product.businessId,
+      );
       results.push({
         id: product.id,
         type: 'product',
         title: product.name,
         description: product.description,
-        image: product.image,
+        image: product.image || '',
         price: product.price,
-        authorName: business?.fullName || business?.name || 'Unknown Business',
-        authorImage: business?.avatar || business?.logo,
+        authorName: business?.fullName || 'Unknown Business',
+        authorImage: business?.avatar,
         rating: product.rating,
-        data: product
+        data: product,
       });
     });
 
-    // Add posts
-    mockPosts.forEach(post => {
-      const author = otherUsers.find(u => u.id === post.authorId);
+    // Add posts - use author from API; no subtitle so we only show "Posted by [name]" once
+    posts.forEach((post) => {
+      const author = post.author;
+      const authorName = author?.name ?? author?.fullName ?? 'User';
       results.push({
         id: post.id,
         type: 'post',
         title: post.title || 'Post',
-        subtitle: author?.fullName || author?.name || 'User',
+        subtitle: undefined,
         description: post.content,
-        image: post.image,
-        authorName: author?.fullName || author?.name,
-        authorImage: author?.avatar || author?.logo,
+        image: post.image || '',
+        authorName,
+        authorImage: author?.avatar,
         verified: author?.verified,
-        data: post
+        data: post,
       });
     });
 
-    // Add threads
-    mockThreads.forEach(thread => {
-      const author = otherUsers.find(u => u.id === thread.authorId);
+    // Add threads - use author from API; no subtitle so we only show "Posted by [name]" once
+    threads.forEach((thread) => {
+      const author = thread.author;
+      const authorName = author?.name ?? author?.fullName ?? 'User';
       results.push({
         id: thread.id,
         type: 'thread',
         title: thread.title || 'Thread',
-        subtitle: author?.fullName || author?.name || 'User',
+        subtitle: undefined,
         description: thread.content,
-        image: author?.avatar || author?.logo || 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400',
-        authorName: author?.fullName || author?.name,
-        authorImage: author?.avatar || author?.logo,
+        image: author?.avatar || '',
+        authorName,
+        authorImage: author?.avatar,
         verified: author?.verified,
-        data: thread
+        data: thread,
       });
     });
 
     return results;
-  }, []);
+  }, [businesses, products, posts, threads]);
 
   // Apply all filters
   const filteredResults = useMemo(() => {
@@ -391,13 +423,19 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
               className="bg-white border border-neutral-200 rounded-xl p-4 hover:shadow-lg hover:border-green-300 transition-all cursor-pointer"
             >
               <div className="flex items-start gap-4">
-                {/* Image/Avatar */}
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={result.image}
-                    alt={result.title}
-                    className="w-20 h-20 rounded-lg object-cover"
-                  />
+                {/* Image/Avatar - resolve path via getImageUrl so server-hosted images load correctly */}
+                <div className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-neutral-100">
+                  {getImageUrl(result.image) ? (
+                    <img
+                      src={getImageUrl(result.image)}
+                      alt={result.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                      {getResultIcon(result.type)}
+                    </div>
+                  )}
                   {result.verified && (
                     <div className="absolute -top-1 -right-1 bg-green-600 text-white p-1 rounded-full">
                       <CheckCircle className="w-3 h-3" />
@@ -434,7 +472,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                         <div className="flex items-center gap-2 mb-2">
                           {result.authorImage && (
                             <img
-                              src={result.authorImage}
+                              src={getImageUrl(result.authorImage)}
                               alt={result.authorName}
                               className="w-5 h-5 rounded-full object-cover"
                             />
@@ -467,7 +505,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                         )}
                         {result.price && (
                           <div className="text-green-600 font-semibold">
-                            SR {result.price}
+                            $ {result.price}
                           </div>
                         )}
                       </div>

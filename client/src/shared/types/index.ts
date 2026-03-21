@@ -113,6 +113,8 @@ export interface SavedItem {
   image: string;
   description: string;
   savedAt: Date;
+  /** Set for product type – business that owns the product */
+  businessId?: string;
 }
 
 export interface Post {

@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Leaf, Sprout, Shovel, TreePine, Filter, MapPin, X } from 'lucide-react';
-import { otherUsers } from '../data/centralMockData';
+import React, { useState, useEffect } from 'react';
+import { Leaf, Sprout, Shovel, TreePine, Filter, MapPin, X, Building2 } from 'lucide-react';
+import { fetchBusinesses } from '../shared/api/users';
+import { getImageUrl } from '../shared/api/client';
+import type { Page } from '../App';
 
 interface SearchDiscoveryProps {
   onViewBusiness: (businessId: string) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 const categories = [
@@ -13,30 +16,28 @@ const categories = [
   { id: 'plants', name: 'Trees & Plants', icon: TreePine },
 ];
 
-export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
+export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [location, setLocation] = useState('all');
+  const [businesses, setBusinesses] = useState<any[]>([]);
 
-  const businesses = otherUsers.filter(u => u.role === 'business');
+  useEffect(() => {
+    fetchBusinesses()
+      .then(setBusinesses)
+      .catch(() => setBusinesses([]));
+  }, []);
 
-  // Filter businesses based on category and advanced filters
-  const filteredBusinesses = businesses.filter(business => {
-    // Category filter - searching bio for matching terms
-    const matchesCategory = selectedCategory === 'all' || 
-      business.bio.toLowerCase().includes(selectedCategory.toLowerCase());
-
-    // Rating filter
-    const matchesRating = (business.rating || 0) >= minRating;
-
-    // Verified filter
+  const filteredBusinesses = businesses.filter((business: any) => {
+    const bio = (business.bio || '').toLowerCase();
+    const matchesCategory =
+      selectedCategory === 'all' || bio.includes(selectedCategory.toLowerCase());
+    const matchesRating = (business.rating ?? 0) >= minRating;
     const matchesVerified = !verifiedOnly || business.verified;
-
-    // Location filter
-    const matchesLocation = location === 'all' || business.location.includes(location);
-
+    const loc = business.location || '';
+    const matchesLocation = location === 'all' || (typeof loc === 'string' && loc.includes(location));
     return matchesCategory && matchesRating && matchesVerified && matchesLocation;
   });
 
@@ -179,12 +180,18 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
               className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
               onClick={() => onViewBusiness(business.businessId || business.id)}
             >
-              <div className="relative h-48">
-                <img
-                  src={business.avatar}
-                  alt={business.fullName}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative h-48 bg-neutral-100">
+                {getImageUrl(business.avatar) ? (
+                  <img
+                    src={getImageUrl(business.avatar)}
+                    alt={business.fullName || 'Business'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                    <Building2 className="w-16 h-16" />
+                  </div>
+                )}
                 {business.verified && (
                   <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
                     Verified
@@ -193,20 +200,20 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
               </div>
               
               <div className="p-5">
-                <h3 className="text-xl text-neutral-900 mb-2">{business.fullName}</h3>
+                <h3 className="text-xl text-neutral-900 mb-2">{business.fullName || business.companyName || 'Business'}</h3>
                 <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
-                  <MapPin className="w-4 h-4" />
-                  <span>{business.location}</span>
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span>{business.location || '—'}</span>
                 </div>
-                <p className="text-neutral-600 mb-4 line-clamp-2">{business.bio}</p>
-                
+                <p className="text-neutral-600 mb-4 line-clamp-2">{business.bio || 'No description'}</p>
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <span className="text-amber-500">★</span>
-                    <span className="text-neutral-900">{business.rating}</span>
-                    <span className="text-neutral-500 text-sm">({business.reviewsCount})</span>
+                    <span className="text-neutral-900">{typeof business.rating === 'number' ? business.rating.toFixed(1) : '—'}</span>
+                    <span className="text-neutral-500 text-sm">({business.reviewsCount ?? 0} reviews)</span>
                   </div>
-                  <div className="text-sm text-green-600">{business.followers} followers</div>
+                  <div className="text-sm text-green-600">{(business.followersCount ?? 0).toLocaleString()} followers</div>
                 </div>
               </div>
             </div>
@@ -232,9 +239,8 @@ export function SearchDiscovery({ onViewBusiness }: SearchDiscoveryProps) {
           <div className="text-center mt-12">
             <button 
               onClick={() => {
-                // In a real app, this would load more businesses from the backend
-                // For now, it just shows a message
-                alert('Loading more businesses...');
+                // Navigate to the full businesses listing
+                onNavigate?.('businesses');
               }}
               className="px-8 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors"
             >

@@ -1,23 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, Search, ArrowLeft, Circle, HardHat, Building2, User, Leaf, Shield } from 'lucide-react';
-import { mockChats as centralChats, mockChatMessages as centralChatMessages, currentUser, otherUsers } from '../data/centralMockData';
+import { MessageCircle, Send, Search, ArrowLeft, Circle, HardHat, Building2, User, Leaf, Shield, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from '../contexts/AuthContext';
+import { getConversations, createOrGetConversation, getMessages, editMessage as apiEditMessage, deleteMessage as apiDeleteMessage, type ChatConversation, type ChatMessageDto } from '../shared/api/chat';
+import { getImageUrl, SOCKET_URL } from '../shared/api/client';
 
 interface ChatsPageProps {
   onNavigateToProfile: (profileId: string) => void;
   selectedProfileId?: string | null;
+  /** Navigate in-app to a post or thread by ID (used when clicking shared links). */
+  onNavigateWithParams?: (page: string, params: { highlightPostId?: string; highlightThreadId?: string }) => void;
 }
 
-interface Chat {
-  id: string;
-  profileId: string;
-  profileName: string;
-  profileAvatar: string;
-  profileType: 'business' | 'engineer' | 'visitor';
-  lastMessage: string;
-  lastMessageTime: string;
-  unread: number;
-  online: boolean;
+/** Normalized shape for shared post in chat (backend returns postId, postTitle, postImage, postUrl, postOwnerName, postOwnerAvatar). */
+interface SharedPostData {
+  postId?: string;
+  postTitle?: string;
+  postImage?: string;
+  postUrl?: string;
+  postOwnerName?: string;
+  postOwnerAvatar?: string;
+  title?: string;
+  image?: string;
+  url?: string;
+  authorName?: string;
 }
 
 interface Message {
@@ -25,194 +32,351 @@ interface Message {
   chatId: string;
   text: string;
   sender: 'user' | 'other';
-  timestamp: Date;
+  timestamp: Date | string;
+  sharedPost?: SharedPostData;
 }
 
-export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageProps) {
-  // Initialize chats from mock data and selected profile
-  const initializeChats = (): Chat[] => {
-    const baseChats = centralChats.map(c => {
-      const otherParticipantId = c.participants.find(p => p !== 'me') || '';
-      const otherParticipant = otherUsers.find(u => u.id === otherParticipantId) || currentUser;
-      return {
-        id: c.id,
-        profileId: otherParticipant.id,
-        profileName: otherParticipant.fullName,
-        profileAvatar: otherParticipant.avatar,
-        profileType: otherParticipant.role as any,
-        lastMessage: c.lastMessage || '',
-        lastMessageTime: c.lastMessageTime || '',
-        unread: c.unreadCount,
-        online: true,
-      };
-    });
-    
-    // If a profile is selected and not already in chats, create a new chat
-    if (selectedProfileId) {
-      const existingChat = baseChats.find(c => c.profileId === selectedProfileId);
-      if (!existingChat) {
-        const profile = otherUsers.find(u => u.id === selectedProfileId);
-        if (profile) {
-          const newChat: Chat = {
-            id: `chat-${Date.now()}`,
-            profileId: profile.id,
-            profileName: profile.fullName,
-            profileAvatar: profile.avatar,
-            profileType: profile.role as any,
-            lastMessage: '',
-            lastMessageTime: '',
-            unread: 0,
-            online: true,
-          };
-          baseChats.unshift(newChat); // Add to beginning of list
-        }
-      }
+const EDIT_DELETE_WINDOW_MS = 20 * 60 * 1000; // 20 minutes
+
+function canEditOrDeleteMessage(message: Message): boolean {
+  if (message.sender !== 'user') return false;
+  const ts = typeof message.timestamp === 'string' ? new Date(message.timestamp).getTime() : new Date(message.timestamp).getTime();
+  return Date.now() - ts <= EDIT_DELETE_WINDOW_MS;
+}
+
+/** Capitalize the first letter in the message and the first letter after each . ? or ! */
+function capitalizeMessageText(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  let out = text;
+  const firstLower = out.search(/[a-z]/);
+  if (firstLower >= 0) {
+    out = out.slice(0, firstLower) + out[firstLower].toUpperCase() + out.slice(firstLower + 1);
+  }
+  return out.replace(/[.!?](\s*)([a-z])/g, (match, space, letter) => match[0] + space + letter.toUpperCase());
+}
+
+/** Parse shared URL to get post or thread ID for in-app navigation (by path only, so it works across origins). */
+function parseSharedLinkUrl(url: string): { type: 'post' | 'thread'; id: string } | null {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const path = url.startsWith('http') ? new URL(url).pathname : url.startsWith('/') ? url : `/${url}`;
+    const postMatch = path.match(/\/post\/([^/]+)/);
+    if (postMatch) return { type: 'post', id: postMatch[1] };
+    const threadMatch = path.match(/\/threads?\/([^/]+)/);
+    if (threadMatch) return { type: 'thread', id: threadMatch[1] };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function SharedLink({
+  url,
+  onNavigateWithParams,
+  className,
+  children,
+  linkClassName,
+}: {
+  url?: string;
+  onNavigateWithParams?: (page: string, params: { highlightPostId?: string; highlightThreadId?: string }) => void;
+  className?: string;
+  linkClassName?: string;
+  children: React.ReactNode;
+}) {
+  const href = (url && url.trim()) || '#';
+  const parsed = href !== '#' ? parseSharedLinkUrl(href) : null;
+  const handleClick = (e: React.MouseEvent) => {
+    if (parsed && onNavigateWithParams) {
+      e.preventDefault();
+      if (parsed.type === 'post') onNavigateWithParams('posts', { highlightPostId: parsed.id });
+      else onNavigateWithParams('threads', { highlightThreadId: parsed.id });
     }
-    
-    return baseChats;
+  };
+  const isExternal = href !== '#' && !parsed;
+  const colorClass = linkClassName ?? 'text-blue-500 hover:underline cursor-pointer';
+  const combinedClass = [className, colorClass].filter(Boolean).join(' ');
+  return (
+    <a
+      href={href}
+      onClick={handleClick}
+      target={isExternal ? '_blank' : undefined}
+      rel={isExternal ? 'noopener noreferrer' : undefined}
+      className={combinedClass}
+      style={{ cursor: 'pointer' }}
+    >
+      {children}
+    </a>
+  );
+}
+
+/**
+ * Rich preview card for shared post/thread in chat.
+ * Displays POST OWNER (uploader) name, NOT the chat sender.
+ * Clicking the card navigates to the post with highlight.
+ */
+function SharedPostPreviewCard({
+  sharedPost,
+  isOwnMessage,
+  onNavigateWithParams,
+}: {
+  sharedPost: SharedPostData;
+  isOwnMessage: boolean;
+  onNavigateWithParams?: (page: string, params: { highlightPostId?: string; highlightThreadId?: string }) => void;
+}) {
+  const postTitle = sharedPost.postTitle ?? sharedPost.title ?? '';
+  const postImage = sharedPost.postImage ?? sharedPost.image;
+  const postUrl = sharedPost.postUrl ?? sharedPost.url ?? '#';
+  const postOwnerName = sharedPost.postOwnerName ?? sharedPost.authorName ?? 'Unknown';
+  const postOwnerAvatar = sharedPost.postOwnerAvatar;
+
+  const parsed = postUrl && postUrl !== '#' ? parseSharedLinkUrl(postUrl) : null;
+  const handleNavigate = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (parsed && onNavigateWithParams) {
+      if (parsed.type === 'post') onNavigateWithParams('posts', { highlightPostId: parsed.id });
+      else onNavigateWithParams('threads', { highlightThreadId: parsed.id });
+    }
   };
 
-  const [chats, setChats] = useState<Chat[]>(initializeChats());
-  const [messages, setMessages] = useState<Message[]>(centralChatMessages.map(m => ({
-    id: m.id,
-    chatId: m.chatId,
-    text: m.text,
-    sender: m.senderId === 'me' ? 'user' : 'other',
-    timestamp: new Date(m.timestamp)
-  })));
-  
-  // Auto-select chat if coming from a profile page
-  const initialChat = selectedProfileId 
-    ? chats.find(c => c.profileId === selectedProfileId) || null
-    : null;
-    
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(initialChat);
+  const cardClassName = 'rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden bg-white text-neutral-900 cursor-pointer';
+
+  const content = (
+    <>
+      {postImage && (
+        <img
+          src={getImageUrl(postImage) || ''}
+          alt={postTitle || 'Shared post'}
+          className="w-full h-48 object-cover bg-neutral-100"
+        />
+      )}
+      <div className="p-4">
+        <p className="font-semibold text-gray-900 text-base mt-0 line-clamp-2">
+          Shared with you: {postTitle || 'Post'}
+        </p>
+        <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-2">
+          {postOwnerAvatar && (
+            <img src={getImageUrl(postOwnerAvatar)} alt="" className="w-4 h-4 rounded-full object-cover" />
+          )}
+          Uploaded by {postOwnerName}
+        </p>
+        {postUrl && postUrl !== '#' && (
+          <span className="text-blue-500 hover:text-blue-600 hover:underline font-medium cursor-pointer inline-flex items-center gap-1">
+            View post →
+          </span>
+        )}
+      </div>
+    </>
+  );
+
+  if (parsed && onNavigateWithParams) {
+    return (
+      <div
+        className={cardClassName}
+        onClick={handleNavigate}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNavigate(e as unknown as React.MouseEvent); } }}
+        aria-label={`View shared post: ${postTitle || 'Post'}`}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <SharedLink url={postUrl} onNavigateWithParams={onNavigateWithParams} className={cardClassName}>
+      {content}
+    </SharedLink>
+  );
+}
+
+export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWithParams }: ChatsPageProps) {
+  const { isAuthenticated, user } = useAuth();
+  const userIdRef = useRef<string | null>(null);
+  userIdRef.current = user?.id ?? null;
+  const [chats, setChats] = useState<ChatConversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedChat, setSelectedChat] = useState<ChatConversation | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [wsConnected, setWsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [chatsLoading, setChatsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
-  // State to trigger re-renders for dynamic timestamp updates
   const [currentTime, setCurrentTime] = useState(Date.now());
 
-  // Helper function to get the last message for a chat
   const getLastMessageForChat = (chatId: string) => {
-    const chatMessages = messages.filter(m => m.chatId === chatId);
+    const chatMessages = messages.filter((m) => m.chatId === chatId);
     if (chatMessages.length === 0) return null;
     return chatMessages[chatMessages.length - 1];
   };
 
-  // Helper function to format timestamp
-  const formatTimestamp = (timestamp: Date) => {
-    const now = new Date(currentTime); // Use currentTime state instead of Date.now()
-    const diffMs = now.getTime() - timestamp.getTime();
+  /** Preview for list: prefer loaded messages (real-time), else conversation's lastMessage from API. */
+  const getLastMessagePreview = (chat: ChatConversation) => {
+    const fromState = getLastMessageForChat(chat.id);
+    const text = (fromState?.text ?? chat.lastMessage ?? '').trim();
+    if (!text) return null;
+    const maxLen = 50;
+    if (text.length <= maxLen) return text;
+    const truncated = text.slice(0, maxLen).trim();
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 25 ? truncated.slice(0, lastSpace) + '…' : truncated + '…';
+  };
+
+  const toDate = (t: Date | string) => (t instanceof Date ? t : new Date(t));
+
+  const formatTimestamp = (timestamp: Date | string) => {
+    const ts = toDate(timestamp);
+    const now = new Date(currentTime);
+    const diffMs = now.getTime() - ts.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins} min ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   };
 
-  // Auto-open chat if selectedProfileId changes
+  // Fetch conversations when authenticated
   useEffect(() => {
-    if (selectedProfileId) {
-      const chat = chats.find(c => c.profileId === selectedProfileId);
-      if (chat) {
-        setSelectedChat(chat);
-        setChats(chats.map(c => c.id === chat.id ? { ...c, unread: 0 } : c));
-      }
+    if (!isAuthenticated) {
+      setChats([]);
+      setSelectedChat(null);
+      setChatsLoading(false);
+      return;
     }
-  }, [selectedProfileId]);
+    let cancelled = false;
+    setChatsLoading(true);
+    getConversations()
+      .then((list) => {
+        if (!cancelled) setChats(list);
+      })
+      .catch(() => {
+        if (!cancelled) setChats([]);
+      })
+      .finally(() => {
+        if (!cancelled) setChatsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
 
-  // Update timestamp every minute for dynamic time updates
+  // When conversations loaded and selectedProfileId, select or create that chat
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 10000); // Update every 10 seconds for more precise timestamp updates
+    if (!selectedProfileId || !isAuthenticated || chatsLoading) return;
+    const existing = chats.find((c) => c.profileId === selectedProfileId);
+    if (existing) {
+      setSelectedChat(existing);
+      return;
+    }
+    createOrGetConversation(selectedProfileId)
+      .then((chat) => {
+        setChats((prev) => {
+          const has = prev.some((c) => c.id === chat.id);
+          if (has) return prev;
+          return [...prev, chat];
+        });
+        setSelectedChat(chat);
+      })
+      .catch(() => {});
+  }, [selectedProfileId, isAuthenticated, chatsLoading]);
 
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // Initialize WebSocket connection
+  // Socket.io: connect when authenticated
   useEffect(() => {
-    // In a real app, replace with your WebSocket server URL
-    // const ws = new WebSocket('wss://your-websocket-server.com');
-    
-    // For demo purposes, we'll simulate WebSocket with setTimeout
-    const simulateWebSocket = () => {
-      setWsConnected(true);
-      
-      // Simulate receiving messages
-      const interval = setInterval(() => {
-        // Randomly receive a message (for demo)
-        if (Math.random() > 0.95) {
-          const randomChat = chats[Math.floor(Math.random() * chats.length)];
-          const newMessage: Message = {
-            id: Date.now().toString(),
-            chatId: randomChat.id,
-            text: 'Thank you for your interest! How can we help you today?',
-            sender: 'other',
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, newMessage]);
-          
-          // Update last message in chat list
-          setChats(prev => prev.map(chat => 
-            chat.id === randomChat.id 
-              ? { ...chat, lastMessage: newMessage.text, lastMessageTime: 'Just now', unread: chat.unread + 1 }
-              : chat
-          ));
-        }
-      }, 10000);
-
-      return () => clearInterval(interval);
-    };
-
-    const cleanup = simulateWebSocket();
-
-    // Real WebSocket implementation would look like this:
-    /*
-    const ws = new WebSocket('wss://your-server.com/chat');
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setWsConnected(true);
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const newMessage: Message = {
-        id: data.id,
-        chatId: data.chatId,
-        text: data.text,
-        sender: 'business',
-        timestamp: new Date(data.timestamp),
-      };
-      setMessages(prev => [...prev, newMessage]);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    if (!isAuthenticated) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
       setWsConnected(false);
-    };
-
+      return;
+    }
+    const token = localStorage.getItem('mashtal_token');
+    if (!token) return;
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+      path: '/socket.io',
+    });
+    socketRef.current = socket;
+    socket.on('connect', () => setWsConnected(true));
+    socket.on('disconnect', () => setWsConnected(false));
+    socket.on('message', (msg: ChatMessageDto) => {
+      const myId = userIdRef.current;
+      const senderLabel = (msg as any).senderId && myId
+        ? ((msg as any).senderId === myId ? 'user' : 'other')
+        : (msg.sender || 'other');
+      setMessages((prev) => [...prev, {
+        id: msg.id,
+        chatId: msg.chatId,
+        text: msg.text,
+        sender: senderLabel,
+        timestamp: msg.timestamp,
+        sharedPost: (msg as ChatMessageDto).sharedPost,
+      }]);
+      setChats((prev) => prev.map((c) =>
+        c.id === msg.chatId ? { ...c, lastMessage: msg.text, lastMessageTime: typeof msg.timestamp === 'string' ? msg.timestamp : new Date(msg.timestamp).toISOString() } : c
+      ));
+    });
+    socket.on('message_edited', (msg: ChatMessageDto) => {
+      setMessages((prev) => prev.map((m) =>
+        m.id === msg.id ? { ...m, text: msg.text } : m
+      ));
+      setChats((prev) => prev.map((c) =>
+        c.id === msg.chatId ? { ...c, lastMessage: msg.text } : c
+      ));
+    });
+    socket.on('message_deleted', (payload: { conversationId: string; messageId: string }) => {
+      setMessages((prev) => {
+        const next = prev.filter((m) => m.id !== payload.messageId);
+        const convMessages = next.filter((m) => m.chatId === payload.conversationId);
+        const last = convMessages[convMessages.length - 1];
+        setChats((cPrev) => cPrev.map((c) =>
+          c.id === payload.conversationId
+            ? { ...c, lastMessage: last?.text ?? '', lastMessageTime: last?.timestamp ? (typeof last.timestamp === 'string' ? last.timestamp : new Date(last.timestamp).toISOString()) : c.lastMessageTime }
+            : c
+        ));
+        return next;
+      });
+    });
     return () => {
-      ws.close();
+      socket.disconnect();
+      socketRef.current = null;
     };
-    */
+  }, [isAuthenticated]);
 
-    return cleanup;
-  }, []);
+  // When selected chat changes: join room, load messages
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!selectedChat || !socket) return;
+    socket.emit('join_conversation', selectedChat.id);
+    setMessagesLoading(true);
+    getMessages(selectedChat.id)
+      .then((list) => {
+        setMessages(list.map((m) => ({
+          id: m.id,
+          chatId: m.chatId,
+          text: m.text,
+          sender: m.sender,
+          timestamp: m.timestamp,
+          sharedPost: (m as ChatMessageDto).sharedPost,
+        })));
+      })
+      .finally(() => setMessagesLoading(false));
+    return () => {
+      socket.emit('leave_conversation', selectedChat.id);
+    };
+  }, [selectedChat?.id]);
 
   // Scroll to bottom when messages change - scroll only the messages container
   useEffect(() => {
@@ -234,73 +398,81 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
   }, [selectedChat]);
 
   const handleSendMessage = () => {
-    if (!inputMessage.trim() || !selectedChat) return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      chatId: selectedChat.id,
-      text: inputMessage,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages([...messages, newMessage]);
-    setInputMessage('');
-
-    // Update last message in chat list
-    setChats(chats.map(chat => 
-      chat.id === selectedChat.id 
-        ? { ...chat, lastMessage: inputMessage, lastMessageTime: 'Just now' }
-        : chat
-    ));
-
-    // Scroll to bottom of messages container only
-    setTimeout(() => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-      }
-    }, 100);
-
-    // Send via WebSocket (in real implementation)
-    /*
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        chatId: selectedChat.id,
-        text: inputMessage,
-        timestamp: new Date().toISOString(),
-      }));
+    const text = inputMessage.trim();
+    if (!text || !selectedChat) return;
+    const socket = socketRef.current;
+    if (socket && wsConnected) {
+      socket.emit('send_message', { conversationId: selectedChat.id, text }, (res: { error?: string }) => {
+        if (res?.error) console.error('[ChatsPage] send_message error:', res.error);
+      });
+      setInputMessage('');
+    } else {
+      setInputMessage('');
     }
-    */
   };
 
-  const handleSelectChat = (chat: Chat) => {
+  const handleSelectChat = (chat: ChatConversation) => {
     setSelectedChat(chat);
-    // Mark as read
-    setChats(chats.map(c => c.id === chat.id ? { ...c, unread: 0 } : c));
+    setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c)));
+    setOpenMenuId(null);
+    setEditingMessageId(null);
   };
 
-  const filteredChats = chats.filter(chat =>
+  const handleStartEdit = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditText(message.text);
+    setOpenMenuId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedChat || !editingMessageId || !editText.trim()) return;
+    try {
+      await apiEditMessage(selectedChat.id, editingMessageId, editText.trim());
+      setMessages((prev) => prev.map((m) => m.id === editingMessageId ? { ...m, text: editText.trim() } : m));
+      setEditingMessageId(null);
+      setEditText('');
+    } catch (err) {
+      console.error('[ChatsPage] edit message error:', err);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditText('');
+  };
+
+  const handleRequestDelete = (message: Message) => {
+    setOpenMenuId(null);
+    setMessageToDelete(message);
+  };
+
+  const handleConfirmDelete = async () => {
+    const message = messageToDelete;
+    setMessageToDelete(null);
+    if (!selectedChat || !message || message.sender !== 'user') return;
+    try {
+      await apiDeleteMessage(selectedChat.id, message.id);
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      const remaining = messages.filter((m) => m.chatId === selectedChat.id && m.id !== message.id);
+      const last = remaining[remaining.length - 1];
+      setChats((prev) => prev.map((c) =>
+        c.id === selectedChat.id ? { ...c, lastMessage: last?.text ?? '', lastMessageTime: last?.timestamp ? (typeof last.timestamp === 'string' ? last.timestamp : new Date(last.timestamp).toISOString()) : c.lastMessageTime } : c
+      ));
+    } catch (err) {
+      console.error('[ChatsPage] delete message error:', err);
+    }
+  };
+
+  const filteredChats = chats.filter((chat) =>
     chat.profileName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Sort chats by most recent message timestamp
   const sortedChats = [...filteredChats].sort((a, b) => {
-    const lastMessageA = getLastMessageForChat(a.id);
-    const lastMessageB = getLastMessageForChat(b.id);
-    
-    // If both have messages, sort by timestamp
-    if (lastMessageA && lastMessageB) {
-      return lastMessageB.timestamp.getTime() - lastMessageA.timestamp.getTime();
-    }
-    
-    // If only A has messages, A comes first
-    if (lastMessageA && !lastMessageB) return -1;
-    
-    // If only B has messages, B comes first
-    if (!lastMessageA && lastMessageB) return 1;
-    
-    // If neither has messages, maintain current order
-    return 0;
+    const lastA = getLastMessageForChat(a.id);
+    const lastB = getLastMessageForChat(b.id);
+    const timeA = lastA ? toDate(lastA.timestamp).getTime() : (a.lastMessageTime ? toDate(a.lastMessageTime).getTime() : 0);
+    const timeB = lastB ? toDate(lastB.timestamp).getTime() : (b.lastMessageTime ? toDate(b.lastMessageTime).getTime() : 0);
+    return timeB - timeA;
   });
 
   const currentMessages = selectedChat 
@@ -328,10 +500,23 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
               </div>
 
               <div className="flex-1 overflow-y-auto chat-list-scroll">
-                {sortedChats.map((chat) => {
-                  const lastMessage = getLastMessageForChat(chat.id);
-                  const hasMessages = lastMessage !== null;
-                  
+                {chatsLoading && chats.length === 0 ? (
+                  <div className="p-4 text-neutral-500 text-sm">Loading conversations...</div>
+                ) : !isAuthenticated ? (
+                  <div className="p-4 text-neutral-500 text-sm">Sign in to view messages</div>
+                ) : sortedChats.length === 0 ? (
+                  <div className="p-4 text-center text-neutral-500 text-sm">
+                    <MessageCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p>No conversations yet</p>
+                    <p className="text-xs mt-1">Click Message on a business profile to start chatting</p>
+                  </div>
+                ) : (
+                sortedChats.map((chat) => {
+                  const lastMessageFromState = getLastMessageForChat(chat.id);
+                  const previewText = getLastMessagePreview(chat);
+                  const hasMessages = previewText !== null;
+                  const lastTime = lastMessageFromState?.timestamp ?? chat.lastMessageTime;
+                  const avatarUrl = getImageUrl(chat.profileAvatar);
                   return (
                     <motion.button
                       key={chat.id}
@@ -339,10 +524,10 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
-                      transition={{ 
-                        layout: { duration: 0.3, ease: "easeInOut" },
+                      transition={{
+                        layout: { duration: 0.3, ease: 'easeInOut' },
                         opacity: { duration: 0.2 },
-                        y: { duration: 0.2 }
+                        y: { duration: 0.2 },
                       }}
                       onClick={() => handleSelectChat(chat)}
                       className={`w-full p-4 flex items-start gap-3 hover:bg-neutral-50 transition-colors border-b border-neutral-100 ${
@@ -350,11 +535,17 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
                       }`}
                     >
                       <div className="relative flex-shrink-0">
-                        <img
-                          src={chat.profileAvatar}
-                          alt={chat.profileName}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={chat.profileName}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-neutral-200 flex items-center justify-center">
+                            <User className="w-6 h-6 text-neutral-500" />
+                          </div>
+                        )}
                         <div className="absolute -bottom-1 -right-1 p-0.5 bg-white rounded-full">
                           {chat.profileType === 'business' && <Building2 className="w-3.5 h-3.5 text-blue-600" />}
                           {chat.profileType === 'agronomist' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
@@ -366,14 +557,14 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
                       <div className="flex-1 text-left min-w-0">
                         <div className="flex items-start justify-between mb-1">
                           <h3 className="text-neutral-900 truncate">{chat.profileName}</h3>
-                          {hasMessages && (
+                          {hasMessages && lastTime && (
                             <span className="text-xs text-neutral-500 flex-shrink-0 ml-2">
-                              {formatTimestamp(lastMessage.timestamp)}
+                              {formatTimestamp(lastTime)}
                             </span>
                           )}
                         </div>
                         <p className={`text-sm ${hasMessages ? 'text-neutral-600' : 'text-neutral-400 italic'} truncate`}>
-                          {hasMessages ? lastMessage.text : 'Start a conversation!'}
+                          {hasMessages ? previewText : 'Start a conversation!'}
                         </p>
                       </div>
                       {chat.unread > 0 && (
@@ -383,7 +574,8 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
                       )}
                     </motion.button>
                   );
-                })}
+                })
+                )}
               </div>
             </div>
 
@@ -399,11 +591,17 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
                     >
                       <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <img
-                      src={selectedChat.profileAvatar}
-                      alt={selectedChat.profileName}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {getImageUrl(selectedChat.profileAvatar) ? (
+                      <img
+                        src={getImageUrl(selectedChat.profileAvatar)}
+                        alt={selectedChat.profileName}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-500" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-neutral-900 truncate">{selectedChat.profileName}</h3>
                       <div className="flex items-center gap-1 text-xs text-neutral-600">
@@ -421,38 +619,127 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
 
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50 chat-messages-scroll" ref={messagesContainerRef}>
-                    {currentMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
+                    {messagesLoading ? (
+                      <div className="flex justify-center py-8 text-neutral-500">Loading messages...</div>
+                    ) : (
+                      currentMessages.map((message) => (
                         <div
-                          className={`max-w-[70%] p-3 rounded-2xl break-words ${
-                            message.sender === 'user'
-                              ? 'bg-green-600 text-white rounded-br-sm'
-                              : 'bg-white text-neutral-900 rounded-bl-sm shadow-sm'
-                          }`}
+                          key={message.id}
+                          className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="break-words whitespace-pre-wrap">{message.text}</p>
-                          <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-green-100' : 'text-neutral-500'}`}>
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <div className={`max-w-[70%] relative group ${message.sender === 'user' ? 'flex flex-col items-end' : ''}`}>
+                            {editingMessageId === message.id ? (
+                              <div className="w-full p-3 rounded-2xl bg-green-600 text-white rounded-br-sm space-y-2">
+                                <textarea
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="w-full min-h-[60px] px-3 py-2 rounded-lg bg-white/10 text-white placeholder-green-200 border border-white/20 resize-none text-sm"
+                                  placeholder="Edit message..."
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveEdit}
+                                    disabled={!editText.trim()}
+                                    className="px-3 py-1 text-xs rounded-lg bg-white text-green-600 hover:bg-green-50 disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div
+                                  className={`p-3 rounded-2xl break-words ${
+                                    message.sender === 'user'
+                                      ? 'bg-green-600 text-white rounded-br-sm'
+                                      : 'bg-white text-neutral-900 rounded-bl-sm shadow-sm'
+                                  }`}
+                                >
+                                  {message.sharedPost && (message.sharedPost.postTitle ?? message.sharedPost.title ?? message.sharedPost.postImage ?? message.sharedPost.image ?? message.sharedPost.postUrl ?? message.sharedPost.url) ? (
+                                    <div className="text-neutral-900 bg-transparent min-w-0">
+                                      <SharedPostPreviewCard
+                                        sharedPost={message.sharedPost}
+                                        isOwnMessage={message.sender === 'user'}
+                                        onNavigateWithParams={onNavigateWithParams}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="break-words whitespace-pre-wrap">{capitalizeMessageText(message.text)}</p>
+                                  )}
+                                  <div className="flex items-center justify-between gap-2 mt-1">
+                                    <p className={`text-xs ${message.sender === 'user' ? 'text-green-100' : 'text-neutral-500'}`}>
+                                      {toDate(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    {message.sender === 'user' && canEditOrDeleteMessage(message) && (
+                                      <div className="relative">
+                                        <button
+                                          type="button"
+                                          onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
+                                          className="p-0.5 rounded hover:bg-white/20 text-green-100"
+                                          aria-label="Message options"
+                                        >
+                                          <MoreVertical className="w-3.5 h-3.5" />
+                                        </button>
+                                        {openMenuId === message.id && (
+                                          <>
+                                            <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} aria-hidden="true" />
+                                            <div className="absolute right-0 bottom-full mb-1 py-1 bg-white rounded-lg shadow-lg border border-neutral-200 z-20 min-w-[110px]">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleStartEdit(message)}
+                                                className="w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 rounded-t-lg"
+                                              >
+                                                <Pencil className="w-3.5 h-3.5 flex-shrink-0" />
+                                                Edit
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleRequestDelete(message)}
+                                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                                Delete
+                                              </button>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Input */}
+                  {/* Input: Enter sends, Shift+Enter new line */}
                   <div className="p-4 border-t border-neutral-200 bg-white flex-shrink-0">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
+                    <div className="flex gap-2 items-end">
+                      <textarea
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-3 border border-neutral-200 rounded-xl outline-none focus:border-green-600"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder="Type a message... (Shift+Enter for new line)"
+                        rows={1}
+                        className="flex-1 min-h-[44px] max-h-32 px-4 py-3 border border-neutral-200 rounded-xl outline-none focus:border-green-600 resize-y"
                       />
                       <button
                         onClick={handleSendMessage}
@@ -482,6 +769,48 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId }: ChatsPageP
             </div>
           </div>
         </div>
+
+      {/* Delete message confirmation modal */}
+      {messageToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setMessageToDelete(null)}>
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h3 className="text-lg font-semibold text-neutral-900">Delete message?</h3>
+              <button
+                type="button"
+                onClick={() => setMessageToDelete(null)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-neutral-600 text-sm mb-6">
+              This action cannot be undone. The message will be removed from this conversation.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setMessageToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
