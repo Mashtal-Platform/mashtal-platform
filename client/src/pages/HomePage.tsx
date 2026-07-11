@@ -17,6 +17,7 @@ interface HomePageProps {
   followedBusinesses: any[];
   onFollowBusiness: (business: any) => void;
   onSaveItem?: (item: SavedItem) => void;
+  onRemoveSavedItem?: (savedItemId: string) => void;
   savedItems?: SavedItem[];
 }
 
@@ -28,12 +29,13 @@ export function HomePage({
   followedBusinesses,
   onFollowBusiness,
   onSaveItem,
+  onRemoveSavedItem,
   savedItems = []
 }: HomePageProps) {
   return (
     <>
       <HeroSection onNavigate={onNavigate} />
-      <SearchDiscovery onViewBusiness={onViewBusiness} />
+      <SearchDiscovery onViewBusiness={onViewBusiness} onNavigate={onNavigate} />
       <FeaturedBusinesses onViewBusiness={onViewBusiness} onViewAll={onBusinessesClick} />
       
       {/* Latest Updates Section - Combined Posts & Threads */}
@@ -70,6 +72,7 @@ export function HomePage({
           
           <CombinedFeed
             onSaveItem={onSaveItem}
+            onRemoveSavedItem={onRemoveSavedItem}
             savedItems={savedItems}
             onNavigateToBusiness={onViewBusiness}
             onNavigateToUserProfile={onNavigateToUserProfile}
@@ -77,7 +80,8 @@ export function HomePage({
             onNavigateToThreads={() => onNavigate('threads')}
             followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
-            maxItems={6}
+            maxPosts={8}
+            maxThreads={8}
           />
           
           <div className="text-center mt-8">

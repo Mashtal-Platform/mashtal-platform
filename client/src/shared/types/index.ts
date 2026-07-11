@@ -1,7 +1,7 @@
 // Shared type definitions for the Mashtal platform
 
 // ============= User & Auth Types =============
-export type UserRole = 'user' | 'agronomist' | 'engineer' | 'business' | 'admin' | null;
+export type UserRole = 'visitor' | 'business' | 'admin' | null;
 
 export interface User {
   id: string;
@@ -77,7 +77,6 @@ export type Page =
   | 'dashboard'
   | 'create-post'
   | 'create-thread'
-  | 'engineer-profile'
   | 'user-profile'
   | 'purchase-history';
 
@@ -113,6 +112,8 @@ export interface SavedItem {
   image: string;
   description: string;
   savedAt: Date;
+  /** Set for product type – business that owns the product */
+  businessId?: string;
 }
 
 export interface Post {

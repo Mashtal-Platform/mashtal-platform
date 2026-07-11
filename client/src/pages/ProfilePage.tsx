@@ -1,20 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   User, Mail, Phone, MapPin, Settings, X, Save, MoreVertical, 
   Edit2, Trash2, Camera, Heart, MessageCircle, Bookmark, 
   Calendar, Briefcase, Award, Globe, CheckCircle, Send, FileText,
-  MoreHorizontal, ShoppingBag, Users, Archive, Leaf, HardHat, Building2, Shield,
+  MoreHorizontal, ShoppingBag, Users, Archive, Building2, Shield,
   ExternalLink, ThumbsUp, Reply as ReplyIcon, CheckCircle2, LogOut, RefreshCw
 } from 'lucide-react';
 import { UserProfile, Page, SavedItem } from '../App';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadAvatar } from '../shared/api/users';
+import { getImageUrl } from '../shared/api/client';
+import { filterOutOrphanSavedItems } from '../shared/utils/saved';
 import { UserEditProfile } from '../components/UserEditProfile';
-import { EngineerEditProfile } from '../components/EngineerEditProfile';
+import { BusinessEditProfile } from '../components/BusinessEditProfile';
 import { BusinessProfileView } from '../components/BusinessProfileView';
 import { Button } from '../components/ui/button';
 import { PostModal } from '../components/PostModal';
-import { getTotalCommentCount, mockComments } from '../data/centralMockData';
-import { mockPurchases, getPurchaseStats } from '../data/purchaseData';
+import { ThreadModal, type ThreadModalComment } from '../components/ThreadModal';
+import { fetchMyOrders } from '../shared/api/orders';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { EditPostModal } from '../components/EditPostModal';
 import { EditThreadModal } from '../components/EditThreadModal';
@@ -22,6 +25,24 @@ import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { Textarea } from '../components/ui/textarea';
 import { VerifiedBadge } from '../components/VerifiedBadge';
 import { SwitchUserModal } from '../components/SwitchUserModal';
+import {
+  fetchComments,
+  createComment,
+  deleteComment,
+  toggleLikeComment,
+  updateComment,
+  type CommentDto,
+} from '../shared/api/comments';
+import {
+  fetchPostById,
+  toggleLikePost,
+  sharePost,
+} from '../shared/api/posts';
+import {
+  fetchThreadById,
+  toggleLikeThread,
+  shareThread,
+} from '../shared/api/threads';
 
 // Thread comment types
 interface Reply {
@@ -31,7 +52,7 @@ interface Reply {
     name: string;
     avatar: string;
     verified: boolean;
-    type: 'engineer' | 'business' | 'user';
+    type: 'business' | 'visitor';
     businessId?: string;
   };
   content: string;
@@ -48,7 +69,7 @@ interface Comment {
     name: string;
     avatar: string;
     verified: boolean;
-    type: 'engineer' | 'business' | 'user';
+    type: 'business' | 'visitor';
     businessId?: string;
   };
   content: string;
@@ -58,6 +79,34 @@ interface Comment {
   replies: Reply[];
   edited?: boolean;
 }
+
+function formatTimeAgo(timestamp?: string): string {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString();
+}
+
+const mapCommentDtoToModal = (dto: CommentDto): any => ({
+  id: dto.id,
+  userId: dto.author?.id ?? '',
+  userName: dto.author?.name ?? 'Unknown',
+  userAvatar: dto.author?.avatar,
+  content: dto.content,
+  timeAgo: formatTimeAgo(dto.createdAt),
+  likes: dto.likes ?? 0,
+  isLiked: dto.isLiked ?? false,
+  replies: (dto.replies ?? []).map(mapCommentDtoToModal),
+});
 
 interface ProfilePageProps {
   userProfile: UserProfile;
@@ -70,10 +119,11 @@ interface ProfilePageProps {
   onDeletePost?: (postId: string) => void;
   onUpdatePost?: (postId: string, updatedData: any) => void;
   onDeleteThread?: (threadId: string) => void;
-  onUpdateThread?: (threadId: string) => void;
+  onUpdateThread?: (threadId: string, updatedData?: any) => void;
   followingCount?: number;
   followersCount?: number;
   followedEntities?: any[];
+  userDataLoading?: boolean;
   onNavigateToBusiness?: (businessId: string) => void;
   onNavigateToUserProfile?: (userId: string) => void;
   onRemoveSavedItem?: (itemId: string) => void;
@@ -95,19 +145,23 @@ export function ProfilePage({
   followingCount = 0,
   followersCount = 0,
   followedEntities = [],
+  userDataLoading = false,
   onNavigateToBusiness,
   onNavigateToUserProfile,
   onRemoveSavedItem,
-  onNavigateWithParams
+  onNavigateWithParams,
 }: ProfilePageProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'posts' | 'threads' | 'about' | 'saved'>('posts');
   const [isEditing, setIsEditing] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [editedProfile, setEditedProfile] = useState(userProfile);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editedPostData, setEditedPostData] = useState<any>({});
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
+  const [selectedThread, setSelectedThread] = useState<any | null>(null);
+  const [threadComments, setThreadComments] = useState<Record<string, ThreadModalComment[]>>({});
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
 
@@ -122,12 +176,85 @@ export function ProfilePage({
   // New section states
   const [expandedSection, setExpandedSection] = useState<'purchases' | 'following' | null>(null);
   const [savedFilter, setSavedFilter] = useState<'all' | 'post' | 'thread' | 'product'>('all');
+  const [orders, setOrders] = useState<any[]>([]);
 
-  // Determine user role (default to visitor if not set)
-  const userRole = userProfile.role || 'visitor';
+  // When viewing own profile, if userProfile not yet synced use auth user for display
+  const displayProfile: UserProfile = (userProfile?.id && userProfile.id === user?.id)
+    ? {
+        ...userProfile,
+        hours: (user as any)?.hours ?? (userProfile as any).hours,
+        about: (user as any)?.about ?? (userProfile as any).about,
+        companyName: (user as any)?.companyName ?? userProfile.companyName,
+        bio: (user as any)?.bio ?? userProfile.bio,
+        location: (user as any)?.location ?? userProfile.location,
+        phone: (user as any)?.phone ?? userProfile.phone,
+      }
+    : (user
+        ? {
+            id: user.id,
+            fullName: user.fullName ?? '',
+            email: user.email ?? '',
+            phone: user.phone ?? '',
+            location: user.location ?? '',
+            bio: user.bio ?? '',
+            avatar: user.avatar ?? '',
+            role: user.role as any,
+            companyName: (user as any).companyName,
+            hours: (user as any).hours,
+            about: (user as any).about,
+          }
+        : userProfile);
 
-  // Check if viewing own profile
-  const isOwnProfile = user?.id === userProfile.id;
+  const userRole = (displayProfile && displayProfile.role) || 'visitor';
+  const isOwnProfile = !!(user?.id && displayProfile?.id && user.id === displayProfile.id);
+
+  useEffect(() => {
+    setEditedProfile(userProfile);
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (!isOwnProfile || !user) return;
+    fetchMyOrders()
+      .then(setOrders)
+      .catch(() => setOrders([]));
+  }, [isOwnProfile, user]);
+
+  // Fetch comments whenever the post modal is opened.
+  useEffect(() => {
+    if (!selectedPost?.id) return;
+    fetchComments('post', selectedPost.id)
+      .then((list) => {
+        const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal);
+        setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+      })
+      .catch(() => {
+        setSelectedPost((prev) => (prev ? { ...prev, comments: [] } : prev));
+      });
+  }, [selectedPost?.id]);
+
+  // Fetch comments whenever the thread modal is opened.
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    fetchComments('thread', selectedThread.id)
+      .then((list) => {
+        const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal) as ThreadModalComment[];
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+      })
+      .catch(() => {
+        setThreadComments((prev) => ({ ...prev, [selectedThread.id]: [] }));
+      });
+  }, [selectedThread?.id]);
+
+  // Lock body scroll while modals are open.
+  useEffect(() => {
+    if (selectedPost || selectedThread) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+    return;
+  }, [selectedPost, selectedThread]);
 
   const handleLogout = async () => {
     await signOut();
@@ -136,25 +263,23 @@ export function ProfilePage({
 
   // Role-based hero banner
   const getBannerImage = () => {
-    if (userRole === 'engineer') {
-      return "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200";
-    }
     if (userRole === 'business') {
       return "https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200";
     }
     return "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200";
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newAvatar = reader.result as string;
-        setEditedProfile({ ...editedProfile, avatar: newAvatar });
-        onUpdateProfile({ ...userProfile, avatar: newAvatar });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const updated = await uploadAvatar(file);
+      const avatarPath = updated.avatar ?? '';
+      await updateProfile({ avatar: avatarPath });
+      setEditedProfile((prev) => ({ ...prev, avatar: avatarPath }));
+      onUpdateProfile({ ...displayProfile, avatar: avatarPath });
+    } catch (err) {
+      console.error('[ProfilePage] Avatar upload failed:', err);
     }
   };
 
@@ -211,9 +336,9 @@ export function ProfilePage({
     } else {
       setSelectedPost({
         ...post,
-        authorName: userProfile.fullName,
-        authorAvatar: userProfile.avatar,
-        authorVerified: userRole === 'engineer' || userRole === 'business',
+        authorName: displayProfile.fullName,
+        authorAvatar: displayProfile.avatar,
+        authorVerified: userRole === 'business',
         comments: post.comments || []
       });
     }
@@ -228,71 +353,341 @@ export function ProfilePage({
     }
   };
 
-  const handleLikePost = (postId: string) => {
-    setLikedPosts((prev) => {
-      const newLiked = new Set(prev);
-      if (newLiked.has(postId)) {
-        newLiked.delete(postId);
-      } else {
-        newLiked.add(postId);
-      }
-      return newLiked;
-    });
-    
-    if (selectedPost && selectedPost.id === postId) {
-      setSelectedPost({
-        ...selectedPost,
-        likes: selectedPost.likes + (likedPosts.has(postId) ? -1 : 1),
+  const handleLikePost = async (postId: string) => {
+    if (!user) return;
+    try {
+      const updated = await toggleLikePost(postId);
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (updated.isLiked) next.add(postId);
+        else next.delete(postId);
+        return next;
       });
+      setSelectedPost((prev) =>
+        prev && prev.id === postId ? { ...prev, likes: updated.likes, isLiked: updated.isLiked } : prev,
+      );
+    } catch (err) {
+      console.error('[ProfilePage] toggleLikePost failed:', err);
+    }
+  };
+
+  const handleSharePost = async (postId: string) => {
+    if (!user) return;
+    try {
+      const updated = await sharePost(postId);
+      setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, shares: updated.shares } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] sharePost failed:', err);
+    }
+  };
+
+  const handleSavePost = async (postId: string) => {
+    if (!onRemoveSavedItem) return;
+    const savedId = savedItems?.find((s) => s.type === 'post' && (s.itemId === postId || s.refId === postId))?.id;
+    if (!savedId) return;
+    try {
+      onRemoveSavedItem(savedId);
+      setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, isSaved: false } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] remove saved post failed:', err);
+    }
+  };
+
+  const handleCommentPost = async (postId: string, text: string, parentId?: string) => {
+    if (!user) return;
+    try {
+      await createComment({
+        targetType: 'post',
+        targetId: postId,
+        content: text.trim(),
+        parentCommentId: parentId,
+      });
+      const list = await fetchComments('post', postId);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal);
+      setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] comment on post failed:', err);
+    }
+  };
+
+  const handleDeletePostComment = async (commentId: string) => {
+    if (!user) return;
+    if (!selectedPost?.id) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('post', selectedPost.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal);
+      setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] delete post comment failed:', err);
+    }
+  };
+
+  const handleLikePostComment = async (commentId: string) => {
+    if (!user) return;
+    if (!selectedPost?.id) return;
+    try {
+      await toggleLikeComment(commentId);
+      const list = await fetchComments('post', selectedPost.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal);
+      setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] like post comment failed:', err);
+    }
+  };
+
+  const handleEditPostComment = async (commentId: string, content: string) => {
+    if (!user) return;
+    if (!selectedPost?.id) return;
+    try {
+      await updateComment(commentId, content);
+      const list = await fetchComments('post', selectedPost.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal);
+      setSelectedPost((prev) => (prev ? { ...prev, comments: mapped } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] edit post comment failed:', err);
+    }
+  };
+
+  const handleThreadLike = async () => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      const updated = await toggleLikeThread(selectedThread.id);
+      setSelectedThread((prev) =>
+        prev ? { ...prev, likes: updated.likes ?? prev.likes, isLiked: updated.isLiked } : prev,
+      );
+    } catch (err) {
+      console.error('[ProfilePage] toggleLikeThread failed:', err);
+    }
+  };
+
+  const handleThreadComment = async (text: string, parentId?: string) => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      await createComment({
+        targetType: 'thread',
+        targetId: selectedThread.id,
+        content: text.trim(),
+        parentCommentId: parentId,
+      });
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal) as ThreadModalComment[];
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[ProfilePage] comment on thread failed:', err);
+    }
+  };
+
+  const handleThreadLikeComment = async (commentId: string) => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      await toggleLikeComment(commentId);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal) as ThreadModalComment[];
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[ProfilePage] like thread comment failed:', err);
+    }
+  };
+
+  const handleDeleteThreadComment = async (commentId: string) => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      await deleteComment(commentId);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal) as ThreadModalComment[];
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[ProfilePage] delete thread comment failed:', err);
+    }
+  };
+
+  const handleEditThreadComment = async (commentId: string, content: string) => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      await updateComment(commentId, content);
+      const list = await fetchComments('thread', selectedThread.id);
+      const mapped = (Array.isArray(list) ? list : []).map(mapCommentDtoToModal) as ThreadModalComment[];
+      setThreadComments((prev) => ({ ...prev, [selectedThread.id]: mapped }));
+    } catch (err) {
+      console.error('[ProfilePage] edit thread comment failed:', err);
+    }
+  };
+
+  const handleThreadShare = async () => {
+    if (!user) return;
+    if (!selectedThread?.id) return;
+    try {
+      const updated = await shareThread(selectedThread.id);
+      setSelectedThread((prev) => (prev ? { ...prev, shares: updated.shares } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] shareThread failed:', err);
+    }
+  };
+
+  const handleThreadSave = async () => {
+    if (!onRemoveSavedItem) return;
+    if (!selectedThread?.id) return;
+    const savedId = savedItems?.find((s) => s.type === 'thread' && (s.itemId === selectedThread.id || s.refId === selectedThread.id))?.id;
+    if (!savedId) return;
+    try {
+      onRemoveSavedItem(savedId);
+      setSelectedThread((prev) => (prev ? { ...prev, isSaved: false } : prev));
+    } catch (err) {
+      console.error('[ProfilePage] remove saved thread failed:', err);
     }
   };
 
   const getFilteredSavedItems = () => {
-    if (savedFilter === 'all') return savedItems;
-    return savedItems.filter(item => item.type === savedFilter);
+    const valid = filterOutOrphanSavedItems(savedItems);
+    if (savedFilter === 'all') return valid;
+    return valid.filter(item => item.type === savedFilter);
   };
 
   if (isEditing) {
-    if (userRole === 'engineer') {
+    if (userRole === 'business') {
+      const profileForEdit = {
+        ...displayProfile,
+        fullName: displayProfile.fullName,
+        companyName: displayProfile.companyName,
+        bio: displayProfile.bio,
+        location: displayProfile.location,
+        phone: displayProfile.phone,
+        hours: (user as any)?.hours,
+        about: (user as any)?.about,
+        businessProfile: (user as any)?.businessProfile,
+      };
       return (
-        <EngineerEditProfile
-          profile={userProfile}
-          onSave={(profile) => {
-            onUpdateProfile(profile);
-            setIsEditing(false);
-          }}
-          onCancel={() => setIsEditing(false)}
-        />
-      );
-    } else {
-      return (
-        <UserEditProfile
-          profile={userProfile}
-          onSave={(profile) => {
-            onUpdateProfile(profile);
-            setIsEditing(false);
-          }}
-          onCancel={() => setIsEditing(false)}
-        />
+        <>
+          {profileSaveError && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {profileSaveError}
+              </div>
+            </div>
+          )}
+          <BusinessEditProfile
+            profile={profileForEdit}
+            onSave={async (profile) => {
+              const current = user as any;
+              const mergedBusinessProfile = {
+                ...(current?.businessProfile || {}),
+                ...(profile.businessProfile || {}),
+              };
+              try {
+                setProfileSaveError(null);
+                await updateProfile({
+                  fullName: profile.fullName,
+                  businessProfile: mergedBusinessProfile,
+                });
+                onUpdateProfile({
+                  ...userProfile,
+                  fullName: profile.fullName ?? userProfile.fullName,
+                  companyName: mergedBusinessProfile.companyName ?? userProfile.companyName,
+                  bio: mergedBusinessProfile.bio ?? userProfile.bio,
+                  location: mergedBusinessProfile.location ?? userProfile.location,
+                  phone: mergedBusinessProfile.phone ?? userProfile.phone,
+                  hours: mergedBusinessProfile.hours ?? (userProfile as any).hours,
+                  about: mergedBusinessProfile.about ?? (userProfile as any).about,
+                });
+                setIsEditing(false);
+              } catch (err) {
+                console.error('[ProfilePage] Business profile save failed:', err);
+                setProfileSaveError(err instanceof Error ? err.message : 'Failed to save business profile');
+              }
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        </>
       );
     }
+    return (
+      <>
+        {profileSaveError && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {profileSaveError}
+            </div>
+          </div>
+        )}
+        <UserEditProfile
+          profile={displayProfile}
+          onSave={async (profile) => {
+            try {
+              setProfileSaveError(null);
+              if (userRole === 'visitor') {
+                // Visitor profile fields are stored on the root user document.
+                    // Keep both root and professionalProfile in sync because
+                    // existing users/documents may still store visitor info there.
+                    const current = user as any;
+                    await updateProfile({
+                      fullName: profile.fullName,
+                      phone: profile.phone,
+                      location: profile.location,
+                      professionalProfile: {
+                        ...(current?.professionalProfile || {}),
+                        phone: profile.phone,
+                        location: profile.location,
+                      },
+                    } as any);
+              } else {
+                // Agronomists and other non-business roles use professionalProfile.
+                const current = user as any;
+                const mergedProfessionalProfile = {
+                  ...(current?.professionalProfile || {}),
+                  bio: profile.bio,
+                  location: profile.location,
+                  phone: profile.phone,
+                };
+                await updateProfile({
+                  fullName: profile.fullName,
+                  professionalProfile: mergedProfessionalProfile,
+                });
+              }
+              onUpdateProfile({
+                ...userProfile,
+                fullName: profile.fullName ?? userProfile.fullName,
+                bio: userRole === 'visitor' ? profile.bio : profile.bio ?? userProfile.bio,
+                location: profile.location ?? userProfile.location,
+                phone: profile.phone ?? userProfile.phone,
+              });
+              setIsEditing(false);
+            } catch (err) {
+              console.error('[ProfilePage] Profile save failed:', err);
+              setProfileSaveError(err instanceof Error ? err.message : 'Failed to save profile');
+            }
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      </>
+    );
   }
 
   // If user is a business, show business profile view
   if (userRole === 'business') {
     return (
       <BusinessProfileView
-  userProfile={userProfile}
-  userPosts={userPosts}
-  userThreads={userThreads}
+  userProfile={displayProfile}
+  userPosts={userDataLoading ? [] : userPosts}
+  userThreads={userDataLoading ? [] : userThreads}
   isOwnProfile={true}
+  userDataLoading={userDataLoading}
+  followersCount={followersCount}
+  followingCount={followingCount}
   onEditProfile={() => setIsEditing(true)}
   onPostClick={handlePostClick}
   onThreadClick={handleThreadClick}
   onDeletePost={onDeletePost}
   onEditPost={handleEditPost}
+  onUpdatePost={onUpdatePost}
   onDeleteThread={onDeleteThread}
   onEditThread={handleEditThread}
+  onUpdateThread={onUpdateThread}
   onAvatarChange={handleAvatarChange}
   avatarFileInputRef={fileInputRef}
   onNavigate={onNavigate}
@@ -328,10 +723,10 @@ export function ProfilePage({
                   className="relative w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden cursor-pointer group bg-neutral-100"
                   onClick={handleAvatarClick}
                 >
-                  {userProfile.avatar ? (
+                  {displayProfile.avatar ? (
                     <img
-                      src={userProfile.avatar}
-                      alt={userProfile.fullName}
+                      src={getImageUrl(displayProfile.avatar)}
+                      alt={displayProfile.fullName}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -355,8 +750,6 @@ export function ProfilePage({
                 {userRole && userRole !== 'visitor' && (
                   <div className="absolute bottom-1 right-1 p-1.5 rounded-full border-2 border-white shadow-md z-10 bg-white">
                     {userRole === 'business' && <Building2 className="w-4 h-4 text-blue-600" />}
-                    {userRole === 'agronomist' && <Leaf className="w-4 h-4 text-green-600" />}
-                    {userRole === 'engineer' && <HardHat className="w-4 h-4 text-orange-600" />}
                     {userRole === 'admin' && <Shield className="w-4 h-4 text-purple-600" />}
                   </div>
                 )}
@@ -367,19 +760,7 @@ export function ProfilePage({
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold text-neutral-900">{userProfile.fullName}</h1>
-                      {userRole === 'agronomist' && (
-                        <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-green-200 flex items-center gap-1">
-                          <Leaf className="w-3 h-3" />
-                          Verified Agronomist
-                        </span>
-                      )}
-                      {userRole === 'engineer' && (
-                        <span className="bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-orange-200 flex items-center gap-1">
-                          <HardHat className="w-3 h-3" />
-                          Verified Engineer
-                        </span>
-                      )}
+                      <h1 className="text-3xl font-bold text-neutral-900">{displayProfile.fullName}</h1>
                       {userRole=== 'business' && (
                         <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
@@ -395,15 +776,15 @@ export function ProfilePage({
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-4 text-neutral-600 mb-4">
-                      {userProfile.specialization && (
+                      {displayProfile.specialization && (
                         <div className="flex items-center gap-1.5">
                           <Briefcase className="w-4 h-4 text-neutral-400" />
-                          <span>{userProfile.specialization}</span>
+                          <span>{displayProfile.specialization}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 text-neutral-400" />
-                        <span>{userProfile.location}</span>
+                        <span>{displayProfile.location}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-neutral-400" />
@@ -411,13 +792,18 @@ export function ProfilePage({
                       </div>
                     </div>
                     
-                    <p className="text-neutral-700 max-w-2xl leading-relaxed">{userProfile.bio}</p>
+                    {userRole !== 'visitor' && (
+                      <p className="text-neutral-700 max-w-2xl leading-relaxed">{displayProfile.bio}</p>
+                    )}
                   </div>
 
                   {/* Action Button */}
                   <div className="flex gap-2 min-w-[160px]">
                     <Button
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => {
+                        setProfileSaveError(null);
+                        setIsEditing(true);
+                      }}
                       className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Settings className="w-4 h-4" />
@@ -461,7 +847,7 @@ export function ProfilePage({
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-neutral-900">Purchases</h3>
-                  <p className="text-sm text-neutral-500">{getPurchaseStats(mockPurchases).totalOrders} {getPurchaseStats(mockPurchases).totalOrders === 1 ? 'order' : 'orders'}</p>
+                  <p className="text-sm text-neutral-500">{orders.length} {orders.length === 1 ? 'order' : 'orders'}</p>
                 </div>
               </div>
               <div className="text-neutral-400">
@@ -471,23 +857,44 @@ export function ProfilePage({
             
             {expandedSection === 'purchases' && (
               <div className="border-t border-neutral-200 p-4 bg-neutral-50 space-y-3 max-h-[400px] overflow-y-auto">
-                {/* Show first 5 purchases from centralized data */}
-                {mockPurchases.slice(0, 5).map((purchase) => (
-                  <div 
-                    key={purchase.id} 
-                    onClick={() => onNavigateToBusiness && onNavigateToBusiness(purchase.businessId)}
-                    className="flex items-center gap-3 p-3 bg-white rounded-lg hover:shadow-sm transition-shadow cursor-pointer border border-neutral-100 group"
-                  >
-                    <img src={purchase.image} alt={purchase.name} className="w-14 h-14 rounded-lg object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-neutral-900 truncate group-hover:text-green-600 transition-colors">{purchase.name}</h4>
-                      <div className="flex items-center justify-between text-xs text-neutral-500 mt-1">
-                        <span className="font-bold text-green-600">${purchase.price.toFixed(2)}</span>
-                        <span>{new Date(purchase.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                {orders.slice(0, 5).flatMap((order) =>
+                  (order.items || []).map((item: any, idx: number) => (
+                    <div
+                      key={`${order.id}-${idx}`}
+                      onClick={() => item.product?.businessId && onNavigateToBusiness?.(item.product.businessId)}
+                      className="flex items-center gap-3 p-3 bg-white rounded-lg hover:shadow-sm transition-shadow cursor-pointer border border-neutral-100 group"
+                    >
+                      {getImageUrl(item.product?.image) ? (
+                        <img
+                          src={getImageUrl(item.product?.image)}
+                          alt={item.product?.name || 'Product'}
+                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-neutral-900 truncate group-hover:text-green-600 transition-colors">
+                          {item.product?.name || 'Product'}
+                        </h4>
+                        <div className="flex items-center justify-between text-xs text-neutral-500 mt-1">
+                          <span className="font-bold text-green-600">
+                            {(item.priceAtPurchase ?? item.price ?? 0).toFixed(2)} SAR
+                          </span>
+                          <span>
+                            {new Date(order.createdAt || order.created).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
                 <Button 
                   variant="ghost" 
                   className="w-full text-xs text-green-600 hover:text-green-700 font-bold mt-2"
@@ -539,11 +946,9 @@ export function ProfilePage({
                       className="flex items-center gap-3 p-3 bg-white rounded-lg hover:shadow-sm transition-shadow cursor-pointer border border-neutral-100 group"
                     >
                       <div className="relative">
-                        <img src={account.image || account.avatar} alt={account.name} className="w-12 h-12 rounded-full object-cover" />
+                        <img src={getImageUrl(account.image || account.avatar)} alt={account.name} className="w-12 h-12 rounded-full object-cover" />
                         <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-sm">
                           {account.role === 'business' && <Building2 className="w-3.5 h-3.5 text-blue-600" />}
-                          {account.role === 'agronomist' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
-                          {account.role === 'engineer' && <HardHat className="w-3.5 h-3.5 text-orange-600" />}
                           {account.role === 'admin' && <Shield className="w-3.5 h-3.5 text-purple-600" />}
                         </div>
                       </div>
@@ -573,8 +978,8 @@ export function ProfilePage({
             )}
           </div>
 
-          {/* Followers Card - Only for Engineer/Agronomist/Business */}
-          {(userRole === 'engineer' || userRole === 'agronomist' || userRole === 'business') && (
+          {/* Followers Card - Only for Business */}
+          {userRole === 'business' && (
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                  onClick={() => onNavigate('followers')}
             >
@@ -690,7 +1095,7 @@ export function ProfilePage({
                           onClick={() => handlePostClick(post)}
                         >
                           <img
-                            src={post.image}
+                            src={getImageUrl(post.image)}
                             alt={post.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                           />
@@ -701,7 +1106,7 @@ export function ProfilePage({
                             </div>
                             <div className="flex items-center gap-2">
                               <MessageCircle className="w-5 h-5 fill-current" />
-                              <span>{getTotalCommentCount(post.id)}</span>
+                              <span>{post.commentsCount ?? post.comments ?? 0}</span>
                             </div>
                           </div>
                           <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10" onClick={(e) => e.stopPropagation()}>
@@ -752,14 +1157,14 @@ export function ProfilePage({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center overflow-hidden border border-neutral-100">
-                                {userProfile.avatar ? (
-                                  <img src={userProfile.avatar} alt={userProfile.fullName} className="w-full h-full object-cover" />
+                                {displayProfile.avatar ? (
+                                  <img src={getImageUrl(displayProfile.avatar)} alt={displayProfile.fullName} className="w-full h-full object-cover" />
                                 ) : (
                                   <User className="w-4 h-4 text-green-600" />
                                 )}
                               </div>
                               <div>
-                                <h4 className="font-bold text-neutral-900 text-sm leading-tight">{userProfile.fullName}</h4>
+                                <h4 className="font-bold text-neutral-900 text-sm leading-tight">{displayProfile.fullName}</h4>
                                 <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-tight">{thread.timeAgo}</p>
                               </div>
                             </div>
@@ -842,8 +1247,8 @@ export function ProfilePage({
                       {getFilteredSavedItems().map((item) => (
                         <div key={item.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
                           <div className="relative h-48 bg-gradient-to-br from-neutral-50 to-neutral-100">
-                            {item.image ? (
-                              <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            {(item.image && getImageUrl(item.image)) ? (
+                              <img src={getImageUrl(item.image)} alt={item.title || 'Saved'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-neutral-300">
                                 {item.type === 'thread' ? <MessageCircle className="w-16 h-16" /> : <FileText className="w-16 h-16" />}
@@ -868,10 +1273,10 @@ export function ProfilePage({
                           </div>
                           <div className="p-5">
                             <h3 className="font-bold text-neutral-900 mb-2 line-clamp-2 group-hover:text-green-600 transition-colors text-lg">
-                              {item.title}
+                              {item.title || 'Untitled'}
                             </h3>
                             <p className="text-neutral-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-                              {item.description}
+                              {item.description || 'No description'}
                             </p>
                             <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                               <div className="flex items-center gap-2">
@@ -885,32 +1290,93 @@ export function ProfilePage({
                                 onClick={() => {
                                   // Navigate to item based on type
                                   if (item.type === 'product' && (item as any).businessId && onNavigateToBusiness) {
-                                    // Navigate to business page and scroll to products
-                                    onNavigateToBusiness((item as any).businessId);
-                                    // Scroll to products tab after navigation
-                                    setTimeout(() => {
-                                      const productsTab = document.querySelector('[data-tab="products"]');
-                                      if (productsTab) {
-                                        (productsTab as HTMLElement).click();
+                                    const businessId = (item as any).businessId as string;
+                                    const productId = item.itemId;
+                                    const productElementId = `product-${productId}`;
+
+                                    // Navigate to business page and then scroll to the specific product card.
+                                    onNavigateToBusiness(businessId);
+
+                                    const start = Date.now();
+                                    const maxMs = 5000;
+                                    const interval = window.setInterval(() => {
+                                      // Best effort: make sure Products tab is visible first.
+                                      const productsTab = document.querySelector('[data-tab="products"]') as HTMLElement | null;
+                                      productsTab?.click?.();
+
+                                      const productElement = document.getElementById(productElementId);
+                                      if (productElement) {
+                                        productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        productElement.classList.add('ring-4', 'ring-green-500');
+                                        setTimeout(() => {
+                                          productElement.classList.remove('ring-4', 'ring-green-500');
+                                        }, 2000);
+                                        window.clearInterval(interval);
+                                        return;
                                       }
-                                      // Then scroll to the specific product
-                                      setTimeout(() => {
-                                        const productElement = document.getElementById(`product-${item.itemId}`);
-                                        if (productElement) {
-                                          productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                          productElement.classList.add('ring-4', 'ring-green-500');
-                                          setTimeout(() => {
-                                            productElement.classList.remove('ring-4', 'ring-green-500');
-                                          }, 2000);
-                                        }
-                                      }, 300);
-                                    }, 100);
-                                  } else if (item.type === 'post' && item.itemId) {
-                                    // Navigate to posts page
-                                    onNavigate('posts');
-                                  } else if (item.type === 'thread' && item.itemId) {
-                                    // Navigate to threads page
-                                    onNavigate('threads');
+
+                                      if (Date.now() - start > maxMs) {
+                                        window.clearInterval(interval);
+                                      }
+                                    }, 200);
+
+                                    return;
+                                  }
+
+                                  if (item.type === 'business' && item.itemId && onNavigateToBusiness) {
+                                    // Saved "business" item: go directly to that business page.
+                                    onNavigateToBusiness(item.itemId);
+                                    return;
+                                  }
+
+                                  if (item.type === 'post' && item.itemId) {
+                                    void (async () => {
+                                      try {
+                                        const post = await fetchPostById(item.itemId);
+                                        setSelectedPost({
+                                          id: post.id,
+                                          image: post.image || '',
+                                          title: post.title || 'Untitled',
+                                          content: post.content || '',
+                                          likes: post.likes ?? 0,
+                                          comments: [],
+                                          timeAgo: formatTimeAgo(post.timestamp),
+                                          authorName: post.author?.name ?? displayProfile.fullName,
+                                          authorAvatar: post.author?.avatar ?? displayProfile.avatar,
+                                        });
+                                      } catch (err) {
+                                        console.error('[ProfilePage] fetchPostById failed:', err);
+                                      }
+                                    })();
+                                    return;
+                                  }
+
+                                  if (item.type === 'thread' && item.itemId) {
+                                    void (async () => {
+                                      try {
+                                        const thread = await fetchThreadById(item.itemId);
+                                        setSelectedThread({
+                                          id: thread.id,
+                                          title: thread.title || '',
+                                          content: thread.content || '',
+                                          likes: thread.likes ?? 0,
+                                          isLiked: thread.isLiked ?? false,
+                                          commentsCount: thread.commentsCount ?? 0,
+                                          shares: thread.shares ?? 0,
+                                          timeAgo: formatTimeAgo(thread.timestamp),
+                                          timestamp: thread.timestamp,
+                                          tags: thread.tags ?? [],
+                                          author: {
+                                            id: thread.author?.id ?? (displayProfile as any).id,
+                                            name: thread.author?.name ?? displayProfile.fullName,
+                                            avatar: thread.author?.avatar ?? displayProfile.avatar,
+                                          },
+                                        });
+                                      } catch (err) {
+                                        console.error('[ProfilePage] fetchThreadById failed:', err);
+                                      }
+                                    })();
+                                    return;
                                   }
                                 }}
                               >
@@ -953,7 +1419,7 @@ export function ProfilePage({
                       About
                     </h3>
                     <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-6 rounded-xl border border-neutral-100 text-sm">
-                      {userProfile.bio}
+                      {displayProfile.bio}
                     </p>
                   </section>
                   
@@ -969,7 +1435,7 @@ export function ProfilePage({
                         </div>
                         <div>
                           <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider mb-1">Location</div>
-                          <div className="text-neutral-900 font-semibold">{userProfile.location}</div>
+                          <div className="text-neutral-900 font-semibold">{displayProfile.location}</div>
                         </div>
                       </div>
                       <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
@@ -987,7 +1453,7 @@ export function ProfilePage({
                         </div>
                         <div>
                           <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider mb-1">Email</div>
-                          <div className="text-neutral-900 font-semibold">{userProfile.email}</div>
+                          <div className="text-neutral-900 font-semibold">{displayProfile.email}</div>
                         </div>
                       </div>
                       <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
@@ -996,20 +1462,20 @@ export function ProfilePage({
                         </div>
                         <div>
                           <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider mb-1">Phone</div>
-                          <div className="text-neutral-900 font-semibold">{userProfile.phone}</div>
+                          <div className="text-neutral-900 font-semibold">{displayProfile.phone}</div>
                         </div>
                       </div>
                     </div>
                   </section>
 
-                  {userProfile.customFields && userProfile.customFields.length > 0 && (
+                  {displayProfile.customFields && displayProfile.customFields.length > 0 && (
                     <section>
                       <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
                         <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                         Additional Details
                       </h3>
                       <div className="space-y-4">
-                        {userProfile.customFields.map((field) => (
+                        {displayProfile.customFields!.map((field) => (
                           field.title && field.content && (
                             <div key={field.id} className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm hover:border-green-200 transition-all group">
                               <h4 className="font-bold text-neutral-900 mb-3 flex items-center justify-between">
@@ -1041,7 +1507,51 @@ export function ProfilePage({
       {selectedPost && (
         <PostModal
           post={selectedPost}
+          isOpen={!!selectedPost}
           onClose={() => setSelectedPost(null)}
+          onLike={() => handleLikePost(selectedPost.id)}
+          onComment={(text, parentId) => handleCommentPost(selectedPost.id, text, parentId)}
+          onDeleteComment={handleDeletePostComment}
+          onEditComment={handleEditPostComment}
+          onLikeComment={handleLikePostComment}
+          onShare={() => handleSharePost(selectedPost.id)}
+          onSave={() => handleSavePost(selectedPost.id)}
+          onNavigateToBusiness={onNavigateToBusiness}
+          onNavigateToUserProfile={onNavigateToUserProfile}
+          isLiked={selectedPost.isLiked ?? likedPosts.has(selectedPost.id)}
+          isSaved={!!savedItems.find((s) => s.type === 'post' && (s.itemId === selectedPost.id || s.refId === selectedPost.id))}
+        />
+      )}
+
+      {/* Thread Modal */}
+      {selectedThread && (
+        <ThreadModal
+          thread={{
+            id: selectedThread.id,
+            title: selectedThread.title,
+            content: selectedThread.content || '',
+            tags: selectedThread.tags || [],
+            likes: selectedThread.likes ?? 0,
+            commentsCount: selectedThread.commentsCount ?? 0,
+            shares: selectedThread.shares ?? 0,
+            timeAgo: selectedThread.timeAgo,
+            timestamp: selectedThread.timestamp,
+            author: selectedThread.author,
+          }}
+          comments={threadComments[selectedThread.id] ?? []}
+          isOpen={!!selectedThread}
+          onClose={() => setSelectedThread(null)}
+          onLike={handleThreadLike}
+          onComment={handleThreadComment}
+          onLikeComment={handleThreadLikeComment}
+          onDeleteComment={handleDeleteThreadComment}
+          onEditComment={handleEditThreadComment}
+          onNavigateToBusiness={onNavigateToBusiness}
+          onNavigateToUserProfile={onNavigateToUserProfile}
+          onSave={onRemoveSavedItem ? handleThreadSave : undefined}
+          onShare={handleThreadShare}
+          isLiked={selectedThread.isLiked ?? false}
+          isSaved={!!savedItems.find((s) => s.type === 'thread' && (s.itemId === selectedThread.id || s.refId === selectedThread.id))}
         />
       )}
 

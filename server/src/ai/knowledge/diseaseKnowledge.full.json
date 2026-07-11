@@ -1,0 +1,1142 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "canonical": "Powdery Mildew",
+      "aliases": ["powdery mildew", "oidium"],
+      "description": {
+        "en": "A fungal disease that appears as white powdery growth on leaves and stems, reducing photosynthesis and vigor.",
+        "ar": "مرض فطري يظهر كطبقة بيضاء مسحوقية على الأوراق والسيقان ويقلل التمثيل الضوئي وحيوية النبات."
+      },
+      "treatment": {
+        "en": "Prune heavily infected tissue, improve airflow, and apply sulfur or potassium bicarbonate fungicides at label intervals.",
+        "ar": "قم بإزالة الأجزاء المصابة بشدة، وحسّن التهوية، واستخدم مبيدات فطرية مثل الكبريت أو بيكربونات البوتاسيوم حسب تعليمات الملصق."
+      },
+      "prevention": {
+        "en": "Avoid dense canopy growth, reduce humidity around plants, and use preventive sprays in high-risk periods.",
+        "ar": "تجنب الكثافة النباتية العالية، وخفّض الرطوبة حول النبات، واستخدم رشات وقائية في فترات الخطورة."
+      },
+      "recommendedProducts": ["Sulfur fungicide", "Potassium bicarbonate", "Neem-based bio-fungicide"]
+    },
+    {
+      "canonical": "Downy Mildew",
+      "aliases": ["downy mildew"],
+      "description": {
+        "en": "A fungal-like disease causing yellow patches on upper leaf surfaces and gray-purple growth underneath under humid conditions.",
+        "ar": "مرض شبيه بالفطريات يسبب بقعًا صفراء على سطح الورقة العلوي ونموًا رماديًا بنفسجيًا أسفلها في الظروف الرطبة."
+      },
+      "treatment": {
+        "en": "Remove infected foliage promptly and apply copper-based or targeted downy mildew fungicides with rotation of active ingredients.",
+        "ar": "أزل الأوراق المصابة بسرعة واستخدم مبيدات مناسبة للبياض الزغبي مثل المركبات النحاسية مع تدوير المواد الفعالة."
+      },
+      "prevention": {
+        "en": "Use drip irrigation, avoid prolonged leaf wetness, and keep canopy ventilation high.",
+        "ar": "استخدم الري بالتنقيط وتجنب بقاء الأوراق مبللة لفترات طويلة وحافظ على تهوية جيدة."
+      },
+      "recommendedProducts": ["Copper hydroxide", "Metalaxyl-mancozeb", "Phosphite-based fungicide"]
+    },
+    {
+      "canonical": "Early Blight",
+      "aliases": ["early blight", "tomato___early_blight", "potato___early_blight"],
+      "description": {
+        "en": "A fungal disease (Alternaria spp.) causing concentric target-like spots on lower leaves, progressing upward.",
+        "ar": "مرض فطري (Alternaria) يسبب بقعًا حلقية شبيهة بالهدف على الأوراق السفلية ثم ينتشر للأعلى."
+      },
+      "treatment": {
+        "en": "Remove lower infected leaves and apply protectant fungicides such as chlorothalonil or mancozeb at regular intervals.",
+        "ar": "أزل الأوراق السفلية المصابة واستخدم مبيدات وقائية مثل كلوروثالونيل أو مانكوزيب على فترات منتظمة."
+      },
+      "prevention": {
+        "en": "Rotate crops, avoid overhead irrigation, and keep foliage dry with proper spacing and pruning.",
+        "ar": "اتبع الدورة الزراعية وتجنب الري بالرش وحافظ على جفاف المجموع الخضري عبر التهوية والتباعد المناسب."
+      },
+      "recommendedProducts": ["Chlorothalonil", "Mancozeb", "Bacillus subtilis bio-fungicide"]
+    },
+    {
+      "canonical": "Late Blight",
+      "aliases": ["late blight", "tomato___late_blight", "potato___late_blight"],
+      "description": {
+        "en": "A destructive disease (Phytophthora infestans) causing water-soaked lesions and rapid tissue collapse in cool, wet weather.",
+        "ar": "مرض مدمر (اللفحة المتأخرة) يسبب آفات مائية وانهيارًا سريعًا للأنسجة في الأجواء الباردة الرطبة."
+      },
+      "treatment": {
+        "en": "Remove infected plants where severe and apply anti-oomycete fungicides preventively and curatively according to local guidance.",
+        "ar": "أزل النباتات شديدة الإصابة واستخدم مبيدات مخصصة للأوميستات وقائيًا وعلاجيًا وفق الإرشادات المحلية."
+      },
+      "prevention": {
+        "en": "Use disease-free seedlings, avoid prolonged wet foliage, and monitor forecasts for blight-conducive weather.",
+        "ar": "استخدم شتلات سليمة وتجنب ابتلال الأوراق لفترات طويلة وراقب الطقس الملائم لانتشار اللفحة."
+      },
+      "recommendedProducts": ["Cymoxanil + mancozeb", "Copper fungicide", "Zoxamide-based fungicide"]
+    },
+    {
+      "canonical": "Septoria Leaf Spot",
+      "aliases": ["septoria leaf spot", "tomato___septoria_leaf_spot"],
+      "description": {
+        "en": "A fungal tomato disease causing numerous small dark spots with tan centers, leading to defoliation.",
+        "ar": "مرض فطري في الطماطم يسبب بقعًا صغيرة داكنة ذات مركز فاتح وقد يؤدي لتساقط الأوراق."
+      },
+      "treatment": {
+        "en": "Prune infected leaves and apply fungicides such as chlorothalonil, mancozeb, or copper compounds on schedule.",
+        "ar": "أزل الأوراق المصابة واستخدم مبيدات مثل كلوروثالونيل أو مانكوزيب أو مركبات النحاس وفق برنامج منتظم."
+      },
+      "prevention": {
+        "en": "Use mulch to reduce splash spread, keep lower leaves off soil, and avoid working plants while wet.",
+        "ar": "استخدم المهاد لتقليل تناثر العدوى، وأبعد الأوراق السفلية عن التربة، وتجنب التعامل مع النباتات وهي مبللة."
+      },
+      "recommendedProducts": ["Chlorothalonil", "Mancozeb", "Copper oxychloride"]
+    },
+    {
+      "canonical": "Leaf Spot",
+      "aliases": ["leaf spot", "gray leaf spot", "corn___cercospora_leaf_spot_gray_leaf_spot"],
+      "description": {
+        "en": "A broad disease group causing necrotic spots on foliage; severe infection reduces photosynthetic area and yield.",
+        "ar": "مجموعة أمراض تسبب بقعًا نخرية على الأوراق، ومع شدة الإصابة تنخفض المساحة الفعالة للتمثيل الضوئي والمحصول."
+      },
+      "treatment": {
+        "en": "Remove heavily infected leaves and use labeled fungicides specific to crop and pathogen pressure.",
+        "ar": "أزل الأوراق شديدة الإصابة واستخدم مبيدات فطرية معتمدة مناسبة للمحصول وشدة المسبب المرضي."
+      },
+      "prevention": {
+        "en": "Promote airflow, apply balanced fertilization, and sanitize crop residues after harvest.",
+        "ar": "حسّن التهوية، وطبّق تسميدًا متوازنًا، وتخلّص من بقايا المحصول المصابة بعد الحصاد."
+      },
+      "recommendedProducts": ["Azoxystrobin", "Mancozeb", "Copper fungicide"]
+    },
+    {
+      "canonical": "Anthracnose",
+      "aliases": ["anthracnose"],
+      "description": {
+        "en": "A fungal disease causing dark, sunken lesions on leaves, stems, and fruits, often favored by warm humidity.",
+        "ar": "مرض فطري يسبب آفات داكنة غائرة على الأوراق والسيقان والثمار ويزداد في الرطوبة والدفء."
+      },
+      "treatment": {
+        "en": "Prune infected tissues and protect with fungicides such as copper or mancozeb, rotating modes of action.",
+        "ar": "أزل الأنسجة المصابة واستخدم مبيدات مثل النحاس أو مانكوزيب مع تدوير آليات التأثير."
+      },
+      "prevention": {
+        "en": "Avoid overhead irrigation, maintain spacing, and remove infected debris from the field.",
+        "ar": "تجنب الري بالرش، وحافظ على التباعد المناسب، وأزل المخلفات النباتية المصابة من الحقل."
+      },
+      "recommendedProducts": ["Mancozeb fungicide", "Copper fungicide", "Seaweed biostimulant"]
+    },
+    {
+      "canonical": "Rust",
+      "aliases": ["rust", "wheat rust", "brown rust", "yellow rust", "corn___common_rust_"],
+      "description": {
+        "en": "Fungal rust diseases produce orange/brown pustules and can significantly reduce photosynthesis and grain/fruit quality.",
+        "ar": "أمراض الصدأ الفطرية تُظهر بثرات برتقالية/بنية وتؤدي إلى انخفاض التمثيل الضوئي وجودة الإنتاج."
+      },
+      "treatment": {
+        "en": "Apply triazole or strobilurin fungicides early at first symptoms; repeat based on disease pressure and label.",
+        "ar": "استخدم مبيدات من مجموعة الترايازول أو الستروبيليورين مبكرًا عند ظهور الأعراض الأولى مع التكرار حسب شدة الإصابة."
+      },
+      "prevention": {
+        "en": "Use resistant cultivars, remove volunteer hosts, and avoid excess nitrogen that drives soft susceptible growth.",
+        "ar": "استخدم أصنافًا مقاومة، وتخلص من النباتات العائلة البديلة، وتجنب الإفراط في النيتروجين."
+      },
+      "recommendedProducts": ["Propiconazole", "Azoxystrobin", "Copper fungicide"]
+    },
+    {
+      "canonical": "Cedar Apple Rust",
+      "aliases": ["cedar apple rust", "apple___cedar_apple_rust"],
+      "description": {
+        "en": "A fungal rust disease causing bright yellow-orange lesions on apple leaves and fruit quality losses.",
+        "ar": "مرض صدأ فطري يسبب بقعًا صفراء/برتقالية زاهية على أوراق التفاح وقد يخفض جودة الثمار."
+      },
+      "treatment": {
+        "en": "Apply rust-labeled fungicides during susceptible growth stages and prune alternate host sources where feasible.",
+        "ar": "طبّق مبيدات مخصصة للصدأ في المراحل الحساسة وقم بتقليم أو إزالة مصادر العائل البديل عند الإمكان."
+      },
+      "prevention": {
+        "en": "Use preventive seasonal spray programs and maintain good orchard airflow.",
+        "ar": "اتبع برنامج رش وقائي موسمي وحافظ على تهوية جيدة داخل البستان."
+      },
+      "recommendedProducts": ["Myclobutanil", "Copper fungicide", "Sulfur fungicide"]
+    },
+    {
+      "canonical": "Apple Scab",
+      "aliases": ["apple scab", "apple___apple_scab"],
+      "description": {
+        "en": "A common apple fungal disease causing olive-brown lesions on leaves and scabby fruit lesions.",
+        "ar": "مرض فطري شائع في التفاح يسبب بقعًا زيتونية/بنية على الأوراق وآفات قشرية على الثمار."
+      },
+      "treatment": {
+        "en": "Use protectant and systemic fungicides at key phenological stages, especially from green tip to petal fall.",
+        "ar": "استخدم مبيدات وقائية وجهازية في المراحل الحرجة خاصة من بداية تفتح البراعم حتى تساقط البتلات."
+      },
+      "prevention": {
+        "en": "Sanitize fallen leaves, prune for airflow, and implement a weather-based spray schedule.",
+        "ar": "تخلّص من الأوراق المتساقطة المصابة، وقم بالتقليم لتحسين التهوية، واعتمد برنامج رش مبنيًا على الطقس."
+      },
+      "recommendedProducts": ["Captan", "Difenoconazole", "Mancozeb"]
+    },
+    {
+      "canonical": "Black Rot",
+      "aliases": ["black rot", "apple___black_rot", "grape___black_rot"],
+      "description": {
+        "en": "A fungal disease causing dark rot lesions on fruit and necrotic spots on foliage.",
+        "ar": "مرض فطري يسبب تعفنًا داكنًا على الثمار وبقعًا نخرية على الأوراق."
+      },
+      "treatment": {
+        "en": "Remove mummified fruits and infected shoots, then apply labeled fungicides with resistance management.",
+        "ar": "أزل الثمار المتحنطة والأفرع المصابة ثم استخدم مبيدات معتمدة مع مراعاة إدارة مقاومة المسبب."
+      },
+      "prevention": {
+        "en": "Improve sanitation and canopy aeration and avoid prolonged leaf wetness.",
+        "ar": "حسّن النظافة الزراعية وتهوية المجموع الخضري وتجنب بقاء الأوراق مبللة لفترات طويلة."
+      },
+      "recommendedProducts": ["Mancozeb", "Myclobutanil", "Copper fungicide"]
+    },
+    {
+      "canonical": "Bacterial Spot",
+      "aliases": ["bacterial spot", "tomato___bacterial_spot", "pepper,_bell___bacterial_spot"],
+      "description": {
+        "en": "A bacterial disease causing small dark lesions on leaves and fruit, often spread by splash and handling.",
+        "ar": "مرض بكتيري يسبب آفات داكنة صغيرة على الأوراق والثمار وينتشر غالبًا بالتناثر والملامسة."
+      },
+      "treatment": {
+        "en": "Apply copper + mancozeb programs where allowed, remove severely infected material, and reduce field handling when wet.",
+        "ar": "استخدم برامج نحاس + مانكوزيب عند السماح بها، وأزل الأجزاء شديدة الإصابة، وقلل التعامل مع النبات أثناء البلل."
+      },
+      "prevention": {
+        "en": "Use certified clean seedlings, avoid overhead irrigation, and disinfect tools frequently.",
+        "ar": "استخدم شتلات معتمدة سليمة، وتجنب الري بالرش، وطهّر الأدوات بشكل متكرر."
+      },
+      "recommendedProducts": ["Copper hydroxide", "Mancozeb", "Bacillus-based bio-product"]
+    },
+    {
+      "canonical": "Bacterial Blight",
+      "aliases": ["bacterial blight"],
+      "description": {
+        "en": "A bacterial disease causing blighting, wilting, and tissue necrosis on susceptible crops.",
+        "ar": "مرض بكتيري يسبب لفحات وذبولًا ونخرًا في الأنسجة بالمحاصيل الحساسة."
+      },
+      "treatment": {
+        "en": "Remove infected plants quickly and apply approved bactericides where available under local regulations.",
+        "ar": "أزل النباتات المصابة سريعًا واستخدم مبيدات بكتيرية معتمدة وفق اللوائح المحلية."
+      },
+      "prevention": {
+        "en": "Use clean seed, rotate crops, and avoid mechanical spread through contaminated tools and water.",
+        "ar": "استخدم بذورًا سليمة، واتبِع الدورة الزراعية، وتجنب الانتشار الميكانيكي عبر الأدوات والمياه الملوثة."
+      },
+      "recommendedProducts": ["Copper bactericide", "Biological Bacillus formulation", "Plant defense inducer"]
+    },
+    {
+      "canonical": "Fusarium Wilt",
+      "aliases": ["fusarium wilt"],
+      "description": {
+        "en": "A soil-borne fungal vascular disease causing yellowing, one-sided wilt, and eventual plant collapse.",
+        "ar": "مرض وعائي فطري تربة يسبب اصفرارًا وذبولًا أحادي الجانب ثم انهيار النبات."
+      },
+      "treatment": {
+        "en": "Rogue severely affected plants, improve soil drainage, and use biological antagonists and soil health programs.",
+        "ar": "أزل النباتات المتضررة بشدة، وحسّن صرف التربة، واستخدم عوامل حيوية مضادة وبرامج تحسين صحة التربة."
+      },
+      "prevention": {
+        "en": "Use resistant cultivars, grafting where practical, and long crop rotation with non-host crops.",
+        "ar": "استخدم أصنافًا مقاومة أو التطعيم عند الإمكان، وطبّق دورة زراعية طويلة بمحاصيل غير عائلة."
+      },
+      "recommendedProducts": ["Trichoderma soil amendment", "Potassium phosphite", "Compost-based bio-stimulant"]
+    },
+    {
+      "canonical": "Verticillium Wilt",
+      "aliases": ["verticillium wilt"],
+      "description": {
+        "en": "A soil-borne vascular wilt causing progressive chlorosis and wilting, often with unilateral symptoms.",
+        "ar": "ذبول وعائي من مصدر تربة يسبب اصفرارًا تدريجيًا وذبولًا وقد يظهر بشكل أحادي الجانب."
+      },
+      "treatment": {
+        "en": "Remove heavily symptomatic plants, reduce stress, and support root health with biological soil programs.",
+        "ar": "أزل النباتات شديدة الأعراض، وقلل الإجهاد، وادعم الجذور ببرامج حيوية للتربة."
+      },
+      "prevention": {
+        "en": "Use resistant varieties and avoid planting susceptible crops repeatedly in infested soils.",
+        "ar": "استخدم أصنافًا مقاومة وتجنب تكرار زراعة المحاصيل الحساسة في الأراضي الموبوءة."
+      },
+      "recommendedProducts": ["Trichoderma product", "Humic acid", "Seaweed biostimulant"]
+    },
+    {
+      "canonical": "Root Rot",
+      "aliases": ["root rot", "phytophthora root rot", "damping off"],
+      "description": {
+        "en": "Root diseases linked to excess moisture and poor drainage, causing root decay, yellowing, and stunting.",
+        "ar": "أمراض الجذور المرتبطة بالرطوبة الزائدة وسوء الصرف وتسبب تعفن الجذور والاصفرار وضعف النمو."
+      },
+      "treatment": {
+        "en": "Correct irrigation immediately, improve drainage, and apply suitable anti-oomycete or biological root-zone products.",
+        "ar": "عدّل الري فورًا وحسّن الصرف واستخدم منتجات مناسبة لمنطقة الجذور (كيميائية/حيوية) حسب المسبب."
+      },
+      "prevention": {
+        "en": "Use well-drained media, avoid overwatering, and sanitize nursery containers and tools.",
+        "ar": "استخدم وسطًا جيد الصرف وتجنب الإفراط في الري وطهّر حاويات المشتل والأدوات."
+      },
+      "recommendedProducts": ["Phosphonate", "Trichoderma root inoculant", "Hydrogen peroxide soil drench (labeled use)"]
+    },
+    {
+      "canonical": "Botrytis (Gray Mold)",
+      "aliases": ["botrytis", "gray mold", "grey mold"],
+      "description": {
+        "en": "A fungal disease causing soft brown lesions and gray fuzzy mold on flowers, leaves, and fruits in humid conditions.",
+        "ar": "مرض فطري يسبب تعفنًا بنيًا طريًا ونموًا رماديًا زغبيًا على الأزهار والأوراق والثمار في الرطوبة العالية."
+      },
+      "treatment": {
+        "en": "Remove infected tissues, reduce humidity, and rotate botrytis-active fungicides to prevent resistance.",
+        "ar": "أزل الأجزاء المصابة، وخفّض الرطوبة، ودوّر مبيدات فعالة ضد البوتريتس لمنع ظهور المقاومة."
+      },
+      "prevention": {
+        "en": "Improve air movement and avoid dense canopy and prolonged condensation.",
+        "ar": "حسّن حركة الهواء وتجنب التزاحم النباتي وتكاثف الرطوبة لفترات طويلة."
+      },
+      "recommendedProducts": ["Fenhexamid", "Cyprodinil + fludioxonil", "Bacillus amyloliquefaciens"]
+    },
+    {
+      "canonical": "Mosaic Virus",
+      "aliases": ["mosaic virus", "tomato mosaic virus", "tobacco mosaic virus"],
+      "description": {
+        "en": "Viral disease causing mosaic mottling, distortion, and growth reduction; spreads mechanically and via vectors.",
+        "ar": "مرض فيروسي يسبب تبقعًا فسيفسائيًا وتشوهات وتراجع نمو، وينتشر ميكانيكيًا أو عبر نواقل."
+      },
+      "treatment": {
+        "en": "No curative antiviral treatment; remove infected plants and aggressively control vectors and contamination sources.",
+        "ar": "لا يوجد علاج شافٍ للفيروس؛ أزل النباتات المصابة وسيطر بقوة على النواقل ومصادر التلوث."
+      },
+      "prevention": {
+        "en": "Use virus-free seeds/seedlings, disinfect tools and hands, and control aphids/whiteflies.",
+        "ar": "استخدم بذورًا/شتلات خالية من الفيروس، وطهّر الأدوات والأيدي، وكافح المن والذبابة البيضاء."
+      },
+      "recommendedProducts": ["Yellow sticky traps", "Insecticidal soap", "Mineral oil spray (labeled use)"]
+    },
+    {
+      "canonical": "Tomato Yellow Leaf Curl Virus",
+      "aliases": ["tomato yellow leaf curl virus", "tomato___tomato_yellow_leaf_curl_virus"],
+      "description": {
+        "en": "A whitefly-transmitted viral disease causing leaf curling, yellowing, and severe yield reduction in tomato.",
+        "ar": "فيروس ينتقل بالذبابة البيضاء ويسبب التفاف الأوراق واصفرارها وانخفاضًا كبيرًا في محصول الطماطم."
+      },
+      "treatment": {
+        "en": "Rogue infected plants early and intensify whitefly management with integrated chemical and physical barriers.",
+        "ar": "أزل النباتات المصابة مبكرًا وشدّد مكافحة الذبابة البيضاء بمزيج من الوسائل الكيميائية والحواجز الفيزيائية."
+      },
+      "prevention": {
+        "en": "Use tolerant varieties, insect-proof nurseries, reflective mulches, and vector monitoring.",
+        "ar": "استخدم أصنافًا متحملة، ومشاتل محمية ضد الحشرات، وملش عاكس، مع مراقبة النواقل باستمرار."
+      },
+      "recommendedProducts": ["Imidacloprid (labeled use)", "Reflective mulch", "Yellow sticky traps"]
+    },
+    {
+      "canonical": "Citrus Canker",
+      "aliases": ["citrus canker"],
+      "description": {
+        "en": "A bacterial citrus disease causing raised corky lesions on leaves, stems, and fruits with quality loss.",
+        "ar": "مرض بكتيري في الحمضيات يسبب آفات فلينية مرتفعة على الأوراق والأفرع والثمار مع تراجع الجودة."
+      },
+      "treatment": {
+        "en": "Prune infected twigs, apply copper sprays in flush periods, and enforce strict orchard sanitation.",
+        "ar": "قم بتقليم الأفرع المصابة واستخدم رشات نحاسية في فترات النمو الحديث مع تشديد النظافة البستانية."
+      },
+      "prevention": {
+        "en": "Use windbreaks, disease-free nursery stock, and avoid moving contaminated plant materials.",
+        "ar": "استخدم مصدات رياح وشتلات سليمة وتجنب نقل المواد النباتية الملوثة."
+      },
+      "recommendedProducts": ["Copper hydroxide", "Copper oxychloride", "Sanitation disinfectant"]
+    },
+    {
+      "canonical": "Fire Blight",
+      "aliases": ["fire blight"],
+      "description": {
+        "en": "A bacterial disease of pome fruits causing blossom blight, shoot dieback, and characteristic scorched appearance.",
+        "ar": "مرض بكتيري في التفاحيات يسبب لفحة الأزهار وموت الأفرع ومظهرًا محروقًا مميزًا."
+      },
+      "treatment": {
+        "en": "Prune infected shoots below visible symptoms and disinfect tools between cuts; apply bactericides during bloom where permitted.",
+        "ar": "اقلم الأفرع المصابة أسفل حدود الأعراض وطهّر الأدوات بين القصات؛ واستخدم مبيدات بكتيرية أثناء الإزهار عند السماح."
+      },
+      "prevention": {
+        "en": "Avoid excess nitrogen, manage vigor, and use bloom-risk forecasting models.",
+        "ar": "تجنب الإفراط في النيتروجين واضبط النمو الخضري واستخدم نماذج توقع خطر العدوى أثناء الإزهار."
+      },
+      "recommendedProducts": ["Copper bactericide", "Biological bloom protectant", "Tool disinfectant"]
+    },
+    {
+      "canonical": "Rice Blast",
+      "aliases": ["rice blast"],
+      "description": {
+        "en": "A major rice fungal disease causing diamond-shaped leaf lesions and severe panicle damage.",
+        "ar": "مرض فطري مهم في الأرز يسبب بقعًا ماسية على الأوراق وقد يسبب أضرارًا شديدة في السنابل."
+      },
+      "treatment": {
+        "en": "Apply blast-specific fungicides at tillering/booting stages and avoid excessive nitrogen top-dressing.",
+        "ar": "استخدم مبيدات متخصصة لمرض اللفحة في مراحل التفريع/التسنبل وتجنب الإفراط في التسميد النيتروجيني."
+      },
+      "prevention": {
+        "en": "Use resistant cultivars, balanced fertilization, and water management that avoids stress swings.",
+        "ar": "استخدم أصنافًا مقاومة وتسميدًا متوازنًا وإدارة مياه تقلل تقلبات الإجهاد."
+      },
+      "recommendedProducts": ["Tricyclazole", "Azoxystrobin", "Balanced NPK fertilizer"]
+    },
+    {
+      "canonical": "Rice Brown Spot",
+      "aliases": ["brown spot", "rice brown spot"],
+      "description": {
+        "en": "A fungal disease causing brown lesions on leaves and grains, often associated with nutrient stress.",
+        "ar": "مرض فطري يسبب بقعًا بنية على الأوراق والحبوب وغالبًا يرتبط بإجهاد غذائي."
+      },
+      "treatment": {
+        "en": "Correct nutritional deficiencies and apply suitable fungicides when disease pressure is high.",
+        "ar": "صحّح نقص العناصر الغذائية واستخدم مبيدات مناسبة عند ارتفاع شدة المرض."
+      },
+      "prevention": {
+        "en": "Use balanced fertilization (especially potassium and silicon where relevant) and quality seeds.",
+        "ar": "استخدم تسميدًا متوازنًا (خصوصًا البوتاسيوم والسيليكون عند الحاجة) وبذورًا جيدة."
+      },
+      "recommendedProducts": ["Mancozeb", "Potassium fertilizer", "Silicon supplement"]
+    },
+    {
+      "canonical": "Sheath Blight",
+      "aliases": ["sheath blight"],
+      "description": {
+        "en": "A rice fungal disease causing sheath lesions and canopy-level spread under high humidity and dense stands.",
+        "ar": "مرض فطري في الأرز يسبب آفات على الأغمدة وينتشر في الكثافة العالية والرطوبة المرتفعة."
+      },
+      "treatment": {
+        "en": "Apply recommended fungicides at early lesion appearance and reduce canopy humidity where possible.",
+        "ar": "استخدم المبيدات الموصى بها عند بداية الأعراض وقلّل رطوبة المجموع الخضري قدر الإمكان."
+      },
+      "prevention": {
+        "en": "Avoid excessive nitrogen, optimize plant spacing, and manage irrigation to reduce humidity peaks.",
+        "ar": "تجنب زيادة النيتروجين، وحسّن الكثافة النباتية، واضبط الري لتقليل قمم الرطوبة."
+      },
+      "recommendedProducts": ["Validamycin", "Azoxystrobin", "Balanced nitrogen management"]
+    },
+    {
+      "canonical": "Corn Northern Leaf Blight",
+      "aliases": ["corn northern leaf blight", "corn_(maize)___northern_leaf_blight"],
+      "description": {
+        "en": "A fungal corn disease causing elongated gray-green lesions that reduce leaf function and grain fill.",
+        "ar": "مرض فطري في الذرة يسبب آفات طولية رمادية/خضراء تقلل كفاءة الأوراق وامتلاء الحبوب."
+      },
+      "treatment": {
+        "en": "Apply foliar fungicides at threshold and protect upper canopy leaves during grain-filling stages.",
+        "ar": "استخدم مبيدات ورقية عند الوصول للحد الحرج واحمِ الأوراق العليا خلال مرحلة امتلاء الحبوب."
+      },
+      "prevention": {
+        "en": "Use resistant hybrids, residue management, and crop rotation.",
+        "ar": "استخدم هجنًا مقاومة مع إدارة المخلفات والدورة الزراعية."
+      },
+      "recommendedProducts": ["Azoxystrobin + propiconazole", "Mancozeb", "Resistant seed hybrid"]
+    },
+    {
+      "canonical": "Corn Common Rust",
+      "aliases": ["corn common rust", "common rust", "corn___common_rust_"],
+      "description": {
+        "en": "A fungal disease causing reddish-brown pustules on corn leaves, reducing photosynthetic capacity when severe.",
+        "ar": "مرض فطري يسبب بثرات بنية محمرة على أوراق الذرة وقد يقلل التمثيل الضوئي عند اشتداد الإصابة."
+      },
+      "treatment": {
+        "en": "Use triazole/strobilurin fungicides where needed based on growth stage and disease severity.",
+        "ar": "استخدم مبيدات من الترايازول/الستروبيليورين عند الحاجة حسب مرحلة النمو وشدة الإصابة."
+      },
+      "prevention": {
+        "en": "Plant resistant hybrids and monitor fields early to time interventions correctly.",
+        "ar": "ازرع هجنًا مقاومة وراقب الحقول مبكرًا لتوقيت التدخل بصورة صحيحة."
+      },
+      "recommendedProducts": ["Propiconazole", "Azoxystrobin", "Resistant hybrid seed"]
+    },
+    {
+      "canonical": "Strawberry Leaf Scorch",
+      "aliases": ["strawberry with leaf scorch", "strawberry___leaf_scorch", "leaf scorch"],
+      "description": {
+        "en": "A fungal strawberry leaf disease causing purple-red spots that merge and scorch leaf margins, reducing vigor.",
+        "ar": "مرض فطري في الفراولة يسبب بقعًا أرجوانية/حمراء قد تندمج وتحرق حواف الورقة وتضعف النبات."
+      },
+      "treatment": {
+        "en": "Remove infected leaves, improve airflow, and apply labeled strawberry fungicides such as captan or copper products.",
+        "ar": "أزل الأوراق المصابة وحسّن التهوية واستخدم مبيدات معتمدة للفراولة مثل الكابتان أو المركبات النحاسية."
+      },
+      "prevention": {
+        "en": "Avoid overhead irrigation, remove infected debris, and maintain field sanitation and spacing.",
+        "ar": "تجنب الري بالرش وأزل المخلفات المصابة وحافظ على نظافة الحقل والتباعد المناسب."
+      },
+      "recommendedProducts": ["Captan fungicide", "Copper fungicide", "Potassium phosphite", "Seaweed biostimulant"]
+    },
+    {
+      "canonical": "Grape Black Rot",
+      "aliases": ["grape black rot", "grape___black_rot"],
+      "description": {
+        "en": "A grape fungal disease causing leaf lesions and fruit mummification with major bunch losses if uncontrolled.",
+        "ar": "مرض فطري في العنب يسبب بقعًا ورقية وتحنيطًا للثمار وقد يسبب خسائر كبيرة في العناقيد."
+      },
+      "treatment": {
+        "en": "Remove infected clusters and apply fungicides before and after bloom based on disease pressure.",
+        "ar": "أزل العناقيد المصابة واستخدم مبيدات قبل وبعد الإزهار حسب شدة المرض."
+      },
+      "prevention": {
+        "en": "Prune for canopy openness and sanitize mummified berries and infected debris.",
+        "ar": "قلم الكرمة لفتح المجموع الخضري وتخلص من الثمار المتحنطة والمخلفات المصابة."
+      },
+      "recommendedProducts": ["Mancozeb", "Myclobutanil", "Copper fungicide"]
+    },
+    {
+      "canonical": "Grape Esca (Black Measles)",
+      "aliases": ["esca", "grape___esca_(black_measles)"],
+      "description": {
+        "en": "A grapevine trunk disease complex causing tiger-stripe leaf symptoms and progressive vine decline.",
+        "ar": "مجموعة أمراض خشبية في العنب تسبب أعراضًا مخططة على الأوراق وتدهورًا تدريجيًا للكرمة."
+      },
+      "treatment": {
+        "en": "Prune and remove severely affected wood and protect pruning wounds with registered wound protectants.",
+        "ar": "قم بتقليم وإزالة الخشب شديد الإصابة واحمِ جروح التقليم بمواد حماية معتمدة."
+      },
+      "prevention": {
+        "en": "Sanitize pruning tools and avoid pruning during high-risk wet periods.",
+        "ar": "طهّر أدوات التقليم وتجنب التقليم خلال الفترات الرطبة عالية الخطورة."
+      },
+      "recommendedProducts": ["Pruning wound sealant", "Copper protectant", "Biological trunk protection"]
+    },
+    {
+      "canonical": "Tomato Leaf Mold",
+      "aliases": ["tomato leaf mold", "tomato___leaf_mold"],
+      "description": {
+        "en": "A greenhouse-favored fungal disease causing pale spots and olive mold on lower leaf surfaces.",
+        "ar": "مرض فطري يشيع في البيوت المحمية ويسبب بقعًا فاتحة وعفنًا زيتونيًا على السطح السفلي للأوراق."
+      },
+      "treatment": {
+        "en": "Lower humidity and apply appropriate fungicides promptly when first lesions appear.",
+        "ar": "خفض الرطوبة واستخدم المبيدات المناسبة بسرعة عند بداية ظهور الأعراض."
+      },
+      "prevention": {
+        "en": "Ventilate greenhouses well and avoid dense foliage and prolonged condensation.",
+        "ar": "وفّر تهوية جيدة في البيوت المحمية وتجنب الكثافة الورقية والتكاثف لفترات طويلة."
+      },
+      "recommendedProducts": ["Chlorothalonil", "Copper fungicide", "Biological Bacillus formulation"]
+    },
+    {
+      "canonical": "Tomato Target Spot",
+      "aliases": ["tomato target spot", "tomato___target_spot"],
+      "description": {
+        "en": "A fungal disease producing concentric lesions on tomato leaves and fruit, reducing marketable yield.",
+        "ar": "مرض فطري يسبب بقعًا حلقية على أوراق وثمار الطماطم ويقلل الإنتاج التسويقي."
+      },
+      "treatment": {
+        "en": "Remove affected tissues and apply fungicide rotations with different FRAC groups.",
+        "ar": "أزل الأجزاء المصابة واستخدم برنامج مبيدات مع تدوير مجموعات FRAC المختلفة."
+      },
+      "prevention": {
+        "en": "Maintain field hygiene, optimize plant spacing, and reduce leaf wetness duration.",
+        "ar": "حافظ على نظافة الحقل وحسن التباعد وقلل مدة ابتلال الأوراق."
+      },
+      "recommendedProducts": ["Azoxystrobin", "Difenoconazole", "Mancozeb"]
+    },
+    {
+      "canonical": "Tomato Spider Mites Damage",
+      "aliases": ["tomato spider mites", "tomato___spider_mites_two-spotted_spider_mite"],
+      "description": {
+        "en": "A pest problem (not pathogen) causing stippling, bronzing, webbing, and leaf desiccation.",
+        "ar": "مشكلة آفة (وليست ممرضًا) تسبب تنقيطًا وبرونزية وخيوطًا عنكبوتية وجفافًا للأوراق."
+      },
+      "treatment": {
+        "en": "Use targeted acaricides and improve biological control by conserving predatory mites.",
+        "ar": "استخدم مبيدات أكاروسية موجهة وعزّز المكافحة الحيوية بالحفاظ على الأعداء الحيوية."
+      },
+      "prevention": {
+        "en": "Avoid drought stress and excessive broad-spectrum insecticide use that disrupts beneficial insects.",
+        "ar": "تجنب إجهاد العطش والإفراط في المبيدات واسعة الطيف التي تضر الكائنات النافعة."
+      },
+      "recommendedProducts": ["Abamectin (labeled use)", "Bifenazate", "Predatory mite release"]
+    },
+    {
+      "canonical": "Tomato Bacterial Speck",
+      "aliases": ["tomato bacterial speck", "tomato___bacterial_speck"],
+      "description": {
+        "en": "A bacterial tomato disease causing tiny dark specks with yellow halos on leaves and fruit under cool humid conditions.",
+        "ar": "مرض بكتيري في الطماطم يسبب نقاطًا داكنة صغيرة بهالة صفراء على الأوراق والثمار في الأجواء الباردة الرطبة."
+      },
+      "treatment": {
+        "en": "Use copper-based bactericides with protectant partners, remove heavily infected tissue, and avoid handling wet plants.",
+        "ar": "استخدم مبيدات نحاسية مع مواد وقائية مساعدة، وأزل الأجزاء شديدة الإصابة، وتجنب ملامسة النباتات وهي مبللة."
+      },
+      "prevention": {
+        "en": "Plant certified clean seedling stock and avoid overhead irrigation and mechanical spread by tools.",
+        "ar": "ازرع شتلات سليمة معتمدة وتجنب الري بالرش والانتقال الميكانيكي عبر الأدوات."
+      },
+      "recommendedProducts": ["Copper hydroxide", "Mancozeb", "Tool disinfectant"]
+    },
+    {
+      "canonical": "Tomato Curly Top Virus",
+      "aliases": ["tomato curly top virus", "curly top"],
+      "description": {
+        "en": "A viral disease causing severe curling, stunting, and chlorosis, commonly transmitted by leafhoppers.",
+        "ar": "مرض فيروسي يسبب تجعدًا شديدًا وتقزمًا واصفرارًا وغالبًا ينتقل بواسطة نطاطات الأوراق."
+      },
+      "treatment": {
+        "en": "No curative treatment exists; remove infected plants and focus on rapid vector suppression.",
+        "ar": "لا يوجد علاج شافٍ؛ أزل النباتات المصابة وركز على خفض الناقل بسرعة."
+      },
+      "prevention": {
+        "en": "Use insect netting, reflective mulch, and monitor/control leafhopper populations early.",
+        "ar": "استخدم شبكًا حشريًا وملشًا عاكسًا وراقب/كافح نطاطات الأوراق مبكرًا."
+      },
+      "recommendedProducts": ["Reflective mulch", "Insect net", "Vector-target insecticide (labeled use)"]
+    },
+    {
+      "canonical": "Tomato Fusarium Wilt",
+      "aliases": ["tomato fusarium wilt", "fusarium wilt tomato"],
+      "description": {
+        "en": "A soil-borne vascular fungal disease causing yellowing, wilting, and brown vascular discoloration in tomato.",
+        "ar": "مرض وعائي فطري من التربة يسبب اصفرارًا وذبولًا واسمرارًا في الأوعية داخل الطماطم."
+      },
+      "treatment": {
+        "en": "Remove severely infected plants and reduce soil stress with better drainage and biological root support.",
+        "ar": "أزل النباتات شديدة الإصابة وخفّض إجهاد التربة بتحسين الصرف ودعم الجذور حيويًا."
+      },
+      "prevention": {
+        "en": "Use resistant rootstocks/varieties and rotate with non-host crops for multiple seasons.",
+        "ar": "استخدم أصول/أصناف مقاومة وطبّق دورة زراعية مع محاصيل غير عائلة لعدة مواسم."
+      },
+      "recommendedProducts": ["Trichoderma amendment", "Potassium phosphite", "Humic acid"]
+    },
+    {
+      "canonical": "Tomato Verticillium Wilt",
+      "aliases": ["tomato verticillium wilt", "verticillium wilt tomato"],
+      "description": {
+        "en": "A vascular wilt causing unilateral yellowing and gradual decline, often in cooler production periods.",
+        "ar": "ذبول وعائي يسبب اصفرارًا أحادي الجانب وتدهورًا تدريجيًا خاصة في الفترات الأبرد."
+      },
+      "treatment": {
+        "en": "Remove highly symptomatic plants and improve root-zone aeration and soil health.",
+        "ar": "أزل النباتات شديدة الأعراض وحسّن تهوية منطقة الجذور وصحة التربة."
+      },
+      "prevention": {
+        "en": "Use resistant varieties, avoid susceptible rotations, and sanitize equipment between fields.",
+        "ar": "استخدم أصنافًا مقاومة وتجنب التتابع بمحاصيل حساسة وطهّر المعدات بين الحقول."
+      },
+      "recommendedProducts": ["Trichoderma inoculant", "Compost tea (verified source)", "Seaweed biostimulant"]
+    },
+    {
+      "canonical": "Potato Black Scurf",
+      "aliases": ["potato black scurf", "rhizoctonia"],
+      "description": {
+        "en": "A Rhizoctonia disease causing black crusts on tubers and poor emergence/stand establishment.",
+        "ar": "مرض ريزوكتونيا يسبب قشورًا سوداء على الدرنات وضعف الإنبات وتأسيس النبات."
+      },
+      "treatment": {
+        "en": "Use treated seed tubers and improve soil warmth/drainage to reduce disease pressure at emergence.",
+        "ar": "استخدم درنات تقاوي معالجة وحسّن حرارة التربة وصرفها لتقليل الضغط المرضي عند الإنبات."
+      },
+      "prevention": {
+        "en": "Avoid cold wet planting conditions and rotate away from susceptible hosts.",
+        "ar": "تجنب الزراعة في التربة الباردة الرطبة وطبّق دورة زراعية بعيدًا عن العوائل الحساسة."
+      },
+      "recommendedProducts": ["Seed treatment fungicide", "Trichoderma seed treatment", "Soil conditioner"]
+    },
+    {
+      "canonical": "Potato Common Scab",
+      "aliases": ["potato common scab"],
+      "description": {
+        "en": "A tuber skin disease causing rough corky lesions, often associated with high pH and dry soil during tuber set.",
+        "ar": "مرض جلدي على درنات البطاطا يسبب آفات فلينية خشنة ويرتبط غالبًا بارتفاع pH وجفاف التربة أثناء عقد الدرنات."
+      },
+      "treatment": {
+        "en": "No curative spray for existing lesions; maintain moisture during tuber set and adjust pH management.",
+        "ar": "لا يوجد علاج رشّي للآفات القائمة؛ حافظ على رطوبة مناسبة أثناء عقد الدرنات واضبط إدارة pH."
+      },
+      "prevention": {
+        "en": "Use tolerant varieties and avoid fresh manure and excessive liming in scab-prone fields.",
+        "ar": "استخدم أصنافًا متحملة وتجنب السماد البلدي الطازج والإفراط في التجيير بالأراضي المعرضة للجرب."
+      },
+      "recommendedProducts": ["Soil moisture sensor", "Sulfur amendment (where suitable)", "Certified seed tubers"]
+    },
+    {
+      "canonical": "Potato Virus Y",
+      "aliases": ["potato virus y", "pvy"],
+      "description": {
+        "en": "A major potato virus causing mosaic patterns, leaf crinkling, and significant yield loss.",
+        "ar": "فيروس مهم في البطاطا يسبب أعراض فسيفسائية وتجعدًا في الأوراق وخسارة كبيرة في المحصول."
+      },
+      "treatment": {
+        "en": "No curative treatment; rogue infected plants and aggressively control aphid vectors.",
+        "ar": "لا يوجد علاج شافٍ؛ أزل النباتات المصابة وكافح ناقلات المن بشكل مكثف."
+      },
+      "prevention": {
+        "en": "Use certified virus-free seed and reduce vector pressure with integrated pest management.",
+        "ar": "استخدم تقاوي خالية من الفيروس وخفّض ضغط النواقل عبر المكافحة المتكاملة."
+      },
+      "recommendedProducts": ["Certified seed", "Mineral oil spray", "Yellow sticky traps"]
+    },
+    {
+      "canonical": "Pepper Phytophthora Blight",
+      "aliases": ["pepper phytophthora blight"],
+      "description": {
+        "en": "An oomycete disease causing crown/root rot, wilt, and fruit lesions, favored by saturated soils.",
+        "ar": "مرض أوميستي يسبب تعفن التاج والجذور والذبول وآفات الثمار ويزداد مع تشبع التربة بالماء."
+      },
+      "treatment": {
+        "en": "Improve drainage immediately and use targeted anti-oomycete fungicides under local recommendations.",
+        "ar": "حسّن الصرف فورًا واستخدم مبيدات موجهة للأوميستات وفق التوصيات المحلية."
+      },
+      "prevention": {
+        "en": "Use raised beds, avoid over-irrigation, and rotate with non-host crops.",
+        "ar": "استخدم خطوطًا مرتفعة وتجنب الإفراط في الري وطبّق دورة زراعية بمحاصيل غير عائلة."
+      },
+      "recommendedProducts": ["Phosphonate fungicide", "Metalaxyl-mancozeb", "Raised-bed mulch system"]
+    },
+    {
+      "canonical": "Pepper Anthracnose",
+      "aliases": ["pepper anthracnose"],
+      "description": {
+        "en": "A fruit rot disease causing sunken dark lesions and rapid post-harvest losses in pepper.",
+        "ar": "مرض تعفن في ثمار الفلفل يسبب آفات داكنة غائرة وخسائر سريعة بعد الحصاد."
+      },
+      "treatment": {
+        "en": "Harvest and remove infected fruits quickly and protect with fungicides during fruiting stages.",
+        "ar": "احصد الثمار المصابة وأزلها سريعًا واستخدم الحماية بالمبيدات خلال مراحل الإثمار."
+      },
+      "prevention": {
+        "en": "Avoid fruit wetness and reduce splash spread with mulch and careful irrigation.",
+        "ar": "تجنب ابتلال الثمار وقلل انتشار الرذاذ باستخدام الملش والري الحذر."
+      },
+      "recommendedProducts": ["Mancozeb", "Copper fungicide", "Calcium foliar support"]
+    },
+    {
+      "canonical": "Cucumber Angular Leaf Spot",
+      "aliases": ["cucumber angular leaf spot"],
+      "description": {
+        "en": "A bacterial cucurbit disease producing angular water-soaked lesions that can tear and dry out.",
+        "ar": "مرض بكتيري في القرعيات يسبب بقعًا زاوية مائية قد تتمزق وتجف لاحقًا."
+      },
+      "treatment": {
+        "en": "Use copper-based bactericides and remove heavily infected leaves while limiting overhead irrigation.",
+        "ar": "استخدم مبيدات بكتيرية نحاسية وأزل الأوراق شديدة الإصابة مع تقليل الري بالرش."
+      },
+      "prevention": {
+        "en": "Use clean seed and sanitize tools; avoid moving through crop when foliage is wet.",
+        "ar": "استخدم بذورًا سليمة وطهّر الأدوات وتجنب الحركة بين النباتات عندما تكون الأوراق مبللة."
+      },
+      "recommendedProducts": ["Copper bactericide", "Seed disinfectant", "Drip irrigation kit"]
+    },
+    {
+      "canonical": "Cucumber Downy Mildew",
+      "aliases": ["cucumber downy mildew"],
+      "description": {
+        "en": "An aggressive downy mildew disease in cucurbits causing angular yellow lesions and rapid canopy collapse.",
+        "ar": "بياض زغبي شديد في القرعيات يسبب بقعًا صفراء زاوية وانهيارًا سريعًا للمجموع الخضري."
+      },
+      "treatment": {
+        "en": "Apply downy-specific fungicide rotations early and shorten spray intervals during conducive weather.",
+        "ar": "استخدم تدويرًا مبكرًا لمبيدات متخصصة للبياض الزغبي وقلّص فترات الرش في ظروف الخطورة."
+      },
+      "prevention": {
+        "en": "Improve airflow and monitor regional alerts to start protection before severe symptoms.",
+        "ar": "حسّن التهوية وراقب التنبيهات الإقليمية لبدء الحماية قبل تفاقم الأعراض."
+      },
+      "recommendedProducts": ["Cyazofamid", "Mandipropamid", "Copper protectant"]
+    },
+    {
+      "canonical": "Cucumber Powdery Mildew",
+      "aliases": ["cucumber powdery mildew"],
+      "description": {
+        "en": "A common cucurbit disease with white powdery fungal growth on leaves causing reduced productivity.",
+        "ar": "مرض شائع في القرعيات يظهر كطبقة بيضاء مسحوقية على الأوراق ويقلل الإنتاجية."
+      },
+      "treatment": {
+        "en": "Treat early with sulfur, potassium bicarbonate, or other labeled powdery mildew fungicides.",
+        "ar": "عالج مبكرًا بالكبريت أو بيكربونات البوتاسيوم أو مبيدات معتمدة للبياض الدقيقي."
+      },
+      "prevention": {
+        "en": "Maintain ventilation and avoid excessive nitrogen that creates dense susceptible foliage.",
+        "ar": "حافظ على التهوية وتجنب الإفراط في النيتروجين الذي يسبب نموًا كثيفًا حساسًا للإصابة."
+      },
+      "recommendedProducts": ["Sulfur", "Potassium bicarbonate", "Bio-fungicide Bacillus subtilis"]
+    },
+    {
+      "canonical": "Onion Purple Blotch",
+      "aliases": ["onion purple blotch"],
+      "description": {
+        "en": "A fungal onion disease causing purple lesions on leaves and reducing bulb size and quality.",
+        "ar": "مرض فطري في البصل يسبب بقعًا أرجوانية على الأوراق ويقلل حجم وجودة الأبصال."
+      },
+      "treatment": {
+        "en": "Use protectant fungicides with rotation and remove heavily infected foliage to limit spread.",
+        "ar": "استخدم مبيدات وقائية مع التدوير وأزل الأوراق شديدة الإصابة للحد من الانتشار."
+      },
+      "prevention": {
+        "en": "Avoid prolonged leaf wetness and improve spacing and field sanitation.",
+        "ar": "تجنب بقاء الأوراق مبللة لفترات طويلة وحسّن التباعد ونظافة الحقل."
+      },
+      "recommendedProducts": ["Mancozeb", "Chlorothalonil", "Copper fungicide"]
+    },
+    {
+      "canonical": "Onion Downy Mildew",
+      "aliases": ["onion downy mildew"],
+      "description": {
+        "en": "A downy mildew disease causing pale elongated lesions and gray growth on onion leaves.",
+        "ar": "مرض بياض زغبي يسبب آفات طولية باهتة ونموًا رماديًا على أوراق البصل."
+      },
+      "treatment": {
+        "en": "Use downy mildew-targeted fungicides and tighten spray schedules in cool humid conditions.",
+        "ar": "استخدم مبيدات موجهة للبياض الزغبي وقلص فترات الرش في الأجواء الباردة الرطبة."
+      },
+      "prevention": {
+        "en": "Promote airflow and avoid irrigation timing that leaves foliage wet overnight.",
+        "ar": "حسّن التهوية وتجنب مواعيد ري تُبقي الأوراق مبللة طوال الليل."
+      },
+      "recommendedProducts": ["Metalaxyl-mancozeb", "Copper fungicide", "Phosphite-based fungicide"]
+    },
+    {
+      "canonical": "Garlic Rust",
+      "aliases": ["garlic rust"],
+      "description": {
+        "en": "A rust disease on garlic leaves causing orange pustules and reduced bulb development when severe.",
+        "ar": "مرض صدأ على أوراق الثوم يسبب بثرات برتقالية ويضعف تكوين الأبصال عند اشتداد الإصابة."
+      },
+      "treatment": {
+        "en": "Apply rust fungicides at first symptom appearance and repeat as needed by pressure.",
+        "ar": "استخدم مبيدات الصدأ عند أول ظهور للأعراض وكرر حسب شدة المرض."
+      },
+      "prevention": {
+        "en": "Use clean planting material and avoid dense humid canopies.",
+        "ar": "استخدم مادة زراعية سليمة وتجنب الكثافة والرطوبة العالية داخل المجموع الخضري."
+      },
+      "recommendedProducts": ["Propiconazole", "Sulfur fungicide", "Copper fungicide"]
+    },
+    {
+      "canonical": "Bean Rust",
+      "aliases": ["bean rust"],
+      "description": {
+        "en": "A fungal rust in beans causing pustules on leaves that can defoliate plants under conducive weather.",
+        "ar": "مرض صدأ فطري في الفاصولياء يسبب بثرات على الأوراق وقد يؤدي لتساقطها في الظروف الملائمة."
+      },
+      "treatment": {
+        "en": "Use labeled rust fungicides and remove severely affected leaves to reduce inoculum.",
+        "ar": "استخدم مبيدات صدأ معتمدة وأزل الأوراق شديدة الإصابة لتقليل مصدر العدوى."
+      },
+      "prevention": {
+        "en": "Plant resistant cultivars and maintain crop ventilation with proper spacing.",
+        "ar": "ازرع أصنافًا مقاومة وحافظ على التهوية عبر التباعد المناسب."
+      },
+      "recommendedProducts": ["Azoxystrobin", "Propiconazole", "Resistant seed"]
+    },
+    {
+      "canonical": "Bean Anthracnose",
+      "aliases": ["bean anthracnose"],
+      "description": {
+        "en": "A fungal disease causing dark sunken lesions on pods, stems, and leaves in cool wet weather.",
+        "ar": "مرض فطري يسبب آفات داكنة غائرة على القرون والسيقان والأوراق في الطقس البارد الرطب."
+      },
+      "treatment": {
+        "en": "Use seed-safe fungicide programs and remove infected debris quickly to reduce spread.",
+        "ar": "استخدم برامج مبيدات آمنة للبذور وأزل المخلفات المصابة سريعًا للحد من الانتشار."
+      },
+      "prevention": {
+        "en": "Plant certified seed and avoid working in wet fields to limit mechanical spread.",
+        "ar": "ازرع بذورًا معتمدة وتجنب العمل في الحقول المبتلة للحد من الانتشار الميكانيكي."
+      },
+      "recommendedProducts": ["Copper fungicide", "Mancozeb", "Seed treatment fungicide"]
+    },
+    {
+      "canonical": "Lettuce Downy Mildew",
+      "aliases": ["lettuce downy mildew"],
+      "description": {
+        "en": "A serious lettuce disease causing yellow angular lesions and white downy growth on undersides.",
+        "ar": "مرض خطير في الخس يسبب بقعًا صفراء زاوية ونموًا زغبيًا أبيض على السطح السفلي."
+      },
+      "treatment": {
+        "en": "Use downy mildew fungicide rotations and remove heavily infected leaves.",
+        "ar": "استخدم تدوير مبيدات مخصصة للبياض الزغبي وأزل الأوراق شديدة الإصابة."
+      },
+      "prevention": {
+        "en": "Reduce humidity in protected cultivation and avoid overhead watering late in the day.",
+        "ar": "قلل الرطوبة في الزراعة المحمية وتجنب الري بالرش المتأخر."
+      },
+      "recommendedProducts": ["Mandipropamid", "Copper hydroxide", "Phosphite fungicide"]
+    },
+    {
+      "canonical": "Lettuce Bottom Rot",
+      "aliases": ["lettuce bottom rot", "sclerotinia"],
+      "description": {
+        "en": "A soil-related fungal disease causing basal rot and collapse near harvest.",
+        "ar": "مرض فطري مرتبط بالتربة يسبب تعفنًا قاعديًا وانهيار النبات قرب الحصاد."
+      },
+      "treatment": {
+        "en": "Improve drainage and apply soil/foliar fungicides in high-risk fields based on local recommendations.",
+        "ar": "حسّن الصرف واستخدم مبيدات تربة/ورقية في الحقول عالية الخطورة وفق التوصيات المحلية."
+      },
+      "prevention": {
+        "en": "Rotate with non-hosts and avoid prolonged soil wetness around crown tissues.",
+        "ar": "طبّق دورة زراعية مع محاصيل غير عائلة وتجنب البلل الطويل حول قاعدة النبات."
+      },
+      "recommendedProducts": ["Boscalid-based fungicide", "Irrigation management tools", "Soil biological amendment"]
+    },
+    {
+      "canonical": "Banana Panama Disease",
+      "aliases": ["banana panama disease", "banana fusarium wilt"],
+      "description": {
+        "en": "A destructive Fusarium wilt in banana causing yellowing, vascular browning, and plant death.",
+        "ar": "ذبول فوزاريومي مدمر في الموز يسبب اصفرارًا واسمرارًا وعائيًا وموت النبات."
+      },
+      "treatment": {
+        "en": "No curative chemical treatment; isolate affected zones and remove infected mats with strict sanitation.",
+        "ar": "لا يوجد علاج كيميائي شافٍ؛ اعزل المناطق المصابة وأزل الجور المصابة مع تشديد النظافة."
+      },
+      "prevention": {
+        "en": "Use clean planting material and strict biosecurity to avoid movement of contaminated soil/water.",
+        "ar": "استخدم مواد زراعة سليمة وطبّق أمانًا حيويًا صارمًا لمنع نقل التربة/المياه الملوثة."
+      },
+      "recommendedProducts": ["Clean tissue-culture plants", "Sanitation disinfectant", "Soil biosecurity mats"]
+    },
+    {
+      "canonical": "Banana Sigatoka",
+      "aliases": ["banana sigatoka", "black sigatoka"],
+      "description": {
+        "en": "A major leaf spot disease reducing banana photosynthesis and bunch filling.",
+        "ar": "مرض تبقع ورقي رئيسي يقلل التمثيل الضوئي وامتلاء عناقيد الموز."
+      },
+      "treatment": {
+        "en": "Use fungicide programs with resistance management and remove heavily diseased leaves.",
+        "ar": "استخدم برامج مبيدات مع إدارة للمقاومة وأزل الأوراق شديدة الإصابة."
+      },
+      "prevention": {
+        "en": "Maintain aeration, balanced nutrition, and routine leaf sanitation.",
+        "ar": "حافظ على التهوية والتغذية المتوازنة ونظافة الأوراق بشكل دوري."
+      },
+      "recommendedProducts": ["Triazole fungicide", "Strobilurin fungicide", "Mineral oil spray"]
+    },
+    {
+      "canonical": "Coffee Leaf Rust",
+      "aliases": ["coffee leaf rust"],
+      "description": {
+        "en": "A fungal rust causing orange powdery lesions on coffee leaves and severe yield decline if unmanaged.",
+        "ar": "مرض صدأ فطري يسبب بقعًا برتقالية مسحوقية على أوراق القهوة وقد يخفض المحصول بشدة."
+      },
+      "treatment": {
+        "en": "Apply rust fungicides with timing linked to rainfall patterns and flush growth.",
+        "ar": "استخدم مبيدات الصدأ بتوقيت مرتبط بالأمطار وموجات النمو الخضري."
+      },
+      "prevention": {
+        "en": "Use resistant varieties and optimize shade, pruning, and nutrition management.",
+        "ar": "استخدم أصنافًا مقاومة وحسّن إدارة الظل والتقليم والتغذية."
+      },
+      "recommendedProducts": ["Copper fungicide", "Propiconazole", "Resistant coffee variety"]
+    },
+    {
+      "canonical": "Olive Peacock Spot",
+      "aliases": ["olive peacock spot", "olive leaf spot"],
+      "description": {
+        "en": "An olive fungal leaf spot causing circular dark lesions and leaf drop in humid seasons.",
+        "ar": "مرض تبقع فطري في الزيتون يسبب بقعًا دائرية داكنة وتساقط أوراق في المواسم الرطبة."
+      },
+      "treatment": {
+        "en": "Use copper sprays at key seasonal windows and prune to open canopy.",
+        "ar": "استخدم رشات نحاسية في النوافذ الموسمية الحرجة وقم بالتقليم لفتح قلب الشجرة."
+      },
+      "prevention": {
+        "en": "Maintain orchard sanitation and avoid irrigation practices that elevate canopy humidity.",
+        "ar": "حافظ على نظافة البستان وتجنب ممارسات ري تزيد رطوبة المجموع الخضري."
+      },
+      "recommendedProducts": ["Copper oxychloride", "Copper hydroxide", "Pruning sealant"]
+    },
+    {
+      "canonical": "Olive Verticillium Wilt",
+      "aliases": ["olive verticillium wilt"],
+      "description": {
+        "en": "A soil-borne wilt in olive causing branch dieback and chronic decline, especially in infested soils.",
+        "ar": "ذبول تربة في الزيتون يسبب جفاف الأفرع وتدهورًا مزمنًا خاصة في الأراضي الموبوءة."
+      },
+      "treatment": {
+        "en": "Limit stress, prune dead branches, and improve soil biology; avoid moving infested soil.",
+        "ar": "قلل الإجهاد وقلم الأفرع الجافة وحسن أحياء التربة وتجنب نقل التربة الموبوءة."
+      },
+      "prevention": {
+        "en": "Avoid susceptible crop rotations and use tolerant rootstocks where available.",
+        "ar": "تجنب الدورة بمحاصيل حساسة واستخدم أصولًا متحملة عند توفرها."
+      },
+      "recommendedProducts": ["Trichoderma amendment", "Humic substances", "Sanitation protocol kit"]
+    },
+    {
+      "canonical": "Date Palm Red Palm Weevil Infestation",
+      "aliases": ["red palm weevil", "date palm weevil"],
+      "description": {
+        "en": "A destructive insect infestation in date palms causing internal tissue damage and structural decline.",
+        "ar": "إصابة حشرية مدمرة في نخيل التمر تسبب تلفًا داخليًا وانهيارًا تدريجيًا في البنية."
+      },
+      "treatment": {
+        "en": "Apply integrated management: early detection, sanitation pruning, pheromone trapping, and registered insecticide protocols.",
+        "ar": "اعتمد إدارة متكاملة: كشف مبكر، تقليم صحي، مصائد فرمونية، وبرامج مبيدات مسجلة."
+      },
+      "prevention": {
+        "en": "Avoid trunk wounds, sanitize tools, and maintain regular monitoring and trapping network.",
+        "ar": "تجنب جروح الساق، وطهّر الأدوات، وحافظ على مراقبة دورية وشبكة مصائد."
+      },
+      "recommendedProducts": ["Pheromone trap", "Registered systemic insecticide", "Wound sealing paste"]
+    },
+    {
+      "canonical": "Date Palm Bayoud Disease",
+      "aliases": ["bayoud disease", "date palm bayoud"],
+      "description": {
+        "en": "A Fusarium wilt of date palm causing one-sided frond dieback and eventual palm death.",
+        "ar": "ذبول فوزاريومي في نخيل التمر يسبب جفافًا أحادي الجانب للسعف وقد ينتهي بموت النخلة."
+      },
+      "treatment": {
+        "en": "No fully curative field treatment; remove severe cases and prevent spread through strict sanitation.",
+        "ar": "لا يوجد علاج حقلي شافٍ بالكامل؛ أزل الحالات الشديدة وامنع الانتشار بنظافة صارمة."
+      },
+      "prevention": {
+        "en": "Use resistant/tolerant material and avoid transferring infested soil or offshoots.",
+        "ar": "استخدم مواد زراعة مقاومة/متحملة وتجنب نقل التربة أو الفسائل الملوثة."
+      },
+      "recommendedProducts": ["Resistant offshoots", "Sanitation disinfectant", "Soil biosecurity tools"]
+    },
+    {
+      "canonical": "Sunflower Downy Mildew",
+      "aliases": ["sunflower downy mildew"],
+      "description": {
+        "en": "A downy mildew disease causing chlorosis, stunting, and white growth on leaf undersides in sunflower.",
+        "ar": "مرض بياض زغبي في دوار الشمس يسبب اصفرارًا وتقزمًا ونموًا أبيض على السطح السفلي للأوراق."
+      },
+      "treatment": {
+        "en": "Use seed treatment and early-season protection where risk is high.",
+        "ar": "استخدم معاملات البذور والحماية المبكرة في بداية الموسم عند ارتفاع الخطر."
+      },
+      "prevention": {
+        "en": "Plant resistant hybrids and avoid poorly drained soils.",
+        "ar": "ازرع هجنًا مقاومة وتجنب الأراضي سيئة الصرف."
+      },
+      "recommendedProducts": ["Seed treatment fungicide", "Phosphonate", "Resistant hybrid seed"]
+    },
+    {
+      "canonical": "Wheat Powdery Mildew",
+      "aliases": ["wheat powdery mildew"],
+      "description": {
+        "en": "A wheat foliar disease with white fungal growth reducing photosynthesis and potentially grain fill.",
+        "ar": "مرض ورقي في القمح يظهر بنمو فطري أبيض يقلل التمثيل الضوئي وقد يؤثر على امتلاء الحبوب."
+      },
+      "treatment": {
+        "en": "Apply foliar fungicides when thresholds are reached and protect upper leaves during critical growth stages.",
+        "ar": "استخدم مبيدات ورقية عند بلوغ العتبة المرضية واحمِ الأوراق العليا في المراحل الحرجة."
+      },
+      "prevention": {
+        "en": "Use resistant varieties and avoid excessive nitrogen that creates dense susceptible canopy.",
+        "ar": "استخدم أصنافًا مقاومة وتجنب الإفراط في النيتروجين الذي يزيد حساسية المجموع الخضري."
+      },
+      "recommendedProducts": ["Tebuconazole", "Azoxystrobin", "Balanced nitrogen program"]
+    },
+    {
+      "canonical": "Wheat Septoria",
+      "aliases": ["wheat septoria", "septoria tritici blotch"],
+      "description": {
+        "en": "A major wheat leaf disease causing necrotic blotches and yield loss in wet seasons.",
+        "ar": "مرض ورقي رئيسي في القمح يسبب لطخات نخرية وخسائر محصول في المواسم الرطبة."
+      },
+      "treatment": {
+        "en": "Use fungicides with strong septoria efficacy at growth-stage timing and rotate modes of action.",
+        "ar": "استخدم مبيدات عالية الفعالية ضد السبتيوريا وفق توقيت مراحل النمو مع تدوير آليات التأثير."
+      },
+      "prevention": {
+        "en": "Use tolerant varieties, residue management, and avoid very dense stands.",
+        "ar": "استخدم أصنافًا متحملة وأدر المخلفات وتجنب الكثافة النباتية العالية جدًا."
+      },
+      "recommendedProducts": ["Prothioconazole + tebuconazole", "Mancozeb", "Resistant wheat variety"]
+    },
+    {
+      "canonical": "Soybean Rust",
+      "aliases": ["soybean rust"],
+      "description": {
+        "en": "An aggressive soybean rust disease causing rapid defoliation and major yield losses if unmanaged.",
+        "ar": "مرض صدأ شديد في فول الصويا يسبب تساقطًا سريعًا للأوراق وخسائر كبيرة إذا لم يُدار."
+      },
+      "treatment": {
+        "en": "Apply rust-targeted fungicides early and repeat based on scouting and weather risk.",
+        "ar": "استخدم مبيدات موجهة للصدأ مبكرًا وكرر حسب نتائج المتابعة وخطر الطقس."
+      },
+      "prevention": {
+        "en": "Use tolerant cultivars and monitor regional rust alerts to optimize spray timing.",
+        "ar": "استخدم أصنافًا متحملة وراقب تنبيهات الصدأ الإقليمية لتحسين توقيت الرش."
+      },
+      "recommendedProducts": ["Triazole + strobilurin mix", "Mancozeb", "Rust monitoring service"]
+    },
+    {
+      "canonical": "Soybean Sudden Death Syndrome",
+      "aliases": ["soybean sudden death syndrome", "sds soybean"],
+      "description": {
+        "en": "A root-associated syndrome causing interveinal chlorosis/necrosis and substantial late-season losses.",
+        "ar": "متلازمة مرتبطة بالجذور تسبب اصفرارًا/نخرًا بين العروق وخسائر كبيرة متأخرة بالموسم."
+      },
+      "treatment": {
+        "en": "Focus on root health and stress reduction; no curative foliar treatment for established root infection.",
+        "ar": "ركز على صحة الجذور وتقليل الإجهاد؛ لا يوجد علاج ورقي شافٍ لإصابة الجذور القائمة."
+      },
+      "prevention": {
+        "en": "Use seed treatments and tolerant varieties and avoid compaction/waterlogging.",
+        "ar": "استخدم معاملات بذور وأصنافًا متحملة وتجنب الانضغاط والتغدق."
+      },
+      "recommendedProducts": ["Seed treatment package", "Biological root inoculant", "Soil structure amendment"]
+    },
+    {
+      "canonical": "Chickpea Ascochyta Blight",
+      "aliases": ["chickpea ascochyta blight"],
+      "description": {
+        "en": "A serious chickpea fungal blight causing lesions on leaves, stems, and pods with rapid field spread.",
+        "ar": "لفحة فطرية خطيرة في الحمص تسبب آفات على الأوراق والسيقان والقرون مع انتشار سريع بالحقل."
+      },
+      "treatment": {
+        "en": "Spray fungicides at first symptom and repeat according to disease pressure and rainfall.",
+        "ar": "استخدم الرش بالمبيدات عند أول ظهور للأعراض وكرر وفق شدة المرض وهطول الأمطار."
+      },
+      "prevention": {
+        "en": "Use disease-free seed and long rotation and avoid dense planting in humid periods.",
+        "ar": "استخدم بذورًا خالية من المرض ودورة زراعية طويلة وتجنب الزراعة الكثيفة في فترات الرطوبة."
+      },
+      "recommendedProducts": ["Chlorothalonil", "Mancozeb", "Certified seed"]
+    },
+    {
+      "canonical": "Peanut Leaf Spot",
+      "aliases": ["peanut leaf spot", "groundnut leaf spot"],
+      "description": {
+        "en": "A foliar fungal disease causing premature defoliation and reduced pod filling in peanut.",
+        "ar": "مرض فطري ورقي يسبب تساقطًا مبكرًا للأوراق وضعف امتلاء القرون في الفول السوداني."
+      },
+      "treatment": {
+        "en": "Apply leaf-spot fungicides in scheduled programs and protect canopy during peak risk windows.",
+        "ar": "استخدم مبيدات تبقع الأوراق ببرنامج منتظم مع حماية المجموع الخضري في نوافذ الخطورة العالية."
+      },
+      "prevention": {
+        "en": "Rotate crops and remove infected residues; maintain balanced nutrition and scouting.",
+        "ar": "اتبع الدورة الزراعية وتخلص من المخلفات المصابة وحافظ على تغذية متوازنة ومتابعة دورية."
+      },
+      "recommendedProducts": ["Chlorothalonil", "Tebuconazole", "Mancozeb"]
+    },
+    {
+      "canonical": "Healthy Plant",
+      "aliases": [
+        "healthy",
+        "apple___healthy",
+        "blueberry___healthy",
+        "cherry_(including_sour)___healthy",
+        "corn_(maize)___healthy",
+        "grape___healthy",
+        "peach___healthy",
+        "pepper,_bell___healthy",
+        "potato___healthy",
+        "raspberry___healthy",
+        "soybean___healthy",
+        "strawberry___healthy",
+        "tomato___healthy"
+      ],
+      "description": {
+        "en": "The image appears consistent with a healthy plant with no clear severe disease indicators.",
+        "ar": "تبدو الصورة متوافقة مع نبات سليم دون مؤشرات واضحة على إصابة مرضية شديدة."
+      },
+      "treatment": {
+        "en": "No curative treatment required. Continue standard crop nutrition and irrigation management.",
+        "ar": "لا يلزم علاج مرضي حاليًا. استمر في الإدارة الجيدة للتسميد والري."
+      },
+      "prevention": {
+        "en": "Maintain preventive scouting, balanced fertilization, and sanitation to keep disease risk low.",
+        "ar": "حافظ على المتابعة الوقائية والتسميد المتوازن والنظافة الزراعية لإبقاء المخاطر المرضية منخفضة."
+      },
+      "recommendedProducts": ["Balanced NPK fertilizer", "Seaweed biostimulant", "Micronutrient foliar spray"]
+    }
+  ]
+}
+

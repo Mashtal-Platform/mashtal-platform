@@ -1,0 +1,285 @@
+import React, { useState, useEffect } from 'react';
+import { X, Star, Send, User, Pencil } from 'lucide-react';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+import { getImageUrl } from '../shared/api/client';
+import { fetchProductReviews, createReview, ReviewDto } from '../shared/api/reviews';
+import type { ShoppingProductDto } from '../shared/api/products';
+import { useAuth } from '../contexts/AuthContext';
+
+interface ProductDetailModalProps {
+  product: ShoppingProductDto | null;
+  isOpen: boolean;
+  onClose: () => void;
+  isAuthenticated?: boolean;
+  onAddToCart?: (product: ShoppingProductDto) => void;
+  onRated?: (productId: string, averageRating: number, reviewsCount: number) => void;
+}
+
+export function ProductDetailModal({
+  product,
+  isOpen,
+  onClose,
+  isAuthenticated = false,
+  onAddToCart,
+  onRated,
+}: ProductDetailModalProps) {
+  const { user: currentUser } = useAuth();
+  const [reviews, setReviews] = useState<ReviewDto[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const myReview = currentUser?.id && reviews.find((r) => r.user === currentUser.id);
+
+  useEffect(() => {
+    if (!isOpen || !product?.id) return;
+    setReviewsLoading(true);
+    setSubmitError(null);
+    setRating(0);
+    setComment('');
+    fetchProductReviews(product.id)
+      .then((list) => setReviews(Array.isArray(list) ? list : []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  }, [isOpen, product?.id]);
+
+  useEffect(() => {
+    if (myReview) {
+      setRating(myReview.rating);
+      setComment(myReview.comment ?? '');
+    } else {
+      setRating(0);
+      setComment('');
+    }
+  }, [myReview]);
+
+  const handleSubmitRating = async () => {
+    if (!product || rating < 1 || rating > 5) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await createReview({
+        productId: product.id,
+        rating,
+        comment: comment.trim() || undefined,
+      });
+      const newReview: ReviewDto = {
+        id: res.id,
+        product: res.product,
+        user: res.user,
+        rating: res.rating,
+        comment: res.comment,
+        createdAt: res.createdAt ?? new Date().toISOString(),
+      };
+
+      // If the user already has a review, replace it in-place.
+      // This prevents the UI from showing "two reviews" until the modal is reopened.
+      const currentUserId = currentUser?.id;
+      if (currentUserId) {
+        setReviews((prev) => {
+          const idx = prev.findIndex((r) => r.user === currentUserId);
+          if (idx === -1) return [newReview, ...prev];
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...newReview };
+          // Keep the most recent reviews first (backend typically does this).
+          next.sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+          );
+          return next;
+        });
+      } else {
+        setReviews((prev) => [newReview, ...prev]);
+      }
+
+      const avg = res.averageRating ?? rating;
+      const count = res.reviewsCount ?? 1;
+      onRated?.(product.id, avg, count);
+      setRating(0);
+      setComment('');
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message || 'Failed to submit rating. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const displayProduct = product;
+  const displayRating = displayProduct?.rating ?? 0;
+  const displayReviewsCount = displayProduct?.reviewsCount ?? reviews.length;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[88vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-neutral-200 flex-shrink-0">
+          <h2 className="text-base font-semibold text-neutral-900">Product details</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-3 space-y-4">
+          {!displayProduct ? (
+            <p className="text-neutral-500">No product selected.</p>
+          ) : (
+            <>
+              <div className="flex gap-3">
+                <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-100">
+                  <img
+                    src={getImageUrl(displayProduct.image) || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400'}
+                    alt={displayProduct.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-neutral-900 mb-0.5 line-clamp-2">{displayProduct.name}</h3>
+                  <p className="text-xs text-neutral-600 line-clamp-2 mb-1">{displayProduct.description}</p>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="font-medium">{Number(displayRating).toFixed(1)}</span>
+                    <span className="text-neutral-400">({displayReviewsCount})</span>
+                  </div>
+                  <p className="text-base font-bold text-green-600">${displayProduct.price}</p>
+                  {isAuthenticated && displayProduct.inStock && onAddToCart && (
+                    <Button
+                      size="sm"
+                      className="mt-1.5 h-8 text-xs"
+                      onClick={() => onAddToCart(displayProduct)}
+                    >
+                      Add to cart
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Rate / Edit your review (one per user) */}
+              {isAuthenticated && (
+                <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50/50">
+                  <h4 className="text-xs font-semibold text-neutral-800 mb-2 flex items-center gap-1.5">
+                    {myReview ? <Pencil className="w-3.5 h-3.5" /> : null}
+                    {myReview ? 'Edit your review' : 'Rate this product'}
+                  </h4>
+                  <div className="flex items-center gap-0.5 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="p-0.5 rounded transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-6 h-6 transition-colors ${
+                            star <= (hoverRating || rating)
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'fill-neutral-200 text-neutral-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea
+                    placeholder="Optional comment..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="min-h-[60px] resize-none text-sm mb-2 py-2 px-3"
+                  />
+                  {submitError && (
+                    <p className="text-xs text-red-600 mb-1">{submitError}</p>
+                  )}
+                  <Button
+                    onClick={handleSubmitRating}
+                    disabled={rating < 1 || submitting}
+                    className="w-full gap-1.5 h-8 text-xs"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {submitting ? 'Saving...' : myReview ? 'Update review' : 'Submit rating'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Reviews list */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-800 mb-2">Reviews</h4>
+                {reviewsLoading ? (
+                  <p className="text-xs text-neutral-500">Loading...</p>
+                ) : reviews.length === 0 ? (
+                  <p className="text-xs text-neutral-500">No reviews yet.</p>
+                ) : (
+                  <ul className="space-y-2 max-h-36 overflow-y-auto">
+                    {reviews.map((r) => (
+                      <li key={r.id} className="flex gap-2 p-2 rounded-md bg-neutral-50 border border-neutral-100">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-200 flex-shrink-0 flex items-center justify-center">
+                          {r.userAvatar ? (
+                            <img
+                              src={getImageUrl(r.userAvatar)}
+                              alt={r.userFullName || 'User'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-4 h-4 text-neutral-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-neutral-800">
+                            {r.userFullName || 'User'}
+                            {r.user === currentUser?.id && (
+                              <span className="ml-1 text-neutral-500 font-normal">(you)</span>
+                            )}
+                          </p>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`w-3 h-3 ${
+                                  s <= r.rating ? 'fill-amber-400 text-amber-400' : 'fill-neutral-200 text-neutral-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {r.comment && <p className="text-xs text-neutral-700 line-clamp-2">{r.comment}</p>}
+                          <p className="text-[10px] text-neutral-400">
+                            {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

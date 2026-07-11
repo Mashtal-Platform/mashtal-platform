@@ -1,26 +1,35 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { 
-  Page, 
-  CartItem, 
-  SavedItem, 
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
+import {
+  Page,
+  CartItem,
+  SavedItem,
   UserProfile,
   UserRole,
-  Notification 
+  Notification,
 } from '../types';
-import { 
-  currentUser as mockCurrentUser, 
-  otherUsers as mockOtherUsers,
-  mockPosts as centralPosts,
-  mockThreads as centralThreads,
-  mockNotifications as centralNotifications
-} from '../api/mockData';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  addItemToCart, 
-  updateCartQuantity, 
-  removeCartItem 
+import {
+  addItemToCart,
+  updateCartQuantity,
+  removeCartItem,
 } from '../utils/cart';
-import { scrollToTop, initialNavigationState, NavigationState } from '../utils/navigation';
+import {
+  scrollToTop,
+  initialNavigationState,
+  NavigationState,
+} from '../utils/navigation';
+import { createPost as apiCreatePost, fetchPosts, updatePost as apiUpdatePost, deletePost as apiDeletePost } from '../api/posts';
+import { createThread as apiCreateThread, fetchThreads, updateThread as apiUpdateThread, deleteThread as apiDeleteThread } from '../api/threads';
+import {
+  fetchNotifications,
+  markNotificationRead as apiMarkNotificationRead,
+  markAllNotificationsRead as apiMarkAllNotificationsRead,
+  clearReadNotifications as apiClearReadNotifications,
+  clearAllNotifications as apiClearAllNotifications,
+} from '../api/notifications';
+import { fetchFollowers, fetchFollowing, fetchUser, followUser as apiFollowUser, unfollowUser as apiUnfollowUser, removeFollower as apiRemoveFollower } from '../api/users';
+import { saveItem as apiSaveItem, deleteSavedItem as apiDeleteSavedItem, fetchSavedItems } from '../api/saved';
+import { filterOutOrphanSavedItems } from '../utils/saved';
 
 interface AppState extends NavigationState {
   // Cart
@@ -30,6 +39,8 @@ interface AppState extends NavigationState {
   // User content
   userPosts: any[];
   userThreads: any[];
+  allPosts: any[];
+  allThreads: any[];
   // Profile
   userProfile: UserProfile;
   // Following/Followers
@@ -63,7 +74,7 @@ interface AppStateContextType {
   addSavedItem: (item: SavedItem) => void;
   removeSavedItem: (itemId: string) => void;
   // User content
-  createPost: (postData: any) => void;
+  createPost: (postData: any, imageFile?: File) => void;
   createThread: (threadData: any) => void;
   deletePost: (postId: string) => void;
   updatePost: (postId: string, data: any) => void;
@@ -89,120 +100,209 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  
-  const [state, setState] = useState<AppState>({
+
+  const [state, setState] = useState<AppState>(() => ({
     ...initialNavigationState,
     cartItems: [],
-    savedItems: [
-      {
-        id: '1',
-        type: 'post',
-        itemId: 'p1',
-        title: 'Seasonal Promotion: 20% Off All Seedlings',
-        image: 'https://images.unsplash.com/photo-1697788189761-d954ed91cdb8?w=1080',
-        description: 'We are excited to announce our seasonal sale!',
-        savedAt: new Date('2026-02-01')
-      }
-    ],
-    userPosts: centralPosts.filter(p => p.authorId === 'me').map(p => ({ ...p, author: mockCurrentUser })),
-    userThreads: centralThreads.filter(t => t.authorId === 'me').map(t => ({ ...t, author: mockCurrentUser })),
-    userProfile: {
-      id: mockCurrentUser.id,
-      fullName: mockCurrentUser.fullName,
-      email: mockCurrentUser.email,
-      phone: mockCurrentUser.phone,
-      location: mockCurrentUser.location,
-      bio: mockCurrentUser.bio,
-      avatar: mockCurrentUser.avatar,
-      role: mockCurrentUser.role as any,
-      customFields: [
-        { id: '1', title: 'Farming Equipment', content: 'I own two tractors and a specialized irrigation system.' },
-        { id: '2', title: 'Main Crops', content: 'Wheat and Dates are my primary focus this season.' }
-      ]
-    },
-    followedEntities: mockOtherUsers.slice(0, 3).map(u => ({
-      id: u.id,
-      name: u.fullName,
-      role: u.role,
-      location: u.location,
-      image: u.avatar,
-      followers: u.followers,
-      rating: u.rating,
-      reviews: u.reviewsCount
-    })),
-    followers: mockOtherUsers.slice(3, 8).map(u => ({
-      id: u.id,
-      name: u.fullName,
-      fullName: u.fullName,
-      avatar: u.avatar,
-      role: u.role,
-      location: u.location,
-      rating: u.rating,
-      reviews: u.reviewsCount,
-      followingSince: 'Jan 2026'
-    })),
-    notifications: centralNotifications,
+    savedItems: [],
+    userPosts: [],
+    userThreads: [],
+    allPosts: [],
+    allThreads: [],
+    userProfile: user
+      ? {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone || '',
+          location: user.location,
+          bio: user.bio,
+          avatar: user.avatar,
+          role: user.role as any,
+          companyName: user.companyName,
+        }
+      : {
+          id: '',
+          fullName: '',
+          email: '',
+          phone: '',
+          location: '',
+          bio: '',
+          avatar: '',
+          role: null,
+        },
+    followedEntities: [],
+    followers: [],
+    notifications: [],
     showAIChat: false,
     showPostSuccess: false,
     showThreadSuccess: false,
     shouldScrollToPosts: false,
     shouldScrollToThreads: false,
     paymentRole: null,
-  });
+  }));
 
-  // Sync with authenticated user
+  // When user opens verification link (e.g. from email), show verify-email page so token in hash can be processed
   useEffect(() => {
-    if (user && isAuthenticated) {
-      const allUsers = [mockCurrentUser, ...mockOtherUsers];
-      const currentUserData = allUsers.find(u => u.id === user.id);
-      
-      if (currentUserData) {
-        setState(prev => ({
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (hash.includes('verify-email?token=')) {
+      setState((prev) => ({ ...prev, currentPage: 'verify-email' }));
+    }
+  }, []);
+
+  // Load notifications from backend when auth changes
+  useEffect(() => {
+    if (!user || !isAuthenticated) {
+      setState(prev => ({ ...prev, notifications: [] }));
+      return;
+    }
+
+    fetchNotifications()
+      .then((items) => {
+        setState((prev) => ({
+          ...prev,
+          notifications: items,
+        }));
+      })
+      .catch((err) => {
+        console.error('[AppState] Failed to load notifications from backend:', err);
+      });
+  }, [user, isAuthenticated]);
+
+  // Refetch notifications when user opens the notifications page (so new message notifications appear)
+  const prevPageRef = useRef<string | null>(null);
+  useEffect(() => {
+    const current = state.currentPage;
+    if (current === 'notifications' && isAuthenticated && prevPageRef.current !== 'notifications') {
+      prevPageRef.current = 'notifications';
+      fetchNotifications()
+        .then((items) => {
+          setState((prev) => ({ ...prev, notifications: items }));
+        })
+        .catch(() => {});
+    } else if (current !== 'notifications') {
+      prevPageRef.current = current;
+    }
+  }, [state.currentPage, isAuthenticated]);
+
+  // Sync profile, posts/threads and followers/following with authenticated user from backend
+  useEffect(() => {
+    if (!user || !isAuthenticated) {
+      setState((prev) => ({
+        ...prev,
+        userProfile: {
+          id: '',
+          fullName: '',
+          email: '',
+          phone: '',
+          location: '',
+          bio: '',
+          avatar: '',
+          role: null,
+        },
+        userPosts: [],
+        userThreads: [],
+        allPosts: [],
+        allThreads: [],
+        followedEntities: [],
+        followers: [],
+      }));
+      return;
+    }
+
+    const bp = (user as any).businessProfile || {};
+    // Sync profile from auth user immediately so profile page always has data
+    setState((prev) => ({
+      ...prev,
+      userProfile: {
+        id: user.id,
+        fullName: user.fullName ?? '',
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+        location: user.location ?? '',
+        bio: user.bio ?? '',
+        avatar: user.avatar ?? '',
+        role: user.role as any,
+        companyName: (user as any).companyName ?? '',
+        rating: bp.rating ?? 0,
+        reviewsCount: bp.reviewsCount ?? 0,
+      },
+    }));
+
+    const load = async () => {
+      try {
+        const [allPosts, allThreads, followersRes, followingRes, savedRes] = await Promise.all([
+          fetchPosts({ limit: 500, skip: 0 }).catch(() => []),
+          fetchThreads({ limit: 500, skip: 0 }).catch(() => []),
+          fetchFollowers(user.id).catch(() => []),
+          fetchFollowing(user.id).catch(() => []),
+          fetchSavedItems().catch(() => []),
+        ]);
+
+        const followers = Array.isArray(followersRes) ? followersRes : [];
+        const following = Array.isArray(followingRes) ? followingRes : [];
+        const bp = (user as any).businessProfile || {};
+        const rawSaved = Array.isArray(savedRes) ? savedRes : [];
+        const mappedSaved: SavedItem[] = rawSaved.map((s: any) => ({
+          id: s.id,
+          type: s.type,
+          itemId: s.refId != null ? String(s.refId) : '',
+          title: s.title ?? '',
+          image: s.image ?? '',
+          description: s.description ?? '',
+          savedAt: s.createdAt ? new Date(s.createdAt) : new Date(),
+          ...(s.businessId && { businessId: s.businessId }),
+        }));
+        const savedItems: SavedItem[] = filterOutOrphanSavedItems(mappedSaved);
+
+        const authorIdMatch = (author: any, id: string) =>
+          (author?.id || author?._id?.toString?.()) === id;
+        setState((prev) => ({
           ...prev,
           userProfile: {
-            id: currentUserData.id,
-            fullName: currentUserData.fullName,
-            name: currentUserData.fullName,
-            email: currentUserData.email,
-            phone: currentUserData.phone || '',
-            location: currentUserData.location,
-            bio: currentUserData.bio,
-            avatar: currentUserData.avatar,
-            role: currentUserData.role as any,
-            specialization: currentUserData.specialization,
-            yearsExperience: currentUserData.yearsExperience,
-            companyName: currentUserData.companyName,
-            customFields: currentUserData.role === 'user' ? [
-              { id: '1', title: 'Farming Equipment', content: 'Various agricultural equipment.' },
-              { id: '2', title: 'Main Crops', content: 'Multiple crop varieties.' }
-            ] : undefined
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phone: user.phone || '',
+            location: user.location,
+            bio: user.bio,
+            avatar: user.avatar,
+            role: user.role as any,
+            companyName: user.companyName,
+            rating: bp.rating ?? 0,
+            reviewsCount: bp.reviewsCount ?? 0,
           },
-          userPosts: centralPosts.filter(p => p.authorId === user.id).map(p => ({ ...p, author: currentUserData })),
-          userThreads: centralThreads.filter(t => t.authorId === user.id).map(t => ({ ...t, author: currentUserData })),
-          followedEntities: mockOtherUsers.filter(u => u.id !== user.id).slice(0, 3).map(u => ({
-            id: u.id,
-            name: u.fullName,
-            role: u.role,
-            location: u.location,
-            image: u.avatar,
-            followers: u.followers,
-            rating: u.rating,
-            reviews: u.reviewsCount
-          })),
-          followers: mockOtherUsers.filter(u => u.id !== user.id).slice(3, 8).map(u => ({
-            id: u.id,
-            name: u.fullName,
-            fullName: u.fullName,
-            avatar: u.avatar,
-            role: u.role,
-            location: u.location,
-            rating: u.rating,
-            reviews: u.reviewsCount,
-            followingSince: 'Jan 2026'
-          }))
+          allPosts: (allPosts as any[]) || [],
+          allThreads: (allThreads as any[]) || [],
+          userPosts: (allPosts as any[]).filter((p) => authorIdMatch(p.author, user.id)),
+          userThreads: (allThreads as any[]).filter((t) => authorIdMatch(t.author, user.id)),
+          followers,
+          followedEntities: following,
+          savedItems,
+        }));
+      } catch (err) {
+        console.error('[AppState] Failed to load user-related data from backend:', err);
+        const bp = (user as any).businessProfile || {};
+        setState((prev) => ({
+          ...prev,
+          userProfile: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phone: user.phone || '',
+            location: user.location,
+            bio: user.bio,
+            avatar: user.avatar,
+            role: user.role as any,
+            companyName: user.companyName,
+            rating: bp.rating ?? 0,
+            reviewsCount: bp.reviewsCount ?? 0,
+          },
         }));
       }
-    }
+    };
+
+    load();
   }, [user, isAuthenticated]);
 
   // Navigation handlers
@@ -268,12 +368,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         scrollToTop();
         return;
       }
-      if (page === 'dashboard' && params.productId) {
+      if (page === 'dashboard') {
         setState(prev => ({
           ...prev,
           currentPage: 'dashboard',
-          highlightProductId: params.productId,
-          dashboardTargetSection: 'products'
+          highlightProductId: params.productId ?? undefined,
+          dashboardTargetSection: params.productId ? 'products' : undefined
         }));
         scrollToTop();
         return;
@@ -292,18 +392,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       navigate('profile');
       return;
     }
-    const profileUser = [...mockOtherUsers, mockCurrentUser].find(u => u.id === userId);
-    if (!profileUser) return;
-    
     setState(prev => ({ ...prev, viewingUserId: userId }));
-    
-    if (profileUser.role === 'business' && profileUser.businessId) {
-      navigateToBusiness(profileUser.businessId);
-    } else if (profileUser.role === 'engineer' || profileUser.role === 'agronomist') {
-      navigate('engineer-profile');
-    } else {
-      navigate('user-profile');
-    }
+    fetchUser(userId)
+      .then((profileUser: any) => {
+        if (profileUser.role === 'business' && (profileUser.businessId || profileUser.id)) {
+          navigateToBusiness(profileUser.businessId || profileUser.id);
+        } else {
+          navigate('user-profile');
+        }
+      })
+      .catch(() => {
+        navigate('user-profile');
+      });
   }, [user, navigate, navigateToBusiness]);
 
   const navigateToChat = useCallback((profileId: string) => {
@@ -328,109 +428,256 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, cartItems: [] }));
   }, []);
 
-  // Saved items
+  // Saved items (persist to backend)
   const addSavedItem = useCallback((item: SavedItem) => {
-    setState(prev => ({ ...prev, savedItems: [...prev.savedItems, item] }));
-  }, []);
+    const refId = (item as any).itemId;
+    if (!refId || !user?.id) {
+      setState(prev => ({ ...prev, savedItems: [...prev.savedItems, item] }));
+      return;
+    }
+    const type = item.type as 'post' | 'thread' | 'product';
+    apiSaveItem({ type, refId })
+      .then((saved: any) => {
+        setState(prev => ({
+          ...prev,
+          savedItems: [...prev.savedItems, { ...item, id: saved.id || item.id }],
+        }));
+      })
+      .catch(() => {
+        setState(prev => ({ ...prev, savedItems: [...prev.savedItems, item] }));
+      });
+  }, [user?.id]);
 
   const removeSavedItem = useCallback((itemId: string) => {
     setState(prev => ({ ...prev, savedItems: prev.savedItems.filter(i => i.id !== itemId) }));
+    apiDeleteSavedItem(itemId).catch(() => {
+      fetchSavedItems().then((list) => {
+        const mapped: SavedItem[] = (list as any[]).map((s) => ({
+          id: s.id,
+          type: s.type,
+          itemId: s.refId != null ? String(s.refId) : '',
+          title: s.title ?? '',
+          image: s.image ?? '',
+          description: s.description ?? '',
+          savedAt: s.createdAt ? new Date(s.createdAt) : new Date(),
+          ...(s.businessId && { businessId: s.businessId }),
+        }));
+        const cleaned = filterOutOrphanSavedItems(mapped);
+        setState(prev => ({ ...prev, savedItems: cleaned }));
+      });
+    });
   }, []);
 
   // Content handlers
-  const createPost = useCallback((postData: any) => {
-    const newPost = {
-      id: Date.now().toString(),
-      title: postData.title || postData.content.substring(0, 50) + (postData.content.length > 50 ? '...' : ''),
-      ...postData,
-      tags: postData.tags || [],
-      timeAgo: 'Just now',
-    };
-    setState(prev => ({
-      ...prev,
-      userPosts: [newPost, ...prev.userPosts],
-      currentPage: 'posts',
-      showPostSuccess: true
-    }));
-    setTimeout(() => setState(prev => ({ ...prev, showPostSuccess: false })), 2500);
-  }, []);
+  const createPost = useCallback(async (postData: any, imageFile?: File) => {
+    if (!user) return;
+    const title =
+      postData.title ||
+      postData.content.substring(0, 50) +
+        (postData.content.length > 50 ? '...' : '');
 
-  const createThread = useCallback((threadData: any) => {
-    const newThread = {
-      id: Date.now().toString(),
-      title: threadData.title || threadData.content.substring(0, 50) + (threadData.content.length > 50 ? '...' : ''),
-      ...threadData,
-      tags: threadData.tags || [],
-      timestamp: new Date().toISOString(),
-      timeAgo: 'Just now',
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      isLiked: false,
-      isSaved: false,
-    };
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      userThreads: [newThread, ...prev.userThreads],
-      currentPage: 'threads',
-      showThreadSuccess: true
+      currentPage: 'posts',
+      showPostSuccess: true,
     }));
-    setTimeout(() => setState(prev => ({ ...prev, showThreadSuccess: false })), 2500);
-  }, []);
+
+    try {
+      await apiCreatePost(
+        {
+          title,
+          content: postData.content,
+          image: imageFile ? undefined : postData.image,
+          tags: postData.tags || [],
+          author: {
+            id: user.id,
+            name: user.fullName,
+            avatar: user.avatar ?? '',
+            verified: user.verified ?? false,
+            type: (user.role as any) ?? 'user',
+            businessId: (user as any)?.businessId,
+          },
+        },
+        imageFile
+      );
+      const allPosts = await fetchPosts({ limit: 500, skip: 0 });
+      setState((prev) => ({
+        ...prev,
+        userPosts: (allPosts as any[]).filter((p) => p.author?.id === user.id),
+      }));
+    } catch (err) {
+      console.error('[AppState] Failed to create post in backend:', err);
+    } finally {
+      setTimeout(
+        () =>
+          setState((prev) => ({ ...prev, showPostSuccess: false })),
+        2500
+      );
+    }
+  }, [user]);
+
+  const createThread = useCallback(
+    async (threadData: any) => {
+      if (!user) return;
+      const title =
+        threadData.title ||
+        threadData.content.substring(0, 50) +
+          (threadData.content.length > 50 ? '...' : '');
+
+      setState((prev) => ({
+        ...prev,
+        currentPage: 'threads',
+        showThreadSuccess: true,
+      }));
+
+      try {
+        await apiCreateThread({
+          title,
+          content: threadData.content,
+          tags: threadData.tags || [],
+          author: {
+            id: user.id,
+            name: user.fullName,
+            avatar: user.avatar ?? '',
+            verified: user.verified ?? false,
+            type: (user.role as any) ?? 'user',
+            businessId: (user as any)?.businessId,
+          },
+        });
+        const allThreads = await fetchThreads({ limit: 500, skip: 0 });
+        setState((prev) => ({
+          ...prev,
+          userThreads: (allThreads as any[]).filter((t) => t.author?.id === user.id),
+        }));
+      } catch (err) {
+        console.error('[AppState] Failed to create thread in backend:', err);
+      } finally {
+        setTimeout(
+          () =>
+            setState((prev) => ({ ...prev, showThreadSuccess: false })),
+          2500
+        );
+      }
+    },
+    [user]
+  );
 
   const deletePost = useCallback((postId: string) => {
-    setState(prev => ({ ...prev, userPosts: prev.userPosts.filter(p => p.id !== postId) }));
+    apiDeletePost(postId)
+      .then(() => {
+        setState(prev => ({
+          ...prev,
+          userPosts: prev.userPosts.filter(p => p.id !== postId),
+          allPosts: prev.allPosts.filter(p => p.id !== postId),
+          savedItems: prev.savedItems.filter(
+            (s) => !(s.type === 'post' && s.itemId === postId)
+          ),
+        }));
+      })
+      .catch((err) => {
+        console.error('[AppState] Failed to delete post in backend:', err);
+      });
   }, []);
 
   const updatePost = useCallback((postId: string, data: any) => {
-    setState(prev => ({
-      ...prev,
-      userPosts: prev.userPosts.map(p => p.id === postId ? { ...p, ...data } : p)
-    }));
+    apiUpdatePost(postId, { title: data.title, content: data.content, image: data.image, tags: data.tags })
+      .then((updated) => {
+        const merge = (p: any) => (p.id === postId ? { ...p, ...updated } : p);
+        setState(prev => ({
+          ...prev,
+          userPosts: prev.userPosts.map(merge),
+          allPosts: prev.allPosts.map(merge),
+        }));
+      })
+      .catch((err) => {
+        console.error('[AppState] Failed to update post in backend:', err);
+      });
   }, []);
 
   const deleteThread = useCallback((threadId: string) => {
-    setState(prev => ({ ...prev, userThreads: prev.userThreads.filter(t => t.id !== threadId) }));
+    apiDeleteThread(threadId)
+      .then(() => {
+        setState(prev => ({
+          ...prev,
+          userThreads: prev.userThreads.filter(t => t.id !== threadId),
+          allThreads: prev.allThreads.filter(t => t.id !== threadId),
+          savedItems: prev.savedItems.filter(
+            (s) => !(s.type === 'thread' && s.itemId === threadId)
+          ),
+        }));
+      })
+      .catch((err) => {
+        console.error('[AppState] Failed to delete thread in backend:', err);
+      });
   }, []);
 
   const updateThread = useCallback((threadId: string, data: any) => {
-    setState(prev => ({
-      ...prev,
-      userThreads: prev.userThreads.map(t => t.id === threadId ? { ...t, ...data } : t)
-    }));
+    apiUpdateThread(threadId, { title: data.title, content: data.content, tags: data.tags })
+      .then((updated) => {
+        const merge = (t: any) => (t.id === threadId ? { ...t, ...updated } : t);
+        setState(prev => ({
+          ...prev,
+          userThreads: prev.userThreads.map(merge),
+          allThreads: prev.allThreads.map(merge),
+        }));
+      })
+      .catch((err) => {
+        console.error('[AppState] Failed to update thread in backend:', err);
+      });
   }, []);
 
-  // Following/Followers
+  // Following/Followers (persist to backend)
   const followEntity = useCallback((entity: any) => {
+    const entityId = entity?.id || entity?._id?.toString?.();
+    if (!entityId || !user?.id) return;
     setState(prev => {
-      const isAlreadyFollowing = prev.followedEntities.some(e => e.id === entity.id);
+      const isAlreadyFollowing = prev.followedEntities.some(
+        e => (e?.id || (e as any)?._id?.toString?.()) === entityId
+      );
       if (isAlreadyFollowing) return prev;
-
       const normalizedEntity = {
-        id: entity.id,
+        id: entityId,
         name: entity.name || entity.fullName || "Unknown",
-        role: entity.role || (entity.businessId ? 'business' : 'user'),
+        role: entity.role || (entity.businessId ? 'business' : 'visitor'),
         location: entity.location || "Saudi Arabia",
         image: entity.image || entity.avatar || entity.logo || "",
         rating: entity.rating,
         reviews: entity.reviews,
         followers: entity.followers,
       };
-
       return { ...prev, followedEntities: [...prev.followedEntities, normalizedEntity] };
     });
-  }, []);
+    apiFollowUser(entityId).catch(() => {
+      fetchFollowing(user.id).then((list) => {
+        setState(prev => ({ ...prev, followedEntities: list as any[] }));
+      });
+    });
+  }, [user?.id]);
 
   const unfollowEntity = useCallback((entityId: string) => {
+    if (!user?.id) return;
     setState(prev => ({
       ...prev,
-      followedEntities: prev.followedEntities.filter(e => e.id !== entityId)
+      followedEntities: prev.followedEntities.filter(e => e.id !== entityId),
     }));
-  }, []);
+    apiUnfollowUser(entityId).catch(() => {
+      // Re-fetch following to restore state on error
+      fetchFollowing(user.id).then((list) => {
+        setState(prev => ({ ...prev, followedEntities: list as any[] }));
+      });
+    });
+  }, [user?.id]);
 
   const removeFollower = useCallback((followerId: string) => {
-    setState(prev => ({ ...prev, followers: prev.followers.filter(f => f.id !== followerId) }));
-  }, []);
+    setState(prev => ({ ...prev, followers: prev.followers.filter(f => (f?.id || (f as any)?._id?.toString?.()) !== followerId) }));
+    apiRemoveFollower(followerId).catch(() => {
+      if (user?.id) {
+        fetchFollowers(user.id).then((list) => {
+          setState(prev => ({ ...prev, followers: Array.isArray(list) ? list : [] }));
+        });
+      }
+    });
+  }, [user?.id]);
 
   // Notifications
   const markNotificationAsRead = useCallback((id: string) => {
@@ -438,6 +685,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...prev,
       notifications: prev.notifications.map(n => n.id === id ? { ...n, read: true } : n)
     }));
+
+    apiMarkNotificationRead(id).catch((err) => {
+      console.error('[AppState] Failed to mark notification read in backend:', err);
+    });
   }, []);
 
   const markAllNotificationsAsRead = useCallback(() => {
@@ -445,6 +696,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...prev,
       notifications: prev.notifications.map(n => ({ ...n, read: true }))
     }));
+
+    apiMarkAllNotificationsRead().catch((err) => {
+      console.error('[AppState] Failed to mark all notifications read in backend:', err);
+    });
   }, []);
 
   const deleteReadNotifications = useCallback(() => {
@@ -452,10 +707,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       ...prev,
       notifications: prev.notifications.filter(n => !n.read)
     }));
+
+    apiClearReadNotifications().catch((err) => {
+      console.error('[AppState] Failed to clear read notifications in backend:', err);
+    });
   }, []);
 
   const clearAllNotifications = useCallback(() => {
     setState(prev => ({ ...prev, notifications: [] }));
+
+    apiClearAllNotifications().catch((err) => {
+      console.error('[AppState] Failed to clear notifications in backend:', err);
+    });
   }, []);
 
   // Profile

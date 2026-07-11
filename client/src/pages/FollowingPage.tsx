@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Heart, MapPin, Star, ExternalLink, X, Building2, Leaf, HardHat, Shield, Users, MessageCircle, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { getImageUrl } from '../shared/api/client';
 
 interface FollowingPageProps {
   onViewBusiness: (businessId: string) => void;
@@ -11,7 +12,7 @@ interface FollowingPageProps {
   onOpenChat?: (userId: string) => void;
 }
 
-type RoleFilter = 'all' | 'business' | 'engineer' | 'agronomist' | 'user';
+type RoleFilter = 'all' | 'business' | 'visitor';
 
 export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followedBusinesses, onUnfollowBusiness, onOpenChat }: FollowingPageProps) {
   const [activeFilter, setActiveFilter] = useState<RoleFilter>('all');
@@ -24,27 +25,18 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
   };
 
   const filteredEntities = followedBusinesses.filter(entity => {
-    // Filter out regular users - only show business, engineer, agronomist
-    if (entity.role === 'user') return false;
-    
-    // Apply role filter
     if (activeFilter !== 'all' && entity.role !== activeFilter) return false;
-    
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const name = entity.name.toLowerCase();
+      const name = (entity.name || entity.fullName || '').toLowerCase();
       return name.includes(query);
     }
-    
     return true;
   });
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'business': return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist': return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer': return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin': return <Shield className="w-4 h-4 text-purple-600" />;
       default: return <Users className="w-4 h-4 text-neutral-600" />;
     }
@@ -86,7 +78,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
 
         {/* Role Filters */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {(['all', 'business', 'engineer', 'agronomist'] as RoleFilter[]).map((filter) => (
+          {(['all', 'business', 'visitor'] as RoleFilter[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
@@ -111,8 +103,8 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                 {/* Enhanced Professional Photo Section */}
                 <div className="relative h-80 overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-50">
                   <img
-                    src={entity.image || entity.avatar || 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800'}
-                    alt={entity.name}
+                    src={getImageUrl(entity.avatar || entity.image) || entity.image || entity.avatar || 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800'}
+                    alt={entity.name || entity.fullName || 'Profile'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     style={{ 
                       objectPosition: 'center 25%',
@@ -167,7 +159,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                   {/* Name and Location */}
                   <div className="mb-5">
                     <h3 className="text-xl font-bold text-neutral-900 mb-2 truncate group-hover:text-green-600 transition-colors">
-                      {entity.name}
+                      {entity.name || entity.fullName}
                     </h3>
                     <div className="flex items-center gap-2 text-sm text-neutral-500">
                       <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -199,7 +191,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
 
                   {/* Followers Count */}
                   <div className="mb-4 text-center">
-                    <div className="text-2xl font-bold text-neutral-900">{entity.followers.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-neutral-900">{(typeof entity.followers === 'number' ? entity.followers : (entity.followers?.length ?? 0)).toLocaleString()}</div>
                     <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Followers</div>
                   </div>
 

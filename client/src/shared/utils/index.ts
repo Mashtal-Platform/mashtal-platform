@@ -45,10 +45,7 @@ export const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-  return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
-};
+// Phone validation/formatting is handled by PhoneInput (libphonenumber-js).
 
 // Array utilities
 export const uniqueById = <T extends { id: string }>(array: T[]): T[] => {

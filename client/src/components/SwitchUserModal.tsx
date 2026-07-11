@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, User, Building2, Leaf, HardHat, Shield, CheckCircle } from 'lucide-react';
+import { X, Search, User, Building2, Shield, CheckCircle } from 'lucide-react';
 import { useAuth, User as UserType } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,10 +21,8 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
   // Group users by role
   const groupedUsers = {
     business: filteredUsers.filter(u => u.role === 'business'),
-    engineer: filteredUsers.filter(u => u.role === 'engineer'),
-    agronomist: filteredUsers.filter(u => u.role === 'agronomist'),
     admin: filteredUsers.filter(u => u.role === 'admin'),
-    user: filteredUsers.filter(u => u.role === 'user' || !u.role),
+    visitor: filteredUsers.filter(u => u.role === 'visitor' || !u.role),
   };
 
   const handleUserSelect = (userId: string) => {
@@ -36,10 +34,6 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
     switch (role) {
       case 'business':
         return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'engineer':
-        return <HardHat className="w-4 h-4 text-orange-600" />;
-      case 'agronomist':
-        return <Leaf className="w-4 h-4 text-green-600" />;
       case 'admin':
         return <Shield className="w-4 h-4 text-purple-600" />;
       default:
@@ -51,10 +45,6 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
     switch (role) {
       case 'business':
         return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'engineer':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'agronomist':
-        return 'bg-green-100 text-green-700 border-green-200';
       case 'admin':
         return 'bg-purple-100 text-purple-700 border-purple-200';
       default:
@@ -174,10 +164,8 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
           ) : (
             <>
               {renderUserGroup('Businesses', groupedUsers.business)}
-              {renderUserGroup('Engineers', groupedUsers.engineer)}
-              {renderUserGroup('Agronomists', groupedUsers.agronomist)}
               {renderUserGroup('Administrators', groupedUsers.admin)}
-              {renderUserGroup('Users', groupedUsers.user)}
+              {renderUserGroup('Visitors', groupedUsers.visitor)}
             </>
           )}
         </div>

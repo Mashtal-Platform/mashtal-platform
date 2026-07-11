@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Store, CheckCircle, Upload, MapPin, Phone, Mail, Globe } from 'lucide-react';
 import { Page } from '../App';
 import { useAuth } from '../contexts/AuthContext';
+import { PhoneInput } from '../components/PhoneInput';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
 
 interface RegisterBusinessPageProps {
   onNavigate: (page: Page) => void;
@@ -15,30 +18,41 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
     businessType: '',
     description: '',
     address: '',
-    city: '',
+    location: '',
     phone: '',
     email: '',
     website: '',
   });
+  const [error, setError] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async () => {
-    // Update user to business role and save business data
+    setError('');
+    const phone = formData.phone?.trim() ?? '';
+    if (phone) {
+      const parsed = parsePhoneNumberFromString(phone, 'LB');
+      if (!parsed?.isValid()) {
+        setError('Please enter a valid phone number (example: +961 70 123 456).');
+        return;
+      }
+    }
+    // Save business profile data for the current (business) user
     if (user) {
+      const locationStr = formData.address
+        ? `${formData.address}, ${formData.location}`
+        : formData.location;
       await updateProfile({
-        ...user,
-        role: 'business',
-        companyName: formData.businessName,
-        businessType: formData.businessType,
-        bio: formData.description,
-        phone: formData.phone,
-        email: formData.email,
-        location: `${formData.address}, ${formData.city}`,
-        verified: true,
-        subscriptionStatus: 'active',
+        businessProfile: {
+          companyName: formData.businessName,
+          bio: formData.description,
+          phone: formData.phone,
+          location: locationStr,
+          specialties: [],
+        } as any,
       });
     }
     
@@ -169,6 +183,12 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             <p className="text-neutral-600">Fill in the details to create your business profile on Mashtal</p>
           </div>
 
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-6">
             {/* Business Logo Upload */}
             <div>
@@ -240,32 +260,26 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">City *</label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                  placeholder="Riyadh"
+                <LebanonLocationPicker
+                  label="City / Village (Lebanon) *"
+                  value={formData.location}
+                  required
+                  placeholder="Search city or village in Lebanon…"
+                  onChange={(v) => setFormData({ ...formData, location: v })}
                 />
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">Phone *</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                    placeholder="+966 XX XXX XXXX"
-                  />
-                </div>
+                <PhoneInput
+                  label="Phone *"
+                  value={formData.phone}
+                  required
+                  defaultCountry="LB"
+                  placeholder="e.g. +961 70 123 456"
+                  onChange={(v) => setFormData({ ...formData, phone: v })}
+                />
               </div>
 
               <div>

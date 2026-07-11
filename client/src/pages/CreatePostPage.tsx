@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { businesses } from '../data/businessData';
 
 interface CreatePostPageProps {
-  onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }) => void;
+  onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }, imageFile?: File) => void;
   onBack: () => void;
 }
 
@@ -14,7 +14,7 @@ interface MentionUser {
   id: string;
   name: string;
   avatar: string;
-  type: 'engineer' | 'business' | 'user';
+  type: 'business' | 'visitor';
   verified?: boolean;
 }
 
@@ -24,8 +24,6 @@ const mentionableUsers: MentionUser[] = [
   { id: '2', name: 'AgriTools Pro', avatar: 'https://images.unsplash.com/photo-1690986469727-1ed8bcdf6384?w=100', type: 'business', verified: true },
   { id: '5', name: 'Eco Farm Solutions', avatar: 'https://images.unsplash.com/photo-1636089167961-4964523e6c3f?w=100', type: 'business', verified: true },
   { id: '3', name: 'Fresh Harvest Farm', avatar: 'https://images.unsplash.com/photo-1631337902392-b4bb679fbfdb?w=100', type: 'business', verified: true },
-  { id: 'eng1', name: 'Engineer Hassan', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100', type: 'engineer', verified: true },
-  { id: 'eng2', name: 'Engineer Sara', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100', type: 'engineer', verified: true },
   { id: 'user1', name: 'Farmer Ali', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', type: 'user' },
   { id: 'user2', name: 'Sarah Ahmed', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', type: 'user' },
   { id: 'user3', name: 'Mohammed Hassan', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100', type: 'user' },
@@ -40,6 +38,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const postImageFileRef = useRef<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Mention functionality
@@ -65,6 +64,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      postImageFileRef.current = file;
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
@@ -74,6 +74,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   };
 
   const handleRemoveImage = () => {
+    postImageFileRef.current = null;
     setImage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -166,20 +167,18 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
       return;
     }
 
-    if (!image) {
-      alert('Please upload an image for your post');
-      return;
-    }
-
-    onCreatePost({
-      title: title.trim(),
-      content: content.trim(),
-      image: image,
-      tags: hashtags,
-    });
+    onCreatePost(
+      {
+        title: title.trim(),
+        content: content.trim(),
+        image: image || '',
+        tags: hashtags,
+      },
+      postImageFileRef.current || undefined
+    );
   };
 
-  const isValid = content.trim() && image;
+  const isValid = !!content.trim();
 
   return (
     <div className="min-h-screen bg-neutral-50 py-8">

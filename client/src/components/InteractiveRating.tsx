@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { Star, ThumbsUp, Award, X, Send } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Star, ThumbsUp, Award, X, Send, User, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
+import { getImageUrl } from '../shared/api/client';
+import { toggleBusinessReviewHelpful } from '../shared/api/users';
 
 interface InteractiveRatingProps {
   rating: number;
   totalReviews: number;
   reviews?: Review[];
-  type?: 'business' | 'engineer';
+  type?: 'business';
   entityName: string;
+  businessId?: string;
   onSubmitReview?: (rating: number, comment: string) => void;
+  onEditReview?: (reviewId: string, data: { rating: number; comment: string }) => void | Promise<void>;
 }
 
 interface Review {
@@ -20,15 +24,19 @@ interface Review {
   comment: string;
   date: string;
   helpful: number;
+  isHelpful?: boolean;
+  isMine?: boolean;
 }
 
-export function InteractiveRating({ 
-  rating, 
-  totalReviews, 
+export function InteractiveRating({
+  rating,
+  totalReviews,
   reviews = [],
   type = 'business',
   entityName,
-  onSubmitReview
+  businessId,
+  onSubmitReview,
+  onEditReview,
 }: InteractiveRatingProps) {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
@@ -39,27 +47,70 @@ export function InteractiveRating({
   const [userHasReviewed, setUserHasReviewed] = useState(false);
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [allReviews, setAllReviews] = useState<Review[]>(reviews);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editComment, setEditComment] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [helpfulLoadingId, setHelpfulLoadingId] = useState<string | null>(null);
 
-  const ratingBreakdown = {
-    5: Math.floor(totalReviews * 0.65),
-    4: Math.floor(totalReviews * 0.20),
-    3: Math.floor(totalReviews * 0.10),
-    2: Math.floor(totalReviews * 0.03),
-    1: Math.floor(totalReviews * 0.02),
-  };
+  useEffect(() => {
+    setAllReviews(reviews);
+    const marked = new Set<string>();
+    reviews.forEach((r) => {
+      if (r.isHelpful) marked.add(r.id);
+    });
+    setHelpfulReviews(marked);
+  }, [reviews]);
+
+  const ratingBreakdown = useMemo(() => {
+    if (reviews.length > 0) {
+      const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      reviews.forEach((r) => {
+        const star = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
+        counts[star]++;
+      });
+      return counts;
+    }
+    return {
+      5: Math.floor(totalReviews * 0.65),
+      4: Math.floor(totalReviews * 0.20),
+      3: Math.floor(totalReviews * 0.10),
+      2: Math.floor(totalReviews * 0.03),
+      1: Math.floor(totalReviews * 0.02),
+    };
+  }, [reviews, totalReviews]);
 
   const displayedReviews = showAllReviews ? allReviews : allReviews.slice(0, 3);
 
-  const handleHelpfulClick = (reviewId: string) => {
-    setHelpfulReviews(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(reviewId)) {
-        newSet.delete(reviewId);
-      } else {
-        newSet.add(reviewId);
+  const handleHelpfulClick = async (reviewId: string) => {
+    if (type === 'business' && businessId) {
+      setHelpfulLoadingId(reviewId);
+      try {
+        const res = await toggleBusinessReviewHelpful(businessId, reviewId);
+        setAllReviews((prev) =>
+          prev.map((r) =>
+            r.id === reviewId ? { ...r, helpful: res.helpful, isHelpful: res.isHelpful } : r
+          )
+        );
+        setHelpfulReviews((prev) => {
+          const next = new Set(prev);
+          if (res.isHelpful) next.add(reviewId);
+          else next.delete(reviewId);
+          return next;
+        });
+      } catch {
+        // keep UI unchanged on error
+      } finally {
+        setHelpfulLoadingId(null);
       }
-      return newSet;
-    });
+    } else {
+      setHelpfulReviews((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(reviewId)) newSet.delete(reviewId);
+        else newSet.add(reviewId);
+        return newSet;
+      });
+    }
   };
 
   const handleSubmitReview = () => {
@@ -80,6 +131,23 @@ export function InteractiveRating({
       };
       setUserReview(newReview);
       setAllReviews([...allReviews, newReview]);
+    }
+  };
+
+  const openEditReview = (review: Review) => {
+    setEditingReviewId(review.id);
+    setEditRating(review.rating);
+    setEditComment(review.comment || '');
+  };
+
+  const handleSaveEditReview = async () => {
+    if (!editingReviewId || editRating < 1 || editRating > 5) return;
+    setEditSaving(true);
+    try {
+      await onEditReview?.(editingReviewId, { rating: editRating, comment: editComment.trim() });
+      setEditingReviewId(null);
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -132,7 +200,7 @@ export function InteractiveRating({
               <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
-                  style={{ width: `${(ratingBreakdown[stars as keyof typeof ratingBreakdown] / totalReviews) * 100}%` }}
+                  style={{ width: `${totalReviews ? (ratingBreakdown[stars as keyof typeof ratingBreakdown] / totalReviews) * 100 : 0}%` }}
                 />
               </div>
               <span className="text-sm text-neutral-500 w-12 text-right">
@@ -158,11 +226,17 @@ export function InteractiveRating({
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={review.avatar}
-                      alt={review.author}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-neutral-100"
-                    />
+                    {getImageUrl(review.avatar) ? (
+                      <img
+                        src={getImageUrl(review.avatar)}
+                        alt={review.author}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-neutral-100"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center border-2 border-neutral-100">
+                        <User className="w-5 h-5 text-neutral-500" />
+                      </div>
+                    )}
                     <div>
                       <h4 className="font-semibold text-neutral-900">{review.author}</h4>
                       <p className="text-xs text-neutral-500">{review.date}</p>
@@ -179,20 +253,32 @@ export function InteractiveRating({
                         }`}
                       />
                     ))}
+                    {review.isMine && onEditReview && (
+                      <button
+                        type="button"
+                        onClick={() => openEditReview(review)}
+                        className="ml-2 p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-green-600 transition-colors"
+                        title="Edit review"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <p className="text-neutral-700 leading-relaxed mb-3">{review.comment}</p>
                 <button
+                  type="button"
                   onClick={() => handleHelpfulClick(review.id)}
+                  disabled={helpfulLoadingId === review.id}
                   className={`flex items-center gap-1.5 text-sm transition-colors ${
                     helpfulReviews.has(review.id)
                       ? 'text-green-600 font-medium'
                       : 'text-neutral-500 hover:text-green-600'
-                  }`}
+                  } disabled:opacity-50 disabled:pointer-events-none`}
                 >
                   <ThumbsUp className={`w-4 h-4 ${helpfulReviews.has(review.id) ? 'fill-current' : ''}`} />
                   <span>
-                    Helpful ({review.helpful + (helpfulReviews.has(review.id) ? 1 : 0)})
+                    Helpful ({helpfulLoadingId === review.id ? '…' : (review.helpful ?? 0) + (type !== 'business' && helpfulReviews.has(review.id) ? 1 : 0)})
                   </span>
                 </button>
               </div>
@@ -207,6 +293,73 @@ export function InteractiveRating({
               {showAllReviews ? 'Show Less' : `View All ${allReviews.length} Reviews`}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Edit Review Modal */}
+      {editingReviewId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+              <h2 className="text-xl font-bold text-neutral-900">Edit your review</h2>
+              <button
+                onClick={() => setEditingReviewId(null)}
+                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <p className="text-sm text-neutral-600 mb-3">Your rating</p>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setEditRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="transition-transform hover:scale-110 active:scale-95"
+                    >
+                      <Star
+                        className={`w-10 h-10 transition-colors ${
+                          star <= (hoverRating || editRating)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'fill-neutral-200 text-neutral-200 hover:fill-amber-200 hover:text-amber-200'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Comment</label>
+                <Textarea
+                  value={editComment}
+                  onChange={(e) => setEditComment(e.target.value)}
+                  placeholder="Tell us about your experience..."
+                  className="min-h-[120px] resize-none"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setEditingReviewId(null)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEditReview}
+                  disabled={editRating < 1 || editSaving}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {editSaving ? 'Saving...' : 'Save changes'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

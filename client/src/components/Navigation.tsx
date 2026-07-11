@@ -73,7 +73,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                 Shop
               </button>
               
-              {(user?.role === 'engineer' || user?.role === 'business') && (
+              {(user?.role === 'business') && (
                 <button 
                   onClick={() => onNavigate('dashboard')}
                   className={`transition-colors ${
@@ -242,7 +242,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   Shop
                 </button>
                 
-                {(user?.role === 'engineer' || user?.role === 'business') && (
+                {(user?.role === 'business') && (
                   <button 
                     onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
                     className={`text-left px-4 py-2 rounded-lg transition-colors ${

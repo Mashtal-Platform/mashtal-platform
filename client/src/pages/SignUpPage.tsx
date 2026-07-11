@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, HardHat, Building2, Mail, Lock, Phone, MapPin, CheckCircle2, Eye, EyeOff, Users, Tractor, Store, Loader2, Leaf, Shield } from 'lucide-react';
+import { ArrowLeft, User, Building2, Mail, Lock, CheckCircle2, Store, Loader2, Shield, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { Page } from '../App';
+import { PhoneInput } from '../components/PhoneInput';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
 
 interface SignUpPageProps {
   onNavigate: (page: Page) => void;
@@ -23,6 +26,13 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
+    location: '',
+    bio: '',
+    companyName: '',
+    businessType: '',
+    specialization: '',
+    yearsExperience: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,20 +56,59 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
       return;
     }
 
+    const phone = formData.phone?.trim() ?? '';
+    if (phone) {
+      const parsed = parsePhoneNumberFromString(phone, 'LB');
+      if (!parsed?.isValid()) {
+        setError('Please enter a valid phone number (example: +961 70 123 456).');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.fullName, selectedRole);
+      if (!selectedRole) throw new Error('Role is required');
+
+      const base = {
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        role: selectedRole,
+      } as const;
+
+      const input =
+        selectedRole === 'business'
+          ? {
+              ...base,
+              businessProfile: {
+                phone: formData.phone || undefined,
+                location: formData.location || undefined,
+                bio: formData.bio || undefined,
+                companyName: formData.companyName || undefined,
+                specialties: [],
+              },
+            }
+          : base;
+
+      const result = await signUp(input as any);
       
-      // If Engineer or Business, redirect to payment
-      if (selectedRole === 'engineer' || selectedRole === 'business') {
+      // Paid roles should always see payment form immediately after signup.
+      // Verification can still be completed after payment.
+      if (selectedRole === 'business') {
         onPaymentNeeded(selectedRole);
+        return;
+      }
+
+      // Free roles continue to email verification flow.
+      if (result?.requiresVerification) {
+        onVerificationNeeded();
       } else {
-        // If Visitor, go to email verification
         onVerificationNeeded();
       }
-    } catch (err) {
-      setError('Failed to create account. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to create account. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -72,8 +121,8 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     try {
       await signInWithGoogle();
       
-      // After Google sign-up, still need to select role and payment for Engineer/Business
-      if (selectedRole === 'engineer' || selectedRole === 'business') {
+      // After Google sign-up, still need payment for Business accounts
+      if (selectedRole === 'business') {
         onPaymentNeeded(selectedRole);
       } else {
         onNavigate('home');
@@ -98,7 +147,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               <p className="text-neutral-600">Choose your account type</p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto">
               {/* Visitor */}
               <button
                 onClick={() => handleRoleSelect('visitor')}
@@ -108,39 +157,9 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                   <User className="w-6 h-6 text-neutral-600" />
                 </div>
                 <h3 className="font-semibold text-neutral-900 mb-2">Visitor</h3>
-                <p className="text-sm text-neutral-600 mb-3">Browse and follow experts & businesses</p>
+                <p className="text-sm text-neutral-600 mb-3">Browse, follow businesses, and engage with the community</p>
                 <div className="text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2">
                   <strong>Free</strong> - Email verification required
-                </div>
-              </button>
-
-              {/* Agronomist */}
-              <button
-                onClick={() => handleRoleSelect('agronomist')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
-              >
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
-                  <Leaf className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Agronomist</h3>
-                <p className="text-sm text-neutral-600 mb-3">Share expertise on crops & soil</p>
-                <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Paid Account</strong> - Verification required
-                </div>
-              </button>
-
-              {/* Engineer */}
-              <button
-                onClick={() => handleRoleSelect('engineer')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
-              >
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 transition-colors">
-                  <HardHat className="w-6 h-6 text-orange-600" />
-                </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Engineer</h3>
-                <p className="text-sm text-neutral-600 mb-3">Irrigation & farm systems</p>
-                <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Paid Account</strong> - Verification required
                 </div>
               </button>
 
@@ -192,14 +211,11 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             </button>
             <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               {selectedRole === 'visitor' && <User className="w-8 h-8 text-white" />}
-              {selectedRole === 'agronomist' && <Leaf className="w-8 h-8 text-white" />}
-              {selectedRole === 'engineer' && <HardHat className="w-8 h-8 text-white" />}
               {selectedRole === 'business' && <Building2 className="w-8 h-8 text-white" />}
             </div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Create Account</h1>
             <p className="text-neutral-600">
               {selectedRole === 'visitor' && 'Free account with email verification'}
-              {selectedRole === 'engineer' && 'Professional account - Payment required'}
               {selectedRole === 'business' && 'Business account - Payment required'}
             </p>
           </div>
@@ -298,6 +314,81 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 />
               </div>
             </div>
+
+            {/* Role-specific profile fields */}
+            {selectedRole === 'business' && (
+              <>
+                <PhoneInput
+                  label="Phone"
+                  value={formData.phone}
+                  required={selectedRole === 'business'}
+                  defaultCountry="LB"
+                  placeholder="e.g. +961 70 123 456"
+                  onChange={(v) => setFormData({ ...formData, phone: v })}
+                />
+
+                <div>
+                  <LebanonLocationPicker
+                    label="Location"
+                    value={formData.location}
+                    required={selectedRole === 'business'}
+                    placeholder="Search city or village in Lebanon…"
+                    onChange={(v) => setFormData({ ...formData, location: v })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder={
+                      selectedRole === 'business'
+                        ? 'Tell customers about your business...'
+                        : 'Tell others about your experience...'
+                    }
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    rows={3}
+                    required={selectedRole === 'business'}
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedRole === 'business' && (
+              <>
+                <div>
+                  <Label htmlFor="companyName">Business Name</Label>
+                  <div className="relative mt-1">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Input
+                      id="companyName"
+                      type="text"
+                      placeholder="Green Valley Nursery"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="businessType">Business Type</Label>
+                  <div className="relative mt-1">
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                    <Input
+                      id="businessType"
+                      type="text"
+                      placeholder="Nursery / Tools / Services..."
+                      value={formData.businessType}
+                      onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
