@@ -49,20 +49,68 @@ function shapeThread(doc, userId) {
 }
 
 const DEFAULT_PAGE_SIZE = 20;
+const FEED_PRIORITY_DAYS = 2;
+
+async function getPriorityAuthorIds(userId) {
+  if (!userId || !Types.ObjectId.isValid(userId)) return [];
+  const me = await User.findById(userId).select('following').lean();
+  if (!me) return [];
+  const priorityIds = [new Types.ObjectId(userId)];
+  for (const fid of me.following || []) {
+    if (fid) priorityIds.push(fid);
+  }
+  return priorityIds;
+}
 
 async function getThreads(req, res) {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || DEFAULT_PAGE_SIZE, 100);
     const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
-
-    const threads = await Thread.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('author')
-      .lean();
-
     const userId = req.user?.id ? String(req.user.id) : null;
+
+    let threads;
+    if (userId) {
+      const priorityAuthorIds = await getPriorityAuthorIds(userId);
+      const since = new Date(Date.now() - FEED_PRIORITY_DAYS * 24 * 60 * 60 * 1000);
+      threads = await Thread.aggregate([
+        {
+          $addFields: {
+            feedRank: {
+              $cond: [
+                {
+                  $and: [
+                    { $in: ['$author', priorityAuthorIds] },
+                    { $gte: ['$createdAt', since] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+        { $sort: { feedRank: -1, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'author',
+            foreignField: '_id',
+            as: 'author',
+          },
+        },
+        { $unwind: { path: '$author', preserveNullAndEmptyArrays: true } },
+      ]);
+    } else {
+      threads = await Thread.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('author')
+        .lean();
+    }
+
     const shaped = threads.map((t) => shapeThread(t, userId));
     res.json(shaped);
   } catch (err) {

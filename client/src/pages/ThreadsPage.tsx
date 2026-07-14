@@ -20,6 +20,8 @@ interface ThreadsPageProps {
   savedItems?: SavedItem[];
   highlightThreadId?: string;
   onClearHighlight?: () => void;
+  feedVersion?: number;
+  lastCreatedThread?: any | null;
 }
 
 export function ThreadsPage({ 
@@ -36,7 +38,9 @@ export function ThreadsPage({
   onScrollComplete,
   savedItems = [],
   highlightThreadId,
-  onClearHighlight
+  onClearHighlight,
+  feedVersion = 0,
+  lastCreatedThread = null,
 }: ThreadsPageProps) {
   const { isAuthenticated, user } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -402,6 +406,8 @@ export function ThreadsPage({
             userThreads={userThreads}
             highlightThreadId={highlightThreadId}
             onClearHighlight={onClearHighlight}
+            feedVersion={feedVersion}
+            lastCreatedThread={lastCreatedThread}
           />
         </div>
 

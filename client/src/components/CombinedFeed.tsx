@@ -23,6 +23,7 @@ interface CombinedFeedProps {
   maxThreads?: number;
   // Legacy: if maxPosts/maxThreads are not provided, fall back to maxItems.
   maxItems?: number;
+  feedVersion?: number;
 }
 
 type FeedItem = {
@@ -61,7 +62,8 @@ export function CombinedFeed({
   onFollowBusiness,
   maxPosts,
   maxThreads,
-  maxItems = 10
+  maxItems = 10,
+  feedVersion = 0,
 }: CombinedFeedProps) {
   const { user, isAuthenticated } = useAuth();
   const [combinedItems, setCombinedItems] = useState<FeedItem[]>([]);
@@ -180,7 +182,7 @@ export function CombinedFeed({
       }
     };
     load();
-  }, [maxItems, maxPosts, maxThreads]);
+  }, [maxItems, maxPosts, maxThreads, feedVersion]);
   
   const [items, setItems] = useState<FeedItem[]>(combinedItems);
 

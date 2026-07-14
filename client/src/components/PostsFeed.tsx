@@ -21,6 +21,8 @@ interface PostsFeedProps {
   userPosts?: any[];
   highlightPostId?: string;
   onClearHighlight?: () => void;
+  feedVersion?: number;
+  lastCreatedPost?: any | null;
 }
 
 interface MentionUser {
@@ -41,7 +43,9 @@ export function PostsFeed({
   onFollowBusiness, 
   userPosts = [],
   highlightPostId,
-  onClearHighlight
+  onClearHighlight,
+  feedVersion = 0,
+  lastCreatedPost = null,
 }: PostsFeedProps) {
   const { user, isAuthenticated } = useAuth();
   const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
@@ -82,7 +86,7 @@ export function PostsFeed({
     return () => { isMounted = false; };
   }, []);
 
-  // Load first page of posts (all users, newest first)
+  // Load first page of posts (ranked for authenticated users; newest-first otherwise)
   useEffect(() => {
     let isMounted = true;
     async function loadInitial() {
@@ -91,13 +95,26 @@ export function PostsFeed({
       try {
         const apiPosts: PostDto[] = await fetchPosts({ limit: PAGE_SIZE, skip: 0 });
         if (!isMounted) return;
-        const normalized = apiPosts.map((p) => ({
+        let normalized = apiPosts.map((p) => ({
           ...p,
           comments: typeof p.commentsCount === 'number' ? p.commentsCount : 0,
         }));
+        // Ensure own just-created post is visible immediately even before ranked refetch catches up
+        if (lastCreatedPost?.id && !normalized.some((p) => p.id === lastCreatedPost.id)) {
+          normalized = [
+            {
+              ...lastCreatedPost,
+              comments:
+                typeof lastCreatedPost.commentsCount === 'number'
+                  ? lastCreatedPost.commentsCount
+                  : lastCreatedPost.comments ?? 0,
+            },
+            ...normalized,
+          ];
+        }
         setBackendPosts(normalized);
-        nextSkipRef.current = normalized.length;
-        setHasMorePosts(normalized.length === PAGE_SIZE);
+        nextSkipRef.current = apiPosts.length;
+        setHasMorePosts(apiPosts.length === PAGE_SIZE);
         const authorIds = Array.from(
           new Set(normalized.map((p) => p.author?.id).filter(Boolean) as string[]),
         );
@@ -117,7 +134,17 @@ export function PostsFeed({
         if (!isMounted) return;
         console.error('[PostsFeed] Failed to load posts from API:', err);
         setPostsError('Failed to load latest posts.');
-        setBackendPosts([]);
+        if (lastCreatedPost?.id) {
+          setBackendPosts([{
+            ...lastCreatedPost,
+            comments:
+              typeof lastCreatedPost.commentsCount === 'number'
+                ? lastCreatedPost.commentsCount
+                : lastCreatedPost.comments ?? 0,
+          }]);
+        } else {
+          setBackendPosts([]);
+        }
         setHasMorePosts(false);
       } finally {
         if (isMounted) setIsLoadingPosts(false);
@@ -125,7 +152,7 @@ export function PostsFeed({
     }
     loadInitial();
     return () => { isMounted = false; };
-  }, []);
+  }, [feedVersion, lastCreatedPost?.id]);
 
   // Same relative time format as ThreadsFeed: "Just now", "2m ago", "5h ago", "3d ago", "2w ago", "3mo ago", "1y ago"
   const formatPostTime = (timestamp: string | undefined) => {
