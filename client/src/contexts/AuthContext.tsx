@@ -14,6 +14,7 @@ function normalizeUser(apiUser: any): User {
     fullName: apiUser.fullName,
     role: apiUser.role,
     avatar: apiUser.avatar,
+    coverImage: apiUser.coverImage,
     verified: apiUser.verified,
     phone: isVisitor
       ? apiUser.phone || businessProfile.phone || professionalProfile.phone
@@ -37,8 +38,6 @@ function normalizeUser(apiUser: any): User {
 
 export type UserRole =
   | 'visitor'
-  | 'agronomist'
-  | 'engineer'
   | 'business'
   | 'admin'
   | null;
@@ -49,10 +48,11 @@ export interface User {
   fullName: string;
   role: UserRole;
   avatar?: string;
+  coverImage?: string;
   phone?: string;
   location?: string;
   bio?: string;
-  // Professional (agronomist, engineer) & Business specific
+  // Business-specific
   companyName?: string;
   businessType?: string;
   verified?: boolean;
@@ -94,6 +94,15 @@ interface AuthContextType {
   /** Verify email via link token (from email). Returns true if verified and logged in. */
   verifyEmail: (token: string) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
+  /** Convert current visitor account to a business account. */
+  convertToBusiness: (businessProfile: {
+    companyName: string;
+    bio?: string;
+    phone?: string;
+    location?: string;
+    specialties?: string[];
+  }) => Promise<User>;
+  refreshUser: () => Promise<User | null>;
   switchUser: (userId: string) => void;
   availableUsers: User[];
   loading: boolean;
@@ -270,6 +279,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      const me = await apiGet<any>('/auth/me');
+      const normalized = normalizeUser(me);
+      setUser(normalized);
+      localStorage.setItem('mashtal_user', JSON.stringify(normalized));
+      return normalized;
+    } catch {
+      return null;
+    }
+  };
+
+  const convertToBusiness = async (businessProfile: {
+    companyName: string;
+    bio?: string;
+    phone?: string;
+    location?: string;
+    specialties?: string[];
+  }): Promise<User> => {
+    const updated = await apiPost<any>('/users/me/convert-to-business', { businessProfile });
+    const normalized = normalizeUser(updated);
+    try {
+      const me = await apiGet<any>('/auth/me');
+      const fromMe = normalizeUser(me);
+      setUser(fromMe);
+      localStorage.setItem('mashtal_user', JSON.stringify(fromMe));
+      return fromMe;
+    } catch {
+      setUser(normalized);
+      localStorage.setItem('mashtal_user', JSON.stringify(normalized));
+      return normalized;
+    }
+  };
+
   const switchUser = (userId: string) => {
     void userId;
   };
@@ -285,6 +328,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         verifyEmail,
         updateProfile,
+        convertToBusiness,
+        refreshUser,
         switchUser,
         availableUsers,
         loading,

@@ -7,7 +7,7 @@ import { Textarea } from './ui/textarea';
 import { VerifiedBadge } from './VerifiedBadge';
 import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../shared/api/threads';
 import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
-import { getImageUrl } from '../shared/api/client';
+import { getAvatarUrl } from '../shared/api/client';
 import { fetchMentionableProfiles } from '../shared/api/users';
 
 interface ThreadsFeedProps {
@@ -56,13 +56,19 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
       try {
         const profiles = await fetchMentionableProfiles().catch(() => []);
         const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
-          .map((u) => ({
-            id: u.id,
-            name: (u.fullName || u.companyName || '').trim(),
-            avatar: u.avatar || '',
-            type: u.role || 'business',
-            verified: !!u.verified,
-          }))
+          .map((u) => {
+            const isBusiness = u.role === 'business';
+            const name = (
+              isBusiness ? (u.companyName || u.fullName) : (u.fullName || u.companyName) || ''
+            ).trim();
+            return {
+              id: u.id,
+              name,
+              avatar: getAvatarUrl(u.avatar, name),
+              type: u.role || 'business',
+              verified: !!u.verified,
+            };
+          })
           .filter((u) => u.name.length > 0);
         if (isMounted) setMentionableUsers(mapped);
       } catch {
@@ -561,8 +567,6 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                 // Navigate based on user type
                 if (mentionableUser.type === 'business' && onNavigateToBusiness) {
                   onNavigateToBusiness(matchedUser.id);
-                } else if ((mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') && onNavigateToBusiness) {
-                  onNavigateToBusiness(matchedUser.id);
                 } else if (onNavigateToUserProfile) {
                   onNavigateToUserProfile(matchedUser.id);
                 }
@@ -604,11 +608,6 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                     setCommentsModalThread(null);
 
                     if (mentionableUser.type === 'business' && onNavigateToBusiness) {
-                      onNavigateToBusiness(mentionableUser.id);
-                    } else if (
-                      (mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') &&
-                      onNavigateToBusiness
-                    ) {
                       onNavigateToBusiness(mentionableUser.id);
                     } else if (onNavigateToUserProfile) {
                       onNavigateToUserProfile(mentionableUser.id);
@@ -660,26 +659,14 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
     // Navigate based on author type
     // For businesses, use businessId
     if (commentAuthor.type === 'business' && commentAuthor.businessId && onNavigateToBusiness) {
-      console.log('[ThreadsFeed] Navigating to business:', commentAuthor.businessId);
       onNavigateToBusiness(commentAuthor.businessId);
       return;
     }
     
-    // For engineers and agronomists, use their id to navigate to business-style pages
-    if ((commentAuthor.type === 'engineer' || commentAuthor.type === 'agronomist') && commentAuthor.id && onNavigateToBusiness) {
-      console.log('[ThreadsFeed] Navigating to engineer/agronomist profile:', commentAuthor.id);
-      onNavigateToBusiness(commentAuthor.id);
-      return;
-    }
-    
-    // For regular users, navigate to user profile
     if (commentAuthor.id && onNavigateToUserProfile) {
-      console.log('[ThreadsFeed] Navigating to user profile:', commentAuthor.id);
       onNavigateToUserProfile(commentAuthor.id);
       return;
     }
-    
-    console.warn('[ThreadsFeed] No navigation performed for:', commentAuthor);
   };
 
   const handleAddComment = async () => {
@@ -863,9 +850,6 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
     
     if (author.type === 'business' && author.businessId && onNavigateToBusiness) {
       onNavigateToBusiness(author.businessId);
-    } else if ((author.type === 'engineer' || author.type === 'agronomist') && author.id && onNavigateToBusiness) {
-      // Engineers and agronomists also have business-style pages
-      onNavigateToBusiness(author.id);
     } else if (author.id && onNavigateToUserProfile) {
       onNavigateToUserProfile(author.id);
     }
@@ -907,10 +891,6 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
     switch (type) {
       case 'business':
         return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist':
-        return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer':
-        return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin':
         return <Shield className="w-4 h-4 text-purple-600" />;
       default:
@@ -969,7 +949,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       className="block"
                     >
                       <img
-                        src={getImageUrl(thread.author.avatar)}
+                        src={getAvatarUrl(thread.author.avatar, thread.author.name)}
                         alt={thread.author.name}
                         className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
                       />
@@ -995,9 +975,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       {/* Role name under username */}
                       <span className="text-xs text-neutral-500 capitalize">
                         {thread.author.type === 'business' ? 'Business' : 
-                         thread.author.type === 'engineer' ? 'Engineer' : 
-                         thread.author.type === 'agronomist' ? 'Agronomist' :
-                         thread.author.type === 'admin' ? 'Administrator' : 'User'}
+                         thread.author.type === 'admin' ? 'Administrator' : 'Visitor'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
@@ -1005,7 +983,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       <time>{formatTime(thread.timestamp)}</time>
                     </div>
                   </div>
-                  {isAuthenticated && (thread.author.type === 'business' || thread.author.type === 'engineer' || thread.author.type === 'agronomist') && !isOwnThread(thread.author) && !isFollowingAuthor(thread.author) && (
+                  {isAuthenticated && thread.author.type === 'business' && !isOwnThread(thread.author) && !isFollowingAuthor(thread.author) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1016,7 +994,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       Follow
                     </Button>
                   )}
-                  {isAuthenticated && (thread.author.type === 'business' || thread.author.type === 'engineer' || thread.author.type === 'agronomist') && !isOwnThread(thread.author) && isFollowingAuthor(thread.author) && (
+                  {isAuthenticated && thread.author.type === 'business' && !isOwnThread(thread.author) && isFollowingAuthor(thread.author) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1167,7 +1145,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                             className="block"
                           >
                             <img
-                              src={getImageUrl(comment.author.avatar)}
+                              src={getAvatarUrl(comment.author.avatar, comment.author.name)}
                               alt={comment.author.name}
                               className="w-11 h-11 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
                             />
@@ -1214,7 +1192,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                           }`}
                                         >
                                           <img
-                                            src={getImageUrl(mentionUser.avatar)}
+                                            src={getAvatarUrl(mentionUser.avatar, mentionUser.name)}
                                             alt={mentionUser.name}
                                             className="w-8 h-8 rounded-full object-cover"
                                           />
@@ -1311,7 +1289,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                   {/* Profile picture with role icon at bottom-right */}
                                   <div className="relative flex-shrink-0">
                                     <img
-                                      src={getImageUrl(reply.author.avatar)}
+                                      src={getAvatarUrl(reply.author.avatar, reply.author.name)}
                                       alt={reply.author.name}
                                       onClick={() => handleProfileClick(reply.author)}
                                       draggable="false"
@@ -1446,7 +1424,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                             }`}
                           >
                             <img
-                              src={getImageUrl(mentionUser.avatar)}
+                              src={getAvatarUrl(mentionUser.avatar, mentionUser.name)}
                               alt={mentionUser.name}
                               draggable="false"
                               className="w-8 h-8 rounded-full object-cover select-none"
@@ -1512,7 +1490,11 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
           postUrl={typeof window !== 'undefined' ? `${window.location.origin}/thread/${shareModalThread.id}` : undefined}
           postTitle={shareModalThread.title || shareModalThread.content?.substring(0, 50)}
           postOwnerName={shareModalThread.author?.name || shareModalThread.author?.fullName}
-          postOwnerAvatar={shareModalThread.author?.avatar ? getImageUrl(shareModalThread.author.avatar) : undefined}
+          postOwnerAvatar={
+            shareModalThread.author?.avatar
+              ? getAvatarUrl(shareModalThread.author.avatar, shareModalThread.author.name)
+              : getAvatarUrl(null, shareModalThread.author?.name)
+          }
           onShare={handleShareAction}
         />
       )}

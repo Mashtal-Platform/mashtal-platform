@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Clock, Bookmark, Send, CheckCircle2, UserPlus, Check, Building2, HardHat, User, Leaf, Shield } from 'lucide-react';
+import { Heart, MessageCircle, Clock, Bookmark, Send, CheckCircle2, UserPlus, Check, Building2, User, Shield } from 'lucide-react';
 import { ShareModal } from './ShareModal';
 import { useAuth } from '../contexts/AuthContext';
 import { VerifiedBadge } from './VerifiedBadge';
 import { SavedItem } from '../App';
 import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/posts';
 import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../shared/api/threads';
-import { getImageUrl } from '../shared/api/client';
+import { getImageUrl, getAvatarUrl } from '../shared/api/client';
 
 interface CombinedFeedProps {
   onSaveItem?: (item: any) => void;
@@ -35,7 +35,7 @@ type FeedItem = {
     name: string;
     avatar: string;
     verified: boolean;
-    type: 'business' | 'engineer' | 'user' | 'agronomist';
+    type: 'business' | 'visitor' | 'admin';
     businessId?: string;
   };
   timeAgo: string;
@@ -46,7 +46,7 @@ type FeedItem = {
   tags?: string[];
   isLiked?: boolean;
   isSaved?: boolean;
-  timestamp?: Date;
+  timestamp?: string;
 };
 
 export function CombinedFeed({ 
@@ -65,6 +65,24 @@ export function CombinedFeed({
 }: CombinedFeedProps) {
   const { user, isAuthenticated } = useAuth();
   const [combinedItems, setCombinedItems] = useState<FeedItem[]>([]);
+
+  const formatTimeAgo = (timestamp?: string): string => {
+    if (!timestamp) return '';
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+    return d.toLocaleDateString();
+  };
 
   const safeTimeMs = (timestamp?: string) => {
     if (!timestamp) return 0;
@@ -116,6 +134,7 @@ export function CombinedFeed({
                 type: 'post' as const,
                 comments: post.commentsCount,
                 author: post.author,
+                timeAgo: formatTimeAgo(post.timestamp),
               });
             }
             if (i < threadsLimit && verifiedThreads[i]) {
@@ -125,6 +144,7 @@ export function CombinedFeed({
                 type: 'thread' as const,
                 comments: thread.commentsCount,
                 author: thread.author,
+                timeAgo: formatTimeAgo(thread.timestamp),
               });
             }
           }
@@ -137,6 +157,7 @@ export function CombinedFeed({
             type: 'post' as const,
             comments: post.commentsCount,
             author: post.author,
+            timeAgo: formatTimeAgo(post.timestamp),
           }));
 
           const threadItems: FeedItem[] = (threads as ThreadDto[]).map((thread) => ({
@@ -144,6 +165,7 @@ export function CombinedFeed({
             type: 'thread' as const,
             comments: thread.commentsCount,
             author: thread.author,
+            timeAgo: formatTimeAgo(thread.timestamp),
           }));
 
           const combined = [...postItems, ...threadItems]
@@ -253,9 +275,6 @@ export function CombinedFeed({
     // Navigate based on author type
     if (item.author.type === 'business' && item.author.businessId && onNavigateToBusiness) {
       onNavigateToBusiness(item.author.businessId);
-    } else if ((item.author.type === 'engineer' || item.author.type === 'agronomist') && item.author.id && onNavigateToBusiness) {
-      // Engineers and agronomists also have business-style pages
-      onNavigateToBusiness(item.author.id);
     } else if (item.author.id && onNavigateToUserProfile) {
       onNavigateToUserProfile(item.author.id);
     }
@@ -277,14 +296,10 @@ export function CombinedFeed({
     });
   };
 
-  const getRoleIcon = (type: 'business' | 'agronomist' | 'engineer' | 'admin' | 'user') => {
+  const getRoleIcon = (type: 'business' | 'admin' | 'visitor') => {
     switch (type) {
       case 'business':
         return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist':
-        return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer':
-        return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin':
         return <Shield className="w-4 h-4 text-purple-600" />;
       default:
@@ -326,22 +341,13 @@ export function CombinedFeed({
                 <div className="flex items-center gap-4 mb-4">
                   {/* Profile picture with role icon at bottom-right */}
                   <div className="relative flex-shrink-0">
-                    {getImageUrl(item.author.avatar) ? (
-                      <img
-                        src={getImageUrl(item.author.avatar)}
-                        alt={item.author.name}
-                        onClick={(e) => handleAuthorClick(item, e)}
-                        draggable="false"
-                        className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
-                      />
-                    ) : (
-                      <div
-                        onClick={(e) => handleAuthorClick(item, e)}
-                        className="w-14 h-14 rounded-full bg-neutral-200 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
-                      >
-                        <User className="w-7 h-7 text-neutral-500" />
-                      </div>
-                    )}
+                    <img
+                      src={getAvatarUrl(item.author.avatar, item.author.name)}
+                      alt={item.author.name}
+                      onClick={(e) => handleAuthorClick(item, e)}
+                      draggable="false"
+                      className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
+                    />
                     <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
                       {getRoleIcon(item.author.type)}
                     </div>
@@ -358,9 +364,7 @@ export function CombinedFeed({
                         {/* Role name under username */}
                         <span className="text-xs text-neutral-500 capitalize">
                           {item.author.type === 'business' ? 'Business' : 
-                           item.author.type === 'engineer' ? 'Engineer' : 
-                           item.author.type === 'agronomist' ? 'Agronomist' :
-                           item.author.type === 'admin' ? 'Administrator' : 'User'}
+                           item.author.type === 'admin' ? 'Administrator' : 'Visitor'}
                         </span>
                       </div>
                       {item.author.verified && (
@@ -375,7 +379,7 @@ export function CombinedFeed({
                         {item.type === 'post' ? 'Post' : 'Thread'}
                       </span>
                       {/* Follow Button */}
-                      {(item.author.type === 'engineer' || item.author.type === 'business') && !isOwnBusiness && isAuthenticated && !isFollowing && (
+                      {item.author.type === 'business' && !isOwnBusiness && isAuthenticated && !isFollowing && (
                         <button
                           onClick={(e) => handleFollow(item, e)}
                           className="ml-2 flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
@@ -384,7 +388,7 @@ export function CombinedFeed({
                           Follow
                         </button>
                       )}
-                      {(item.author.type === 'engineer' || item.author.type === 'business') && isFollowing && (
+                      {item.author.type === 'business' && isFollowing && (
                         <span className="ml-2 flex items-center gap-1 text-xs text-neutral-500">
                           <Check className="w-3 h-3" />
                           Following
@@ -526,7 +530,11 @@ export function CombinedFeed({
           postTitle={shareModalItem.title}
           postImage={(shareModalItem?.image || shareModalItem?.images?.[0]) ? getImageUrl(shareModalItem?.image || shareModalItem?.images?.[0]) : undefined}
           postOwnerName={shareModalItem.author?.name || shareModalItem.author?.fullName}
-          postOwnerAvatar={shareModalItem.author?.avatar ? getImageUrl(shareModalItem.author.avatar) : undefined}
+          postOwnerAvatar={
+          shareModalItem.author?.avatar
+            ? getAvatarUrl(shareModalItem.author.avatar, shareModalItem.author.name)
+            : getAvatarUrl(null, shareModalItem.author?.name)
+        }
           onShare={handleShareAction}
         />
       )}

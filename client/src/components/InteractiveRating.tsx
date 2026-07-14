@@ -9,7 +9,7 @@ interface InteractiveRatingProps {
   rating: number;
   totalReviews: number;
   reviews?: Review[];
-  type?: 'business' | 'engineer';
+  type?: 'business';
   entityName: string;
   businessId?: string;
   onSubmitReview?: (rating: number, comment: string) => void;

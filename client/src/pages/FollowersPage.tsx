@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, MapPin, Star, ExternalLink, X, Building2, Leaf, HardHat, Shield, Users, MessageCircle, Search } from 'lucide-react';
+import { Heart, MapPin, Star, ExternalLink, X, Building2, Shield, Users, MessageCircle, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { getImageUrl } from '../shared/api/client';
@@ -12,7 +12,7 @@ interface FollowersPageProps {
   onOpenChat?: (userId: string) => void;
 }
 
-type RoleFilter = 'all' | 'business' | 'engineer' | 'agronomist' | 'visitor';
+type RoleFilter = 'all' | 'business' | 'visitor';
 
 export function FollowersPage({ 
   onViewBusiness, 
@@ -49,8 +49,6 @@ export function FollowersPage({
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'business': return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist': return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer': return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin': return <Shield className="w-4 h-4 text-purple-600" />;
       default: return <Users className="w-4 h-4 text-neutral-600" />;
     }
@@ -92,7 +90,7 @@ export function FollowersPage({
 
         {/* Role Filters */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {(['all', 'visitor', 'business', 'engineer', 'agronomist'] as RoleFilter[]).map((filter) => (
+          {(['all', 'visitor', 'business'] as RoleFilter[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}

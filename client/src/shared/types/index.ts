@@ -1,7 +1,7 @@
 // Shared type definitions for the Mashtal platform
 
 // ============= User & Auth Types =============
-export type UserRole = 'user' | 'agronomist' | 'engineer' | 'business' | 'admin' | null;
+export type UserRole = 'visitor' | 'business' | 'admin' | null;
 
 export interface User {
   id: string;
@@ -9,6 +9,7 @@ export interface User {
   fullName: string;
   role: UserRole;
   avatar?: string;
+  coverImage?: string;
   phone?: string;
   location?: string;
   bio?: string;
@@ -28,6 +29,7 @@ export interface UserProfile {
   location: string;
   bio: string;
   avatar: string;
+  coverImage?: string;
   role?: UserRole;
   website?: string;
   company?: string;
@@ -77,7 +79,6 @@ export type Page =
   | 'dashboard'
   | 'create-post'
   | 'create-thread'
-  | 'engineer-profile'
   | 'user-profile'
   | 'purchase-history';
 

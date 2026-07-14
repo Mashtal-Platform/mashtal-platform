@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, HardHat, Building2, Mail, Lock, MapPin, CheckCircle2, Eye, EyeOff, Users, Tractor, Store, Loader2, Leaf, Shield, Chrome } from 'lucide-react';
+import { ArrowLeft, User, Building2, Mail, Lock, CheckCircle2, Store, Loader2, Shield, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -89,33 +89,12 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 specialties: [],
               },
             }
-          : selectedRole === 'engineer' || selectedRole === 'agronomist'
-            ? {
-                ...base,
-                professionalProfile: {
-                  phone: formData.phone || undefined,
-                  location: formData.location || undefined,
-                  bio: formData.bio || undefined,
-                  specialization: formData.specialization || undefined,
-                  yearsExperience: formData.yearsExperience
-                    ? Number(formData.yearsExperience)
-                    : undefined,
-                  specialties: [],
-                },
-              }
-            : base;
+          : base;
 
       const result = await signUp(input as any);
-      
-      // Paid roles should always see payment form immediately after signup.
-      // Verification can still be completed after payment.
-      if (selectedRole === 'engineer' || selectedRole === 'business') {
-        onPaymentNeeded(selectedRole);
-        return;
-      }
 
-      // Free roles continue to email verification flow.
-      if (result?.requiresVerification) {
+      // Payment for business will be wired later — go to email verification for all roles.
+      if (result?.requiresVerification || selectedRole === 'business' || selectedRole === 'visitor') {
         onVerificationNeeded();
       } else {
         onVerificationNeeded();
@@ -135,9 +114,9 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     try {
       await signInWithGoogle();
       
-      // After Google sign-up, still need to select role and payment for Engineer/Business
-      if (selectedRole === 'engineer' || selectedRole === 'business') {
-        onPaymentNeeded(selectedRole);
+      // After Google sign-up, continue to verification / home (payment later)
+      if (selectedRole === 'business') {
+        onVerificationNeeded();
       } else {
         onNavigate('home');
       }
@@ -161,7 +140,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               <p className="text-neutral-600">Choose your account type</p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto">
               {/* Visitor */}
               <button
                 onClick={() => handleRoleSelect('visitor')}
@@ -171,39 +150,9 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                   <User className="w-6 h-6 text-neutral-600" />
                 </div>
                 <h3 className="font-semibold text-neutral-900 mb-2">Visitor</h3>
-                <p className="text-sm text-neutral-600 mb-3">Browse and follow experts & businesses</p>
+                <p className="text-sm text-neutral-600 mb-3">Browse, follow businesses, and engage with the community</p>
                 <div className="text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2">
                   <strong>Free</strong> - Email verification required
-                </div>
-              </button>
-
-              {/* Agronomist */}
-              <button
-                onClick={() => handleRoleSelect('agronomist')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
-              >
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
-                  <Leaf className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Agronomist</h3>
-                <p className="text-sm text-neutral-600 mb-3">Share expertise on crops & soil</p>
-                <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Paid Account</strong> - Verification required
-                </div>
-              </button>
-
-              {/* Engineer */}
-              <button
-                onClick={() => handleRoleSelect('engineer')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
-              >
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 transition-colors">
-                  <HardHat className="w-6 h-6 text-orange-600" />
-                </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Engineer</h3>
-                <p className="text-sm text-neutral-600 mb-3">Irrigation & farm systems</p>
-                <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Paid Account</strong> - Verification required
                 </div>
               </button>
 
@@ -218,7 +167,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 <h3 className="font-semibold text-neutral-900 mb-2">Business</h3>
                 <p className="text-sm text-neutral-600 mb-3">Sell products & manage business</p>
                 <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Paid Account</strong> - Verification required
+                  <strong>Business</strong> - Email verification required
                 </div>
               </button>
             </div>
@@ -255,15 +204,12 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             </button>
             <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               {selectedRole === 'visitor' && <User className="w-8 h-8 text-white" />}
-              {selectedRole === 'agronomist' && <Leaf className="w-8 h-8 text-white" />}
-              {selectedRole === 'engineer' && <HardHat className="w-8 h-8 text-white" />}
               {selectedRole === 'business' && <Building2 className="w-8 h-8 text-white" />}
             </div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Create Account</h1>
             <p className="text-neutral-600">
               {selectedRole === 'visitor' && 'Free account with email verification'}
-              {selectedRole === 'engineer' && 'Professional account - Payment required'}
-              {selectedRole === 'business' && 'Business account - Payment required'}
+              {selectedRole === 'business' && 'Business account — verify your email to continue'}
             </p>
           </div>
 
@@ -363,7 +309,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             </div>
 
             {/* Role-specific profile fields */}
-            {(selectedRole === 'business' || selectedRole === 'engineer' || selectedRole === 'agronomist') && (
+            {selectedRole === 'business' && (
               <>
                 <PhoneInput
                   label="Phone"
@@ -433,39 +379,6 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                       className="pl-10"
                     />
                   </div>
-                </div>
-              </>
-            )}
-
-            {(selectedRole === 'engineer' || selectedRole === 'agronomist') && (
-              <>
-                <div>
-                  <Label htmlFor="specialization">Specialization</Label>
-                  <div className="relative mt-1">
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                    <Input
-                      id="specialization"
-                      type="text"
-                      placeholder="Irrigation / Plant diseases / Soil..."
-                      value={formData.specialization}
-                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="yearsExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsExperience"
-                    type="number"
-                    min={0}
-                    placeholder="3"
-                    value={formData.yearsExperience}
-                    onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
-                    required
-                  />
                 </div>
               </>
             )}

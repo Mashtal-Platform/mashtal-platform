@@ -31,8 +31,21 @@ import { fetchProducts, ShoppingProductDto } from '../shared/api/products';
 import { getImageUrl } from '../shared/api/client';
 import { ProductDetailModal } from '../components/ProductDetailModal';
 
-const productCategories = ['all', 'seeds', 'tools', 'fertilizers', 'plants', 'irrigation'] as const;
+const productCategories = ['all', 'seeds', 'plants', 'trees', 'fertilizers', 'tools', 'equipment', 'irrigation', 'medicament', 'other'] as const;
 type ProductCategory = (typeof productCategories)[number];
+
+const categoryLabels: Record<ProductCategory, string> = {
+  all: 'All',
+  seeds: 'Seeds',
+  plants: 'Plants',
+  trees: 'Trees',
+  fertilizers: 'Fertilizers',
+  tools: 'Tools',
+  equipment: 'Equipment',
+  irrigation: 'Irrigation',
+  medicament: 'Medicament',
+  other: 'Other',
+};
 const priceRanges = [
   { id: 'all', label: 'All Prices', min: 0, max: Infinity },
   { id: '0-100', label: 'Under $100', min: 0, max: 100 },
@@ -138,6 +151,18 @@ export function ShoppingPage({
   useEffect(() => {
     loadProducts();
   }, [loadProducts, retryCount]);
+
+  useEffect(() => {
+    try {
+      const prefetched = sessionStorage.getItem('mashtal_shop_search');
+      if (prefetched && prefetched.trim()) {
+        setSearchQuery(prefetched.trim());
+        sessionStorage.removeItem('mashtal_shop_search');
+      }
+    } catch {
+      // ignore storage access issues
+    }
+  }, []);
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
@@ -296,24 +321,8 @@ export function ShoppingPage({
     }
   };
 
-  const getCategoryLabel = (category: ProductCategory) => {
-    switch (category) {
-      case 'all':
-        return 'All Categories';
-      case 'seeds':
-        return 'Seeds';
-      case 'tools':
-        return 'Tools';
-      case 'fertilizers':
-        return 'Fertilizers';
-      case 'plants':
-        return 'Plants';
-      case 'irrigation':
-        return 'Irrigation';
-      default:
-        return 'Category';
-    }
-  };
+  const getCategoryLabel = (category: ProductCategory) =>
+    category === 'all' ? 'All Categories' : categoryLabels[category];
 
   const activeFiltersCount = [
     selectedCategory !== 'all',
@@ -405,35 +414,23 @@ export function ShoppingPage({
               />
             </div>
 
-            {/* Category Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-w-[180px] justify-between">
-                  <span className="truncate">{getCategoryLabel(selectedCategory)}</span>
-                  <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuItem onClick={() => setSelectedCategory('all')}>
-                  All Categories
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedCategory('plants')}>
-                  🌱 Plants
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedCategory('seeds')}>
-                  🌾 Seeds
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedCategory('tools')}>
-                  🔧 Tools
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedCategory('fertilizers')}>
-                  💊 Fertilizers
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedCategory('irrigation')}>
-                  💧 Irrigation
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Category Filter — same options as business add-product */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as ProductCategory)}
+              className="min-w-[180px] px-4 py-2.5 border-2 border-green-600 rounded-lg outline-none bg-white text-neutral-900 focus:ring-2 focus:ring-green-200"
+            >
+              <option value="all">Select category</option>
+              <option value="seeds">Seeds</option>
+              <option value="plants">Plants</option>
+              <option value="trees">Trees</option>
+              <option value="fertilizers">Fertilizers</option>
+              <option value="tools">Tools</option>
+              <option value="equipment">Equipment</option>
+              <option value="irrigation">Irrigation</option>
+              <option value="medicament">Medicament</option>
+              <option value="other">Other</option>
+            </select>
 
             {/* Sort */}
             <DropdownMenu>

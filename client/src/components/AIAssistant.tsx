@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { Bot, X, Send, Sparkles, Loader } from 'lucide-react';
+import { api } from '../shared/api/client';
+import { useAppState } from '../shared/store/AppStateContext';
 
 interface AIAssistantProps {
   isOpen: boolean;
@@ -11,12 +12,14 @@ interface Message {
   text: string;
   isUser: boolean;
   suggestions?: string[];
+  productRecommendations?: string[];
 }
 
 export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
+  const { navigate } = useAppState();
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Hello! I'm your agricultural engineer 🌱. Ask me anything about farming, plants, soil, irrigation, pests, fertilizers, or crops.",
+      text: "Hello! I'm your agricultural assistant 🌱. Ask me anything about farming, plants, soil, irrigation, pests, fertilizers, or crops.",
       isUser: false,
       suggestions: suggestedQuestions,
     },
@@ -25,8 +28,40 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // This keeps the full chat history for the API
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [photo, setPhoto] = useState<{
+    file: File;
+    filename: string;
+    mimeType: string;
+    previewUrl: string;
+  } | null>(null);
+
+  const handlePhotoChange = (file: File | null) => {
+    if (!file) {
+      setPhoto(null);
+      return;
+    }
+    if (!file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhoto({
+        file,
+        filename: file.name,
+        mimeType: file.type || 'image/jpeg',
+        previewUrl: String(reader.result || ''),
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   const suggestedFollowUps = (lastQuestion: string) => {
     const q = lastQuestion.toLowerCase();
@@ -41,61 +76,66 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
 
   const handleSuggestedQuestion = (question: string) => setInput(question);
 
+  const handleRecommendationClick = (recommendation: string) => {
+    try {
+      sessionStorage.setItem('mashtal_shop_search', recommendation);
+    } catch {
+      // ignore storage errors
+    }
+    navigate('shopping');
+    onToggle();
+  };
+
   const handleSend = async () => {
-  if (!input.trim() || isLoading) return;
-  const userText = input.trim();
-  setInput('');
+    if (isLoading) return;
+    if (!input.trim() && !photo) return;
 
-  // Add user's message to UI
-  const newMessages = [...messages, { text: userText, isUser: true }];
-  setMessages(newMessages);
-  setIsLoading(true);
+    const userText = input.trim() || (photo ? 'Uploaded image' : '');
+    setInput('');
 
-  try {
-    const API_KEY = "AIzaSyBW6j7A04ec2WHCM4jHgPTWFXYndGu9Scc";
-    const MODEL = "models/gemini-2.5-flash";
+    // Add user's message to UI
+    const newMessages = [...messages, { text: userText, isUser: true }];
+    setMessages(newMessages);
+    setIsLoading(true);
 
-    // Build chat history for API request: include all previous messages + this one
-    const newHistory = [
-      ...chatHistory,
-      { role: 'user', parts: [{ text: userText }] },
-    ];
+    try {
+      const formData = new FormData();
+      formData.append('message', userText);
+      if (photo?.file) formData.append('image', photo.file);
 
-    const { data } = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/${MODEL}:generateContent?key=${API_KEY}`,
-      {
-        contents: newHistory,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
-    console.log("API response:", data);
+      const data = await api.post('/ai/assistant', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-    // Get the raw AI text
-    let aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      let aiText = '';
+      if (data?.kind === 'disease_detection') {
+        aiText = data?.formattedText || '';
+      } else {
+        aiText = data?.text || '';
+      }
 
-    // CLEAN-UP AND FORMAT:
-    aiText = aiText.replace(/(\*\*|\*)/g, '');           // Remove Markdown symbols
-    aiText = aiText.replace(/\. /g, '.\n\n');            // Add line breaks after sentences
-    aiText = aiText.replace(/(Nitrogen Fertilizer|Dermatology|Animal Feed|Diesel Exhaust Fluid|Industrial Applications)/gi, '\n\n$1\n'); // Optional headings
+      if (!aiText.trim()) aiText = 'I could not generate a response. Please try again.';
 
-    const aiMessage: Message = {
-      text: aiText,
-      isUser: false,
-      suggestions: suggestedFollowUps(userText),
-    };
+      const aiMessage: Message = {
+        text: aiText,
+        isUser: false,
+        suggestions: suggestedFollowUps(userText),
+        productRecommendations: Array.isArray(data?.recommendations)
+          ? data.recommendations.filter((v: unknown) => typeof v === 'string')
+          : undefined,
+      };
 
-    // Update UI messages
-    setMessages([...newMessages, aiMessage]);
-
-    // Update chat history with the AI reply
-    setChatHistory([...newHistory, { role: 'model', parts: [{ text: aiText }] }]);
-  } catch (err) {
-    console.error(err);
-    setMessages([...newMessages, { text: "I had trouble connecting. Can you try again?", isUser: false }]);
-  } finally {
-    setIsLoading(false);
-  }
+      setMessages([...newMessages, aiMessage]);
+    } catch (err) {
+      console.error(err);
+      setMessages([
+        ...newMessages,
+        { text: 'I had trouble connecting. Can you try again?', isUser: false },
+      ]);
+    } finally {
+      setIsLoading(false);
+      setPhoto(null);
+    }
 };
 
 
@@ -113,69 +153,128 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
       )}
 
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-neutral-200">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-2xl flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <Bot className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span>Agricultural AI</span>
-                  <Sparkles className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-[520px] max-w-[calc(100vw-2rem)] h-[430px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col border border-neutral-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-6 h-6" />
                 </div>
-                <div className="text-xs text-green-100">Powered by Google Gemini</div>
-              </div>
-            </div>
-            <button onClick={onToggle} className="p-2 hover:bg-white/20 rounded-lg">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl ${msg.isUser ? 'bg-green-600 text-white' : 'bg-neutral-100 text-neutral-900'}`}>
-                  {msg.text}
-                  {msg.suggestions && (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {msg.suggestions.map((s, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSuggestedQuestion(s)}
-                          className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span>Agricultural AI</span>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs text-green-100">Powered by HuggingFace + local rules</div>
                 </div>
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-neutral-100 p-3 rounded-2xl flex items-center gap-2">
-                  <Loader className="w-4 h-4 animate-spin" />
-                  <span>Thinking...</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 border-t">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about farming, plants, agriculture..."
-                className="flex-1 border p-2 rounded-xl"
-              />
-              <button onClick={handleSend} disabled={isLoading || !input.trim()}>
-                <Send className="w-5 h-5" />
+              <button onClick={onToggle} className="p-2 hover:bg-white/20 rounded-lg">
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[80%] p-3 rounded-2xl whitespace-pre-wrap ${
+                      msg.isUser
+                        ? 'bg-green-600 text-white'
+                        : 'bg-neutral-100 text-neutral-900'
+                    }`}
+                  >
+                    {msg.text}
+                    {msg.suggestions && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {msg.suggestions.map((s, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSuggestedQuestion(s)}
+                            className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {msg.productRecommendations && msg.productRecommendations.length > 0 && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {msg.productRecommendations.map((rec, idx) => (
+                          <button
+                            key={`${rec}-${idx}`}
+                            onClick={() => handleRecommendationClick(rec)}
+                            className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full hover:bg-emerald-200 transition-colors"
+                          >
+                            {rec}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-neutral-100 p-3 rounded-2xl flex items-center gap-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>Thinking...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t flex-shrink-0">
+              <div className="flex gap-2">
+                <label className="flex items-center justify-center w-10 h-10 rounded-xl bg-neutral-100 hover:bg-neutral-200 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+                    disabled={isLoading}
+                  />
+                  <span className="text-xl leading-none" aria-hidden>
+                    +
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Ask about farming, plants, agriculture..."
+                  className="flex-1 border p-2 rounded-xl"
+                />
+                <button onClick={handleSend} disabled={isLoading || (!input.trim() && !photo)}>
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+
+              {photo && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    src={photo.previewUrl}
+                    alt={photo.filename}
+                    className="w-14 h-14 rounded-xl object-cover border border-neutral-200"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-neutral-800 truncate">
+                      {photo.filename}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 truncate">
+                      This image will be sent with your next message
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPhoto(null)}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-700 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

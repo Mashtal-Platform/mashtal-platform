@@ -6,6 +6,7 @@ export interface CommentAuthorDto {
   avatar: string;
   verified: boolean;
   type: string;
+  businessId?: string;
 }
 
 export interface CommentDto {

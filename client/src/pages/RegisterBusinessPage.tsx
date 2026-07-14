@@ -11,8 +11,9 @@ interface RegisterBusinessPageProps {
 }
 
 export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) {
-  const { updateProfile, user } = useAuth();
+  const { convertToBusiness, user, isAuthenticated } = useAuth();
   const [step, setStep] = useState<'choice' | 'form' | 'success'>('choice');
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
@@ -32,6 +33,15 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
 
   const handleSubmit = async () => {
     setError('');
+    if (!isAuthenticated || !user) {
+      setError('Please sign in first to register a business.');
+      onNavigate('signin');
+      return;
+    }
+    if (!formData.businessName.trim()) {
+      setError('Business name is required.');
+      return;
+    }
     const phone = formData.phone?.trim() ?? '';
     if (phone) {
       const parsed = parsePhoneNumberFromString(phone, 'LB');
@@ -40,26 +50,28 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
         return;
       }
     }
-    // Save business profile data for the current (business) user
-    if (user) {
+
+    setSubmitting(true);
+    try {
       const locationStr = formData.address
         ? `${formData.address}, ${formData.location}`
         : formData.location;
-      await updateProfile({
-        businessProfile: {
-          companyName: formData.businessName,
-          bio: formData.description,
-          phone: formData.phone,
-          location: locationStr,
-          specialties: [],
-        } as any,
+      await convertToBusiness({
+        companyName: formData.businessName.trim(),
+        bio: formData.description || undefined,
+        phone: formData.phone || undefined,
+        location: locationStr || undefined,
+        specialties: formData.businessType ? [formData.businessType] : [],
       });
+      setStep('success');
+      setTimeout(() => {
+        onNavigate('profile');
+      }, 2500);
+    } catch (err: any) {
+      setError(err?.message || err?.response?.data?.message || 'Failed to register business. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    
-    setStep('success');
-    setTimeout(() => {
-      onNavigate('profile');
-    }, 3000);
   };
 
   if (step === 'choice') {
@@ -135,7 +147,13 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
                 </li>
               </ul>
               <button
-                onClick={() => setStep('form')}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    onNavigate('signin');
+                    return;
+                  }
+                  setStep('form');
+                }}
                 className="w-full bg-white text-green-600 py-3 rounded-lg hover:bg-green-50 transition-colors"
               >
                 Register Business
@@ -322,9 +340,10 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors"
+                disabled={submitting}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                Submit Application
+                {submitting ? 'Submitting...' : 'Submit Application'}
               </button>
             </div>
           </div>

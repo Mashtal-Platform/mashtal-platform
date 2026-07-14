@@ -440,7 +440,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
             )}
 
             {/* Search for business, agronomist or engineer */}
-            <p className="text-xs text-neutral-500 mb-2 mt-4">Search business, agronomist or engineer</p>
+            <p className="text-xs text-neutral-500 mb-2 mt-4">Search businesses</p>
             <div className="relative mb-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
               <input

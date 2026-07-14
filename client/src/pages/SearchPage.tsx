@@ -10,7 +10,7 @@ import { getImageUrl } from '../shared/api/client';
 // Unified search result type
 interface SearchResult {
   id: string;
-  type: 'business' | 'engineer' | 'agronomist' | 'product' | 'post' | 'thread';
+  type: 'business' | 'product' | 'post' | 'thread';
   title: string;
   subtitle?: string;
   description: string;
@@ -82,40 +82,6 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
           rating: business.rating,
           location: business.location,
           data: business,
-        });
-      });
-
-    // Add engineers
-    businesses
-      .filter((u) => u.role === 'engineer')
-      .forEach((engineer) => {
-        results.push({
-          id: engineer.id,
-          type: 'engineer',
-          title: engineer.fullName,
-          subtitle: 'Agricultural Engineer',
-          description: engineer.bio || '',
-          image: engineer.avatar || '',
-          verified: engineer.verified,
-          location: engineer.location,
-          data: engineer,
-        });
-      });
-
-    // Add agronomists
-    businesses
-      .filter((u) => u.role === 'agronomist')
-      .forEach((agronomist) => {
-        results.push({
-          id: agronomist.id,
-          type: 'agronomist',
-          title: agronomist.fullName,
-          subtitle: 'Agricultural Expert',
-          description: agronomist.bio || '',
-          image: agronomist.avatar || '',
-          verified: agronomist.verified,
-          location: agronomist.location,
-          data: agronomist,
         });
       });
 
@@ -217,12 +183,6 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
       case 'business':
         onViewBusiness(result.id);
         break;
-      case 'engineer':
-      case 'agronomist':
-        if (onNavigateToUserProfile) {
-          onNavigateToUserProfile(result.id);
-        }
-        break;
       case 'product':
         // Navigate to shopping page with product highlight
         if (onNavigateWithParams) {
@@ -254,9 +214,6 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
     switch (type) {
       case 'business':
         return <Building2 className="w-5 h-5 text-green-600" />;
-      case 'engineer':
-      case 'agronomist':
-        return <Award className="w-5 h-5 text-blue-600" />;
       case 'product':
         return <Package className="w-5 h-5 text-purple-600" />;
       case 'post':
@@ -272,10 +229,6 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
     switch (type) {
       case 'business':
         return 'Business';
-      case 'engineer':
-        return 'Engineer';
-      case 'agronomist':
-        return 'Agronomist';
       case 'product':
         return 'Product';
       case 'post':
@@ -539,8 +492,6 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
 const categories = [
   { id: 'all', name: 'All' },
   { id: 'business', name: 'Businesses' },
-  { id: 'engineer', name: 'Engineers' },
-  { id: 'agronomist', name: 'Agronomists' },
   { id: 'product', name: 'Products' },
   { id: 'post', name: 'Posts' },
   { id: 'thread', name: 'Threads' },

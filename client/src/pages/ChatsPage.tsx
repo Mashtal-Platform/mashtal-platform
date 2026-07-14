@@ -548,8 +548,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                         )}
                         <div className="absolute -bottom-1 -right-1 p-0.5 bg-white rounded-full">
                           {chat.profileType === 'business' && <Building2 className="w-3.5 h-3.5 text-blue-600" />}
-                          {chat.profileType === 'agronomist' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
-                          {chat.profileType === 'engineer' && <HardHat className="w-3.5 h-3.5 text-orange-600" />}
+                          {chat.profileType === 'business' && <Building2 className="w-3.5 h-3.5 text-blue-600" />}
                           {chat.profileType === 'admin' && <Shield className="w-3.5 h-3.5 text-purple-600" />}
                           {chat.profileType === 'visitor' && chat.online && <Circle className="w-3 h-3 text-green-500 fill-current" />}
                         </div>

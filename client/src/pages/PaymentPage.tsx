@@ -20,11 +20,10 @@ interface PaymentPageProps {
 export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageProps) {
   const { isAuthenticated } = useAuth();
 
-  const subscriptionPrice = role === 'engineer' ? 299 : 499;
+  const subscriptionPrice = 499;
   const subscriptionPeriod = 'month';
 
-  const planRole: SubscriptionPlanRole =
-    role === 'engineer' ? 'engineer' : 'business';
+  const planRole: SubscriptionPlanRole = 'business';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -214,7 +213,7 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
                 <div className="p-4 bg-white rounded-lg border border-neutral-200">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {role === 'engineer' ? '🔧' : '🏢'}
+                      🏢
                     </div>
                     <div>
                       <h3 className="font-medium text-neutral-900 capitalize">{role} Account</h3>
@@ -262,18 +261,6 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
                         <li className="flex items-start gap-2">
                           <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                           <span className="text-neutral-600">Order management</span>
-                        </li>
-                      </>
-                    )}
-                    {role === 'engineer' && (
-                      <>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-neutral-600">Professional tools</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-neutral-600">Analytics dashboard</span>
                         </li>
                       </>
                     )}

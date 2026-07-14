@@ -41,8 +41,7 @@ export const shouldShowFooter = (page: Page): boolean => {
 };
 
 export const canReceiveMessages = (role: UserRole | null | undefined): boolean => {
-  return role === 'engineer' || role === 'agronomist' || role === 'business';
+  return role === 'business';
 };
 
-// Type guard for UserRole
-type UserRole = 'user' | 'agronomist' | 'engineer' | 'business' | 'admin' | null;
+type UserRole = 'visitor' | 'business' | 'admin' | null;
