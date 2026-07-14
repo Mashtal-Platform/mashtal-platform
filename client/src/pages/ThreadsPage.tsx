@@ -365,7 +365,7 @@ export function ThreadsPage({
           }`}
         >
           <div className={`${isSticky ? 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4' : ''}`}>
-            {isAuthenticated ? (
+            {isAuthenticated && user?.role === 'business' ? (
               <Button
                 onClick={onCreateThread}
                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12 flex items-center justify-center gap-2"
@@ -373,10 +373,16 @@ export function ThreadsPage({
                 <Plus className="w-5 h-5" />
                 Create Thread
               </Button>
+            ) : isAuthenticated ? (
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-center">
+                <p className="text-neutral-700">
+                  Only business accounts can create threads. You can still like, comment, and save.
+                </p>
+              </div>
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                 <p className="text-green-800">
-                  Please sign in to create threads and join the conversation
+                  Please sign in to join the conversation
                 </p>
               </div>
             )}

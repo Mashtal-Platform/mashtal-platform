@@ -7,7 +7,7 @@ interface RatingDisplayProps {
   showReviewButton?: boolean;
   onReviewClick?: () => void;
   reviews?: Review[];
-  type?: 'business' | 'engineer';
+  type?: 'business';
 }
 
 interface Review {

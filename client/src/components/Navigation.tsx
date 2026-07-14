@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Sprout, Search, ShoppingBag, Bell, User, Menu, X, MessageCircle, MoreVertical, LogOut, RefreshCw } from 'lucide-react';
+import { Sprout, Search, ShoppingBag, Bell, User, Menu, X, MessageCircle, MoreVertical, LogOut } from 'lucide-react';
 import { Page } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { SwitchUserModal } from './SwitchUserModal';
 
 interface NavigationProps {
   currentPage: Page;
@@ -14,7 +13,6 @@ interface NavigationProps {
 
 export function Navigation({ currentPage, onNavigate, cartItemCount, notificationCount }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
 
   const handleLogout = async () => {
@@ -73,7 +71,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                 Shop
               </button>
               
-              {(user?.role === 'engineer' || user?.role === 'business') && (
+              {(user?.role === 'business') && (
                 <button 
                   onClick={() => onNavigate('dashboard')}
                   className={`transition-colors ${
@@ -158,13 +156,6 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
-                      onClick={() => setShowSwitchUserModal(true)}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Switch User</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                       onClick={handleLogout}
                       className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
                     >
@@ -242,7 +233,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   Shop
                 </button>
                 
-                {(user?.role === 'engineer' || user?.role === 'business') && (
+                {(user?.role === 'business') && (
                   <button 
                     onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
                     className={`text-left px-4 py-2 rounded-lg transition-colors ${
@@ -258,19 +249,9 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   <div className="border-t border-neutral-200 my-2" />
                 )}
                 
-                {/* Mobile - Switch User & Logout */}
+                {/* Mobile - Logout */}
                 {isAuthenticated && (
                   <>
-                    <button 
-                      onClick={() => { 
-                        setShowSwitchUserModal(true); 
-                        setMobileMenuOpen(false); 
-                      }}
-                      className="text-left px-4 py-2 rounded-lg text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-2"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Switch User</span>
-                    </button>
                     <button 
                       onClick={() => { 
                         handleLogout(); 
@@ -307,13 +288,6 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
           )}
         </div>
       </nav>
-
-      {/* Switch User Modal */}
-      {showSwitchUserModal && (
-        <SwitchUserModal
-          onClose={() => setShowSwitchUserModal(false)}
-        />
-      )}
     </>
   );
 }

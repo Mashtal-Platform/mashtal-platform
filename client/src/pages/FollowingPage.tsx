@@ -12,7 +12,7 @@ interface FollowingPageProps {
   onOpenChat?: (userId: string) => void;
 }
 
-type RoleFilter = 'all' | 'business' | 'engineer' | 'agronomist' | 'user';
+type RoleFilter = 'all' | 'business' | 'visitor';
 
 export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followedBusinesses, onUnfollowBusiness, onOpenChat }: FollowingPageProps) {
   const [activeFilter, setActiveFilter] = useState<RoleFilter>('all');
@@ -37,8 +37,6 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'business': return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist': return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer': return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin': return <Shield className="w-4 h-4 text-purple-600" />;
       default: return <Users className="w-4 h-4 text-neutral-600" />;
     }
@@ -80,7 +78,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
 
         {/* Role Filters */}
         <div className="flex flex-wrap gap-2 mb-8">
-          {(['all', 'business', 'engineer', 'agronomist'] as RoleFilter[]).map((filter) => (
+          {(['all', 'business', 'visitor'] as RoleFilter[]).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}

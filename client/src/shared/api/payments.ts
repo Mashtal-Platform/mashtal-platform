@@ -23,9 +23,9 @@ export async function fetchStripePaymentStatus(paymentId: string): Promise<Payme
   return apiGet(`/payments/stripe/${paymentId}`);
 }
 
-// ============= Subscription payments (engineer/business) ============
+// ============= Subscription payments (business) ============
 
-export type SubscriptionPlanRole = 'engineer' | 'business';
+export type SubscriptionPlanRole = 'business';
 
 export interface CreateStripeSubscriptionIntentDto {
   paymentId: string;

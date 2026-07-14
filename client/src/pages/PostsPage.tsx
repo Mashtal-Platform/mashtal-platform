@@ -337,8 +337,8 @@ export function PostsPage({
             </p>
           </div>
           
-          {/* Create Post Button - Original position with sticky behavior */}
-          {isAuthenticated && (
+          {/* Create Post - business accounts only */}
+          {isAuthenticated && user?.role === 'business' && (
             <div className="relative">
               <Button
                 onClick={onCreatePost}

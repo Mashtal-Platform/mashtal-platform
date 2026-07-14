@@ -12,15 +12,25 @@ interface EmailVerificationPageProps {
 function getTokenFromHash(): string | null {
   const hash = window.location.hash || '';
   const match = hash.match(/verify-email\?token=([^&]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  if (!match) return null;
+  const token = decodeURIComponent(match[1]).trim();
+  return isValidVerificationToken(token) ? token : null;
+}
+
+function isValidVerificationToken(token: string): boolean {
+  // Server tokens are 64-char hex from crypto.randomBytes(32)
+  return /^[a-fA-F0-9]{32,128}$/.test(token.trim());
 }
 
 /** Extract token from pasted URL or use raw string as token */
 function parseTokenFromInput(value: string): string {
   const trimmed = value.trim();
-  const urlMatch = trimmed.match(/token=([^&\s]+)/);
-  if (urlMatch) return decodeURIComponent(urlMatch[1]);
-  return trimmed;
+  const urlMatch = trimmed.match(/token=([^&\s#]+)/);
+  if (urlMatch) {
+    const fromUrl = decodeURIComponent(urlMatch[1]).trim();
+    return isValidVerificationToken(fromUrl) ? fromUrl : '';
+  }
+  return isValidVerificationToken(trimmed) ? trimmed : '';
 }
 
 export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps) {
@@ -56,7 +66,7 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
   const handleVerifyByPaste = async () => {
     const token = parseTokenFromInput(linkOrToken);
     if (!token) {
-      setError('Please paste the verification link from your email.');
+      setError('Please paste the full verification link from your email (or the server console), not an error message.');
       return;
     }
     setError('');

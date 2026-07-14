@@ -59,7 +59,7 @@ interface MentionUser {
   id: string;
   name: string;
   avatar: string;
-  type: 'engineer' | 'business' | 'user';
+  type: 'business' | 'visitor';
   verified?: boolean;
 }
 

@@ -3,16 +3,15 @@ import {
   User, Mail, Phone, MapPin, Settings, X, Save, MoreVertical, 
   Edit2, Trash2, Camera, Heart, MessageCircle, Bookmark, 
   Calendar, Briefcase, Award, Globe, CheckCircle, Send, FileText,
-  MoreHorizontal, ShoppingBag, Users, Archive, Leaf, HardHat, Building2, Shield,
+  MoreHorizontal, ShoppingBag, Users, Archive, Building2, Shield,
   ExternalLink, ThumbsUp, Reply as ReplyIcon, CheckCircle2, LogOut, RefreshCw
 } from 'lucide-react';
 import { UserProfile, Page, SavedItem } from '../App';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadAvatar } from '../shared/api/users';
-import { getImageUrl } from '../shared/api/client';
+import { uploadAvatar, uploadCover } from '../shared/api/users';
+import { getImageUrl, getAvatarUrl } from '../shared/api/client';
 import { filterOutOrphanSavedItems } from '../shared/utils/saved';
 import { UserEditProfile } from '../components/UserEditProfile';
-import { EngineerEditProfile } from '../components/EngineerEditProfile';
 import { BusinessEditProfile } from '../components/BusinessEditProfile';
 import { BusinessProfileView } from '../components/BusinessProfileView';
 import { Button } from '../components/ui/button';
@@ -53,7 +52,7 @@ interface Reply {
     name: string;
     avatar: string;
     verified: boolean;
-    type: 'engineer' | 'business' | 'user';
+    type: 'business' | 'visitor';
     businessId?: string;
   };
   content: string;
@@ -70,7 +69,7 @@ interface Comment {
     name: string;
     avatar: string;
     verified: boolean;
-    type: 'engineer' | 'business' | 'user';
+    type: 'business' | 'visitor';
     businessId?: string;
   };
   content: string;
@@ -152,12 +151,13 @@ export function ProfilePage({
   onRemoveSavedItem,
   onNavigateWithParams,
 }: ProfilePageProps) {
-  const { user, signOut, updateProfile } = useAuth();
+  const { user, signOut, updateProfile, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'posts' | 'threads' | 'about' | 'saved'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [editedProfile, setEditedProfile] = useState(userProfile);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editedPostData, setEditedPostData] = useState<any>({});
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
@@ -189,6 +189,8 @@ export function ProfilePage({
         bio: (user as any)?.bio ?? userProfile.bio,
         location: (user as any)?.location ?? userProfile.location,
         phone: (user as any)?.phone ?? userProfile.phone,
+        coverImage: (user as any)?.coverImage ?? (userProfile as any).coverImage,
+        avatar: user?.avatar ?? userProfile.avatar,
       }
     : (user
         ? {
@@ -199,6 +201,7 @@ export function ProfilePage({
             location: user.location ?? '',
             bio: user.bio ?? '',
             avatar: user.avatar ?? '',
+            coverImage: (user as any).coverImage ?? '',
             role: user.role as any,
             companyName: (user as any).companyName,
             hours: (user as any).hours,
@@ -262,11 +265,10 @@ export function ProfilePage({
     onNavigate('home');
   };
 
-  // Role-based hero banner
+  // Role-based hero banner (custom cover takes priority)
   const getBannerImage = () => {
-    if (userRole === 'engineer') {
-      return "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200";
-    }
+    const cover = (editedProfile as any)?.coverImage || (userProfile as any)?.coverImage || (user as any)?.coverImage;
+    if (cover) return getImageUrl(cover);
     if (userRole === 'business') {
       return "https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200";
     }
@@ -284,6 +286,23 @@ export function ProfilePage({
       onUpdateProfile({ ...displayProfile, avatar: avatarPath });
     } catch (err) {
       console.error('[ProfilePage] Avatar upload failed:', err);
+    }
+  };
+
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const updated = await uploadCover(file);
+      const coverPath = (updated as any).coverImage ?? '';
+      await refreshUser();
+      setEditedProfile((prev) => ({ ...prev, coverImage: coverPath } as any));
+      onUpdateProfile({ ...displayProfile, coverImage: coverPath } as any);
+    } catch (err) {
+      console.error('[ProfilePage] Cover upload failed:', err);
+      alert('Failed to update cover image. Please try again.');
+    } finally {
+      e.target.value = '';
     }
   };
 
@@ -342,7 +361,7 @@ export function ProfilePage({
         ...post,
         authorName: displayProfile.fullName,
         authorAvatar: displayProfile.avatar,
-        authorVerified: userRole === 'engineer' || userRole === 'business',
+        authorVerified: userRole === 'business',
         comments: post.comments || []
       });
     }
@@ -610,52 +629,6 @@ export function ProfilePage({
         </>
       );
     }
-    if (userRole === 'engineer') {
-      return (
-        <>
-          {profileSaveError && (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                {profileSaveError}
-              </div>
-            </div>
-          )}
-          <EngineerEditProfile
-            profile={displayProfile}
-            onSave={async (profile) => {
-              try {
-                setProfileSaveError(null);
-                const current = user as any;
-                const mergedProfessionalProfile = {
-                  ...(current?.professionalProfile || {}),
-                  bio: profile.bio,
-                  location: profile.location,
-                  phone: profile.phone,
-                  specialization: (profile as any).specialization,
-                  yearsExperience: (profile as any).yearsExperience,
-                };
-                await updateProfile({
-                  fullName: profile.fullName,
-                  professionalProfile: mergedProfessionalProfile,
-                });
-                onUpdateProfile({
-                  ...userProfile,
-                  fullName: profile.fullName ?? userProfile.fullName,
-                  bio: mergedProfessionalProfile.bio ?? userProfile.bio,
-                  location: mergedProfessionalProfile.location ?? userProfile.location,
-                  phone: mergedProfessionalProfile.phone ?? userProfile.phone,
-                });
-                setIsEditing(false);
-              } catch (err) {
-                console.error('[ProfilePage] Engineer profile save failed:', err);
-                setProfileSaveError(err instanceof Error ? err.message : 'Failed to save engineer profile');
-              }
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
-        </>
-      );
-    }
     return (
       <>
         {profileSaveError && (
@@ -740,6 +713,8 @@ export function ProfilePage({
   onUpdateThread={onUpdateThread}
   onAvatarChange={handleAvatarChange}
   avatarFileInputRef={fileInputRef}
+  onCoverChange={handleCoverChange}
+  coverFileInputRef={coverFileInputRef}
   onNavigate={onNavigate}
   onNavigateToDashboard={onNavigateToDashboard}
   savedItems={savedItems}
@@ -757,9 +732,24 @@ export function ProfilePage({
         <img
           src={getBannerImage()}
           alt="Profile Banner"
-          className="w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover opacity-40"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <button
+          type="button"
+          onClick={() => coverFileInputRef.current?.click()}
+          className="absolute bottom-4 right-4 z-10 flex items-center gap-2 px-4 py-2 bg-black/50 hover:bg-black/70 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <Camera className="w-4 h-4" />
+          Change cover
+        </button>
+        <input
+          ref={coverFileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleCoverChange}
+          className="hidden"
+        />
       </div>
 
       {/* Profile Header Card */}
@@ -773,17 +763,11 @@ export function ProfilePage({
                   className="relative w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden cursor-pointer group bg-neutral-100"
                   onClick={handleAvatarClick}
                 >
-                  {displayProfile.avatar ? (
-                    <img
-                      src={getImageUrl(displayProfile.avatar)}
+                  <img
+                      src={getAvatarUrl(displayProfile.avatar, displayProfile.fullName)}
                       alt={displayProfile.fullName}
                       className="w-full h-full object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-green-50">
-                      <User className="w-16 h-16 text-green-600" />
-                    </div>
-                  )}
                   {/* Circular Hover Overlay */}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full">
                     <Camera className="w-8 h-8 text-white" />
@@ -800,8 +784,6 @@ export function ProfilePage({
                 {userRole && userRole !== 'visitor' && (
                   <div className="absolute bottom-1 right-1 p-1.5 rounded-full border-2 border-white shadow-md z-10 bg-white">
                     {userRole === 'business' && <Building2 className="w-4 h-4 text-blue-600" />}
-                    {userRole === 'agronomist' && <Leaf className="w-4 h-4 text-green-600" />}
-                    {userRole === 'engineer' && <HardHat className="w-4 h-4 text-orange-600" />}
                     {userRole === 'admin' && <Shield className="w-4 h-4 text-purple-600" />}
                   </div>
                 )}
@@ -813,18 +795,6 @@ export function ProfilePage({
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <h1 className="text-3xl font-bold text-neutral-900">{displayProfile.fullName}</h1>
-                      {userRole === 'agronomist' && (
-                        <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-green-200 flex items-center gap-1">
-                          <Leaf className="w-3 h-3" />
-                          Verified Agronomist
-                        </span>
-                      )}
-                      {userRole === 'engineer' && (
-                        <span className="bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-orange-200 flex items-center gap-1">
-                          <HardHat className="w-3 h-3" />
-                          Verified Engineer
-                        </span>
-                      )}
                       {userRole=== 'business' && (
                         <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
@@ -1013,8 +983,6 @@ export function ProfilePage({
                         <img src={getImageUrl(account.image || account.avatar)} alt={account.name} className="w-12 h-12 rounded-full object-cover" />
                         <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-sm">
                           {account.role === 'business' && <Building2 className="w-3.5 h-3.5 text-blue-600" />}
-                          {account.role === 'agronomist' && <Leaf className="w-3.5 h-3.5 text-green-600" />}
-                          {account.role === 'engineer' && <HardHat className="w-3.5 h-3.5 text-orange-600" />}
                           {account.role === 'admin' && <Shield className="w-3.5 h-3.5 text-purple-600" />}
                         </div>
                       </div>
@@ -1044,8 +1012,8 @@ export function ProfilePage({
             )}
           </div>
 
-          {/* Followers Card - Only for Engineer/Agronomist/Business */}
-          {(userRole === 'engineer' || userRole === 'agronomist' || userRole === 'business') && (
+          {/* Followers Card - Only for Business */}
+          {userRole === 'business' && (
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                  onClick={() => onNavigate('followers')}
             >

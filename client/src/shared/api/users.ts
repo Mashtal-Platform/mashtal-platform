@@ -26,18 +26,16 @@ export async function fetchBusinesses(): Promise<UserDto[]> {
   return apiGet('/businesses');
 }
 
-/** Fetch all mentionable profiles (business + professional roles). */
+/** Fetch all mentionable profiles (businesses and visitors). */
 export async function fetchMentionableProfiles(): Promise<UserDto[]> {
-  // Mounted under /api/businesses in the server.
-  // Backend supports `roles` and will filter by role list.
-  return apiGet('/businesses?roles=business,engineer,agronomist');
+  return apiGet('/businesses?roles=business,visitor,agronomist,engineer');
 }
 
-/** Search for businesses, engineers, agronomists (e.g. for Share modal "Send to Mashtal users"). */
+/** Search for businesses (e.g. for Share modal "Send to Mashtal users"). */
 export async function searchShareRecipients(query: string): Promise<UserDto[]> {
   if (!query || !query.trim()) return [];
   const q = encodeURIComponent(query.trim());
-  const roles = encodeURIComponent('business,engineer,agronomist');
+  const roles = encodeURIComponent('business');
   const data = await apiGet<UserDto[]>(`/businesses?search=${q}&roles=${roles}`);
   return Array.isArray(data) ? data : [];
 }
@@ -144,6 +142,16 @@ export async function uploadAvatar(file: File): Promise<UserDto> {
   const form = new FormData();
   form.append('avatar', file);
   const data = await api.post<UserDto>('/users/me/avatar', form, {
+    headers: { 'Content-Type': undefined },
+  });
+  return data;
+}
+
+/** Upload profile cover / header image; returns updated user. */
+export async function uploadCover(file: File): Promise<UserDto & { coverImage?: string }> {
+  const form = new FormData();
+  form.append('cover', file);
+  const data = await api.post<UserDto & { coverImage?: string }>('/users/me/cover', form, {
     headers: { 'Content-Type': undefined },
   });
   return data;

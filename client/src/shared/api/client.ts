@@ -20,6 +20,32 @@ export function getImageUrl(pathOrUrl: string | undefined | null): string {
   return IMAGE_BASE_URL + path;
 }
 
+/**
+ * Initials from a display name: "Mohammad Mantach" → "MM"
+ */
+export function getInitials(name?: string | null): string {
+  const parts = (name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Default avatar when the user has not uploaded a profile picture (initials). */
+export function getDefaultAvatarUrl(name?: string | null): string {
+  const initialsSource = (name || 'User').trim() || 'User';
+  const label = encodeURIComponent(initialsSource.slice(0, 40));
+  return `https://ui-avatars.com/api/?name=${label}&background=16a34a&color=fff&size=256&bold=true`;
+}
+
+/** Resolve avatar URL, falling back to initials avatar. */
+export function getAvatarUrl(pathOrUrl: string | undefined | null, name?: string | null): string {
+  const resolved = getImageUrl(pathOrUrl);
+  return resolved || getDefaultAvatarUrl(name);
+}
+
 function getAuthHeader() {
   try {
     const token = localStorage.getItem('mashtal_token');

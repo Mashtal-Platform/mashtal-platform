@@ -25,7 +25,6 @@ import { PaymentPage } from './pages/PaymentPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreatePostPage } from './pages/CreatePostPage';
 import { CreateThreadPage } from './pages/CreateThreadPage';
-import { EngineerProfilePage } from './pages/EngineerProfilePage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { PurchaseHistoryPage } from './pages/PurchaseHistoryPage';
 import { ShoppingPage } from './pages/ShoppingPage';
@@ -315,6 +314,23 @@ function AppContent() {
         );
 
       case 'create-post':
+        if (!isAuthenticated || user?.role !== 'business') {
+          return (
+            <PostsPage
+              onSavePost={actions.addSavedItem}
+              onRemoveSavedItem={actions.removeSavedItem}
+              onNavigateToBusiness={actions.navigateToBusiness}
+              onNavigateToUserProfile={actions.navigateToUserProfile}
+              followedBusinesses={state.followedEntities}
+              onFollowBusiness={actions.followEntity}
+              onCreatePost={() => actions.navigate('create-post')}
+              userPosts={state.userPosts}
+              savedItems={state.savedItems}
+              highlightPostId={state.highlightPostId}
+              onClearHighlight={() => actions.navigateWithParams('posts', {})}
+            />
+          );
+        }
         return (
           <CreatePostPage
             onCreatePost={actions.createPost}
@@ -323,35 +339,27 @@ function AppContent() {
         );
 
       case 'create-thread':
+        if (!isAuthenticated || user?.role !== 'business') {
+          return (
+            <ThreadsPage
+              onSaveThread={actions.addSavedItem}
+              onRemoveSavedItem={actions.removeSavedItem}
+              onNavigateToBusiness={actions.navigateToBusiness}
+              onNavigateToUserProfile={actions.navigateToUserProfile}
+              followedBusinesses={state.followedEntities}
+              onFollowBusiness={actions.followEntity}
+              onCreateThread={() => actions.navigate('create-thread')}
+              userThreads={state.userThreads}
+              savedItems={state.savedItems}
+              highlightThreadId={state.highlightThreadId}
+              onClearHighlight={() => actions.navigateWithParams('threads', {})}
+            />
+          );
+        }
         return (
           <CreateThreadPage
             onCreateThread={actions.createThread}
             onBack={() => actions.navigate('threads')}
-          />
-        );
-
-      case 'engineer-profile':
-        return (
-          <EngineerProfilePage
-            key={`engineer-profile-${state.viewingUserId || 'none'}`}
-            engineerId={state.viewingUserId}
-            onOpenChat={actions.navigateToChat}
-            onNavigateToBusiness={actions.navigateToBusiness}
-            onNavigateToUserProfile={actions.navigateToUserProfile}
-            onNavigate={actions.navigate}
-            onNavigateWithParams={actions.navigateWithParams}
-            userThreads={state.userThreads}
-            allPosts={state.allPosts}
-            followedEntities={state.followedEntities}
-            onFollow={actions.followEntity}
-            onUnfollow={actions.unfollowEntity}
-            highlightPostId={state.highlightPostId}
-            highlightCommentId={state.highlightCommentId}
-            highlightThreadId={state.highlightThreadId}
-            savedItems={state.savedItems}
-            onSavePost={actions.addSavedItem}
-            onSaveThread={actions.addSavedItem}
-            onRemoveSavedItem={actions.removeSavedItem}
           />
         );
 

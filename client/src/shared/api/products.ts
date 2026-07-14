@@ -6,7 +6,7 @@ export interface ShoppingProductDto {
   description: string;
   price: number;
   image?: string;
-  category: 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation';
+  category: 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' | 'equipment' | 'trees' | 'medicament' | 'other';
   stock: number;
   rating: number;
   reviewsCount: number;

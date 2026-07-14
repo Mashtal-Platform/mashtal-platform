@@ -8,7 +8,7 @@ import { VerifiedBadge } from './VerifiedBadge';
 import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/posts';
 import { fetchUser, fetchBusinesses, fetchMentionableProfiles, UserDto } from '../shared/api/users';
 import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
-import { getImageUrl } from '../shared/api/client';
+import { getImageUrl, getAvatarUrl } from '../shared/api/client';
 
 interface PostsFeedProps {
   onSavePost?: (post: any) => void;
@@ -59,13 +59,19 @@ export function PostsFeed({
       try {
         const profiles = await fetchMentionableProfiles().catch(() => []);
         const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
-          .map((u) => ({
-            id: u.id,
-            name: (u.fullName || u.companyName || '').trim(),
-            avatar: u.avatar || '',
-            type: u.role || 'business',
-            verified: !!u.verified,
-          }))
+          .map((u) => {
+            const isBusiness = u.role === 'business';
+            const name = (
+              isBusiness ? (u.companyName || u.fullName) : (u.fullName || u.companyName) || ''
+            ).trim();
+            return {
+              id: u.id,
+              name,
+              avatar: getAvatarUrl(u.avatar, name),
+              type: u.role || 'business',
+              verified: !!u.verified,
+            };
+          })
           .filter((u) => u.name.length > 0);
         if (isMounted) setMentionableUsers(mapped);
       } catch {
@@ -560,7 +566,7 @@ export function PostsFeed({
       return;
     }
     
-    // Check if the author is a business or engineer (they have business pages)
+    // Check if the author is a business (they have business pages)
     if (post.author.type === 'business' && post.author.businessId && onNavigateToBusiness) {
       onNavigateToBusiness(post.author.businessId);
     } 
@@ -584,11 +590,6 @@ export function PostsFeed({
     if (comment.businessId && comment.userType === 'business' && onNavigateToBusiness) {
       onNavigateToBusiness(comment.businessId);
     }
-    // For engineers and agronomists, navigate to their business-style profile page
-    else if ((comment.userType === 'engineer' || comment.userType === 'agronomist') && comment.userId && onNavigateToBusiness) {
-      onNavigateToBusiness(comment.userId);
-    }
-    // For any user (including regular users), navigate to their profile
     else if (comment.userId && onNavigateToUserProfile) {
       onNavigateToUserProfile(comment.userId);
     }
@@ -608,11 +609,9 @@ export function PostsFeed({
 
   const getMostImportantReply = (replies: Reply[]): Reply | null => {
     if (replies.length === 0) return null;
-    // Prioritize: businesses > engineers > users
+    // Prioritize: businesses > visitors
     const business = replies.find(r => r.userType === 'business');
     if (business) return business;
-    const engineer = replies.find(r => r.userType === 'engineer');
-    if (engineer) return engineer;
     return replies[0];
   };
 
@@ -663,8 +662,6 @@ export function PostsFeed({
                 // Navigate based on user type
                 if (mentionableUser.type === 'business' && onNavigateToBusiness) {
                   onNavigateToBusiness(matchedUser.id);
-                } else if ((mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') && onNavigateToBusiness) {
-                  onNavigateToBusiness(matchedUser.id);
                 } else if (onNavigateToUserProfile) {
                   onNavigateToUserProfile(matchedUser.id);
                 }
@@ -706,11 +703,6 @@ export function PostsFeed({
                     setCommentsModalPost(null);
 
                     if (mentionableUser.type === 'business' && onNavigateToBusiness) {
-                      onNavigateToBusiness(mentionableUser.id);
-                    } else if (
-                      (mentionableUser.type === 'engineer' || mentionableUser.type === 'agronomist') &&
-                      onNavigateToBusiness
-                    ) {
                       onNavigateToBusiness(mentionableUser.id);
                     } else if (onNavigateToUserProfile) {
                       onNavigateToUserProfile(mentionableUser.id);
@@ -952,10 +944,6 @@ export function PostsFeed({
     switch (type) {
       case 'business':
         return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 'agronomist':
-        return <Leaf className="w-4 h-4 text-green-600" />;
-      case 'engineer':
-        return <HardHat className="w-4 h-4 text-orange-600" />;
       case 'admin':
         return <Shield className="w-4 h-4 text-purple-600" />;
       default:
@@ -1028,7 +1016,7 @@ export function PostsFeed({
                     {/* Profile picture with role icon at bottom-right */}
                     <div className="relative flex-shrink-0">
                       <img
-                        src={getImageUrl(post.author.avatar)}
+                        src={getAvatarUrl(post.author.avatar, post.author.name)}
                         alt={post.author.name}
                         onClick={() => handlePostAuthorClick(post)}
                         draggable="false"
@@ -1051,8 +1039,8 @@ export function PostsFeed({
                           {post.author.verified && (
                             <VerifiedBadge />
                           )}
-                          {/* Only show follow button for engineers, agronomists and businesses, not for own posts */}
-                          {(post.author.type === 'engineer' || post.author.type === 'agronomist' || post.author.type === 'business') && !isOwnPost && isAuthenticated && !isFollowing && (
+                          {/* Only show follow button for businesses, not for own posts */}
+                          {(post.author.type === 'business') && !isOwnPost && isAuthenticated && !isFollowing && (
                             <button
                               onClick={(e) => handleFollow(post, e)}
                               className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
@@ -1061,7 +1049,7 @@ export function PostsFeed({
                               Follow
                             </button>
                           )}
-                          {(post.author.type === 'engineer' || post.author.type === 'agronomist' || post.author.type === 'business') && !isOwnPost && isFollowing && (
+                          {(post.author.type === 'business') && !isOwnPost && isFollowing && (
                             <span className="flex items-center gap-1 text-xs text-neutral-500">
                               <Check className="w-3 h-3" />
                               Following
@@ -1071,9 +1059,7 @@ export function PostsFeed({
                         {/* Role name under username */}
                         <span className="text-xs text-neutral-500 capitalize">
                           {post.author.type === 'business' ? 'Business' : 
-                           post.author.type === 'engineer' ? 'Engineer' : 
-                           post.author.type === 'agronomist' ? 'Agronomist' :
-                           post.author.type === 'admin' ? 'Administrator' : 'User'}
+                           post.author.type === 'admin' ? 'Administrator' : 'Visitor'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
@@ -1257,7 +1243,7 @@ export function PostsFeed({
                       {/* Profile picture with role icon at bottom-right */}
                       <div className="relative flex-shrink-0">
                         <img
-                          src={getImageUrl(comment.avatar)}
+                          src={getAvatarUrl(comment.avatar, comment.author)}
                           alt={comment.author}
                           onClick={() => handleProfileClick(comment)}
                           draggable="false"
@@ -1297,7 +1283,7 @@ export function PostsFeed({
                                     }`}
                                   >
                                     <img 
-                                      src={getImageUrl(mentionUser.avatar)} 
+                                      src={getAvatarUrl(mentionUser.avatar, mentionUser.name)} 
                                       alt={mentionUser.name} 
                                       draggable="false"
                                       className="w-8 h-8 rounded-full object-cover select-none"
@@ -1334,7 +1320,7 @@ export function PostsFeed({
                                 >
                                   {comment.author}
                                 </span>
-                                {comment.isVerified && (comment.userType === 'engineer' || comment.userType === 'business') && (
+                                {comment.isVerified && comment.userType === 'business' && (
                                   <VerifiedBadge className="text-[10px]" />
                                 )}
                                 <span className="text-xs text-neutral-500">
@@ -1393,7 +1379,7 @@ export function PostsFeed({
                                 {/* Profile picture with role icon at bottom-right */}
                                 <div className="relative flex-shrink-0">
                                   <img
-                                    src={getImageUrl(reply.avatar)}
+                                    src={getAvatarUrl(reply.avatar, reply.author)}
                                     alt={reply.author}
                                     onClick={() => handleProfileClick(reply)}
                                     draggable="false"
@@ -1412,7 +1398,7 @@ export function PostsFeed({
                                       >
                                         {reply.author}
                                       </span>
-                                      {reply.isVerified && (reply.userType === 'engineer' || reply.userType === 'business') && (
+                                      {reply.isVerified && reply.userType === 'business' && (
                                         <VerifiedBadge className="text-[10px]" />
                                       )}
                                       <span className="text-xs text-neutral-500">
@@ -1460,7 +1446,7 @@ export function PostsFeed({
                                           {/* Profile picture with role icon at bottom-right */}
                                           <div className="relative flex-shrink-0">
                                             <img
-                                              src={getImageUrl(nestedReply.avatar)}
+                                              src={getAvatarUrl(nestedReply.avatar, nestedReply.author)}
                                               alt={nestedReply.author}
                                               onClick={() => handleProfileClick(nestedReply)}
                                               draggable="false"
@@ -1479,7 +1465,7 @@ export function PostsFeed({
                                                 >
                                                   {nestedReply.author}
                                                 </span>
-                                                {nestedReply.isVerified && (nestedReply.userType === 'engineer' || nestedReply.userType === 'business') && (
+                                                {nestedReply.isVerified && nestedReply.userType === 'business' && (
                                                   <VerifiedBadge className="text-[9px]" />
                                                 )}
                                                 <span className="text-[10px] text-neutral-500">
@@ -1606,7 +1592,7 @@ export function PostsFeed({
                             }`}
                           >
                             <img
-                              src={getImageUrl(mentionUser.avatar)}
+                              src={getAvatarUrl(mentionUser.avatar, mentionUser.name)}
                               alt={mentionUser.name}
                               draggable="false"
                               className="w-8 h-8 rounded-full object-cover select-none"
@@ -1673,7 +1659,11 @@ export function PostsFeed({
         postTitle={shareModalPost?.title}
         postImage={(shareModalPost?.image || shareModalPost?.images?.[0]) ? getImageUrl(shareModalPost?.image || shareModalPost?.images?.[0]) : undefined}
         postOwnerName={shareModalPost?.author?.name || shareModalPost?.author?.fullName}
-        postOwnerAvatar={shareModalPost?.author?.avatar ? getImageUrl(shareModalPost.author.avatar) : undefined}
+        postOwnerAvatar={
+          shareModalPost?.author?.avatar
+            ? getAvatarUrl(shareModalPost.author.avatar, shareModalPost.author.name)
+            : getAvatarUrl(null, shareModalPost?.author?.name)
+        }
         onShare={handleShareAction}
       />
 

@@ -3,6 +3,8 @@ import { X, Eye, AlertCircle, Heart, MessageCircle, Send, Hash } from 'lucide-re
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchMentionableProfiles } from '../shared/api/users';
+import { getAvatarUrl } from '../shared/api/client';
 
 interface CreateThreadPageProps {
   onCreateThread: (thread: { title: string; content: string; tags?: string[] }) => void;
@@ -13,25 +15,16 @@ interface MentionUser {
   id: string;
   name: string;
   avatar: string;
-  type: 'engineer' | 'business' | 'user';
+  type: string;
   verified?: boolean;
 }
 
-// Mock users/businesses for mentions
-const mentionableUsers: MentionUser[] = [
-  { id: '1', name: 'Green Valley Nursery', avatar: 'https://images.unsplash.com/photo-1619077130450-baea09efa355?w=100', type: 'business', verified: true },
-  { id: '2', name: 'AgriTools Pro', avatar: 'https://images.unsplash.com/photo-1690986469727-1ed8bcdf6384?w=100', type: 'business', verified: true },
-  { id: '5', name: 'Eco Farm Solutions', avatar: 'https://images.unsplash.com/photo-1636089167961-4964523e6c3f?w=100', type: 'business', verified: true },
-  { id: '3', name: 'Fresh Harvest Farm', avatar: 'https://images.unsplash.com/photo-1631337902392-b4bb679fbfdb?w=100', type: 'business', verified: true },
-  { id: 'eng1', name: 'Engineer Hassan', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100', type: 'engineer', verified: true },
-  { id: 'eng2', name: 'Engineer Sara', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100', type: 'engineer', verified: true },
-  { id: 'user1', name: 'Farmer Ali', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', type: 'user' },
-  { id: 'user2', name: 'Sarah Ahmed', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', type: 'user' },
-  { id: 'user3', name: 'Mohammed Hassan', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100', type: 'user' },
-];
-
 export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPageProps) {
   const { user } = useAuth();
+  const displayName =
+    user?.role === 'business'
+      ? (user.companyName || user.fullName || 'Business')
+      : (user?.fullName || 'User');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -40,24 +33,55 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Mention functionality
+  const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [mentionPosition, setMentionPosition] = useState(0);
   const [filteredMentions, setFilteredMentions] = useState<MentionUser[]>([]);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
+  useEffect(() => {
+    let mounted = true;
+    fetchMentionableProfiles()
+      .then((profiles) => {
+        if (!mounted) return;
+        const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .map((u: any) => ({
+            id: u.id,
+            name: (u.type === 'business' || u.role === 'business'
+              ? (u.companyName || u.fullName)
+              : (u.fullName || u.companyName) || ''
+            ).trim(),
+            avatar: getAvatarUrl(
+              u.avatar,
+              u.type === 'business' || u.role === 'business'
+                ? (u.companyName || u.fullName)
+                : (u.fullName || u.companyName)
+            ),
+            type: u.role || 'visitor',
+            verified: !!u.verified,
+          }))
+          .filter((u) => u.name.length > 0);
+        setMentionableUsers(mapped);
+      })
+      .catch(() => {
+        if (mounted) setMentionableUsers([]);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   // Handle mention search
   useEffect(() => {
     if (mentionSearch) {
-      const filtered = mentionableUsers.filter(user =>
-        user.name.toLowerCase().includes(mentionSearch.toLowerCase())
+      const filtered = mentionableUsers.filter(u =>
+        u.name.toLowerCase().includes(mentionSearch.toLowerCase())
       );
       setFilteredMentions(filtered);
       setSelectedMentionIndex(0);
     } else {
       setFilteredMentions([]);
     }
-  }, [mentionSearch]);
+  }, [mentionSearch, mentionableUsers]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -326,14 +350,14 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
               {/* Author Info */}
               <div className="flex items-center gap-3 mb-4">
                 <img
-                  src={user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300'}
-                  alt={user?.fullName || 'User'}
+                  src={getAvatarUrl(user?.avatar, displayName)}
+                  alt={displayName}
                   className="w-12 h-12 rounded-full object-cover"
                 />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-neutral-900">
-                      {user?.fullName || 'User'}
+                      {displayName}
                     </span>
                     {user?.verified && (
                       <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">

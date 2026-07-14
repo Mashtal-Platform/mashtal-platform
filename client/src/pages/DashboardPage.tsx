@@ -24,7 +24,7 @@ interface Product {
   category: string;
 }
 
-const PREDEFINED_CATEGORIES = ['Seeds', 'Plants', 'Fertilizers', 'Tools', 'Equipment'];
+const PREDEFINED_CATEGORIES = ['Seeds', 'Plants', 'Trees', 'Fertilizers', 'Tools', 'Equipment', 'Irrigation', 'Medicament'];
 
 interface DashboardPageProps {
   targetSection?: 'analytics' | 'products' | null;
@@ -245,15 +245,26 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
 
   const [productSubmitError, setProductSubmitError] = useState<string | null>(null);
 
-  const mapCategoryToApi = (cat: string): 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' => {
-    const m: Record<string, 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation'> = {
+  const mapCategoryToApi = (
+    cat: string
+  ): 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' | 'equipment' | 'trees' | 'medicament' | 'other' => {
+    const m: Record<string, 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' | 'equipment' | 'trees' | 'medicament' | 'other'> = {
       Seeds: 'seeds',
       Plants: 'plants',
+      Trees: 'trees',
       Fertilizers: 'fertilizers',
       Tools: 'tools',
-      Equipment: 'tools',
+      Equipment: 'equipment',
+      Irrigation: 'irrigation',
+      Medicament: 'medicament',
     };
-    return m[cat] ?? 'plants';
+    const key = cat.trim();
+    if (m[key]) return m[key];
+    const lower = key.toLowerCase();
+    if (['seeds', 'tools', 'fertilizers', 'plants', 'irrigation', 'equipment', 'trees', 'medicament', 'other'].includes(lower)) {
+      return lower as 'seeds' | 'tools' | 'fertilizers' | 'plants' | 'irrigation' | 'equipment' | 'trees' | 'medicament' | 'other';
+    }
+    return 'other';
   };
 
   const handleAddProduct = async () => {

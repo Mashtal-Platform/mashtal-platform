@@ -273,11 +273,6 @@ export function ThreadModal({
               onClose();
               if (matchedUser.type === 'business' && onNavigateToBusiness) {
                 onNavigateToBusiness(matchedUser.id);
-              } else if (
-                (matchedUser.type === 'engineer' || matchedUser.type === 'agronomist') &&
-                onNavigateToBusiness
-              ) {
-                onNavigateToBusiness(matchedUser.id);
               } else if (onNavigateToUserProfile) {
                 onNavigateToUserProfile(matchedUser.id);
               }
@@ -316,11 +311,6 @@ export function ThreadModal({
                 e.stopPropagation();
                 onClose();
                 if (partialMatch.type === 'business' && onNavigateToBusiness) {
-                  onNavigateToBusiness(partialMatch.id);
-                } else if (
-                  (partialMatch.type === 'engineer' || partialMatch.type === 'agronomist') &&
-                  onNavigateToBusiness
-                ) {
                   onNavigateToBusiness(partialMatch.id);
                 } else if (onNavigateToUserProfile) {
                   onNavigateToUserProfile(partialMatch.id);

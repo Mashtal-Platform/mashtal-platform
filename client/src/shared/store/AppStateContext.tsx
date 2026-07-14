@@ -118,6 +118,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           location: user.location,
           bio: user.bio,
           avatar: user.avatar,
+          coverImage: (user as any).coverImage ?? '',
           role: user.role as any,
           companyName: user.companyName,
         }
@@ -129,6 +130,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           location: '',
           bio: '',
           avatar: '',
+          coverImage: '',
           role: null,
         },
     followedEntities: [],
@@ -221,7 +223,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         phone: user.phone ?? '',
         location: user.location ?? '',
         bio: user.bio ?? '',
-        avatar: user.avatar ?? '',
+        avatar: user.avatar,
+        coverImage: (user as any).coverImage ?? '',
         role: user.role as any,
         companyName: (user as any).companyName ?? '',
         rating: bp.rating ?? 0,
@@ -267,6 +270,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             location: user.location,
             bio: user.bio,
             avatar: user.avatar,
+            coverImage: (user as any).coverImage ?? '',
             role: user.role as any,
             companyName: user.companyName,
             rating: bp.rating ?? 0,
@@ -293,6 +297,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             location: user.location,
             bio: user.bio,
             avatar: user.avatar,
+            coverImage: (user as any).coverImage ?? '',
             role: user.role as any,
             companyName: user.companyName,
             rating: bp.rating ?? 0,
@@ -397,8 +402,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .then((profileUser: any) => {
         if (profileUser.role === 'business' && (profileUser.businessId || profileUser.id)) {
           navigateToBusiness(profileUser.businessId || profileUser.id);
-        } else if (profileUser.role === 'engineer' || profileUser.role === 'agronomist') {
-          navigate('engineer-profile');
         } else {
           navigate('user-profile');
         }
@@ -493,11 +496,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           tags: postData.tags || [],
           author: {
             id: user.id,
-            name: user.fullName,
+            name:
+              user.role === 'business'
+                ? (user.companyName || user.fullName || 'Business')
+                : (user.fullName || 'User'),
             avatar: user.avatar ?? '',
             verified: user.verified ?? false,
             type: (user.role as any) ?? 'user',
-            businessId: (user as any)?.businessId,
+            businessId: user.role === 'business' ? user.id : (user as any)?.businessId,
           },
         },
         imageFile
@@ -539,11 +545,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           tags: threadData.tags || [],
           author: {
             id: user.id,
-            name: user.fullName,
+            name:
+              user.role === 'business'
+                ? (user.companyName || user.fullName || 'Business')
+                : (user.fullName || 'User'),
             avatar: user.avatar ?? '',
             verified: user.verified ?? false,
             type: (user.role as any) ?? 'user',
-            businessId: (user as any)?.businessId,
+            businessId: user.role === 'business' ? user.id : (user as any)?.businessId,
           },
         });
         const allThreads = await fetchThreads({ limit: 500, skip: 0 });

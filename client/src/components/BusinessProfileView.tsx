@@ -6,7 +6,7 @@ import { EditThreadModal } from "./EditThreadModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { PurchasesCard } from "./PurchasesCard";
 import { fetchProducts } from "../shared/api/products";
-import { getImageUrl } from "../shared/api/client";
+import { getImageUrl, getAvatarUrl } from "../shared/api/client";
 import { filterOutOrphanSavedItems } from "../shared/utils/saved";
 import {
   DropdownMenu,
@@ -119,6 +119,7 @@ const mapCommentToModal = (dto: CommentDto): ThreadModalComment | any => ({
 
 interface UserProfile {
   avatar?: string;
+  coverImage?: string;
   companyName?: string;
   fullName?: string;
   location?: string;
@@ -155,6 +156,10 @@ interface BusinessProfileViewProps {
     e: React.ChangeEvent<HTMLInputElement>,
   ) => void;
   avatarFileInputRef?: React.RefObject<HTMLInputElement>;
+  onCoverChange?: (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => void;
+  coverFileInputRef?: React.RefObject<HTMLInputElement>;
   onNavigate?: (page: string) => void;
   onNavigateToDashboard?: (targetSection?: 'analytics' | 'products') => void;
   savedItems?: any[];
@@ -180,6 +185,8 @@ export function BusinessProfileView({
   onUpdateThread,
   onAvatarChange,
   avatarFileInputRef,
+  onCoverChange,
+  coverFileInputRef,
   onNavigate,
   onNavigateToDashboard,
   savedItems = [],
@@ -627,13 +634,37 @@ export function BusinessProfileView({
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Banner */}
-      <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700">
+      <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700 group">
         <img
-          src="https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200"
+          src={
+            getImageUrl(userProfile.coverImage) ||
+            'https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200'
+          }
           alt="Business Banner"
-          className="w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover opacity-40"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        {isOwnProfile && (
+          <>
+            <button
+              type="button"
+              onClick={() => coverFileInputRef?.current?.click()}
+              className="absolute bottom-4 right-4 z-10 flex items-center gap-2 px-4 py-2 bg-black/50 hover:bg-black/70 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+              Change cover
+            </button>
+            {coverFileInputRef && (
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onCoverChange}
+                className="hidden"
+              />
+            )}
+          </>
+        )}
       </div>
 
       {/* Profile Header Card */}
@@ -651,7 +682,7 @@ export function BusinessProfileView({
                 >
                   {userProfile.avatar ? (
                     <img
-                      src={getImageUrl(userProfile.avatar)}
+                      src={getAvatarUrl(userProfile.avatar, userProfile.companyName || userProfile.fullName)}
                       alt={
                         userProfile.companyName ||
                         userProfile.fullName
@@ -659,9 +690,11 @@ export function BusinessProfileView({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-green-50">
-                      <Building2 className="w-16 h-16 text-green-600" />
-                    </div>
+                    <img
+                      src={getAvatarUrl(null, userProfile.companyName || userProfile.fullName)}
+                      alt={userProfile.companyName || userProfile.fullName || 'Business'}
+                      className="w-full h-full object-cover"
+                    />
                   )}
                   {isOwnProfile && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full">

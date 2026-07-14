@@ -566,7 +566,7 @@ export function UserProfilePage({
                         <Edit className="w-5 h-5" />
                         <span>Edit Profile</span>
                       </Button>
-                    ) : !isOwnProfile && (onFollow || onUnfollow) && (user?.role === 'business' || user?.role === 'agronomist' || user?.role === 'engineer') ? (
+                    ) : !isOwnProfile && (onFollow || onUnfollow) && user?.role === 'business' ? (
                       isFollowing ? (
                         <Button
                           onClick={() => user?.id && onUnfollow(user.id)}
