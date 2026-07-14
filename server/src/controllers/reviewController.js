@@ -19,6 +19,9 @@ async function createReview(req, res) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Comment is optional — empty string clears any previous message
+    const commentValue = comment != null ? String(comment).trim() : '';
+
     const review = await Review.findOneAndUpdate(
       {
         product: new Types.ObjectId(productId),
@@ -26,7 +29,7 @@ async function createReview(req, res) {
       },
       {
         rating,
-        comment,
+        comment: commentValue,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
@@ -55,10 +58,16 @@ async function createReview(req, res) {
       });
     }
 
+    const populated = await Review.findById(review._id)
+      .populate('user', 'fullName avatar')
+      .lean();
+    const u = populated?.user;
     const shaped = {
       id: review._id.toString(),
       product: review.product.toString(),
-      user: review.user.toString(),
+      user: u?._id ? u._id.toString() : review.user.toString(),
+      userFullName: u?.fullName ?? '',
+      userAvatar: u?.avatar ?? '',
       rating: review.rating,
       comment: review.comment,
       createdAt: review.createdAt?.toISOString(),
@@ -111,8 +120,64 @@ async function getProductReviews(req, res) {
   }
 }
 
+async function deleteReview(req, res) {
+  try {
+    const userId = req.user.id;
+    const { reviewId } = req.params;
+    if (!reviewId) {
+      return res.status(400).json({ message: 'reviewId is required' });
+    }
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+    if (review.user.toString() !== userId) {
+      return res.status(403).json({ message: 'You can only delete your own review' });
+    }
+
+    const productId = review.product;
+    await Review.findByIdAndDelete(reviewId);
+
+    const agg = await Review.aggregate([
+      { $match: { product: productId } },
+      {
+        $group: {
+          _id: '$product',
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    let averageRating = 0;
+    let reviewsCount = 0;
+    if (agg.length) {
+      averageRating = Math.round(agg[0].avgRating * 10) / 10;
+      reviewsCount = agg[0].count;
+    }
+    await Product.findByIdAndUpdate(productId, {
+      $set: {
+        rating: averageRating,
+        reviewsCount,
+      },
+    });
+
+    res.json({
+      id: reviewId,
+      product: productId.toString(),
+      averageRating,
+      reviewsCount,
+    });
+  } catch (err) {
+    console.error('[Reviews] deleteReview error:', err);
+    res.status(500).json({ message: 'Failed to delete review' });
+  }
+}
+
 module.exports = {
   createReview,
   getProductReviews,
+  deleteReview,
 };
 

@@ -505,11 +505,11 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Banner */}
       <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700 bg-neutral-200">
-        {getImageUrl(business.avatar) ? (
+        {(getImageUrl(business.coverImage) || business.coverImage) ? (
           <img
-            src={getImageUrl(business.avatar)}
-            alt={displayName}
-            className="w-full h-full object-cover opacity-30"
+            src={getImageUrl(business.coverImage) || business.coverImage}
+            alt={`${displayName} cover`}
+            className="w-full h-full object-cover"
           />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

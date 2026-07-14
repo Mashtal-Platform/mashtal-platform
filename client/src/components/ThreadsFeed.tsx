@@ -1015,7 +1015,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                 )}
 
                 {/* Thread Content */}
-                <p className="text-neutral-800 whitespace-pre-wrap">{thread.content}</p>
+                <p className="text-neutral-800 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
 
                 {/* Hashtags */}
                 {thread.tags && thread.tags.length > 0 && (

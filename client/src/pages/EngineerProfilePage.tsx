@@ -468,18 +468,22 @@ export function EngineerProfilePage({
   // Dynamic role-based text
   const roleDisplayName = engineer.role === 'agronomist' ? 'Agronomist' : 'Engineer';
   const roleBadgeText = engineer.role === 'agronomist' ? 'Verified Agronomist' : 'Verified Engineer';
-  const roleBannerImage = engineer.role === 'agronomist' 
+  const roleBannerFallback = engineer.role === 'agronomist'
     ? 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200' // Agronomist - crops/plants
     : 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200'; // Engineer - technology
+  const bannerImage =
+    getImageUrl((engineer as any).coverImage) ||
+    (engineer as any).coverImage ||
+    roleBannerFallback;
 
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Banner */}
       <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700">
         <img
-          src={roleBannerImage}
-          alt={engineer.fullName}
-          className="w-full h-full object-cover opacity-30"
+          src={bannerImage}
+          alt={`${engineer.fullName} cover`}
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
       </div>

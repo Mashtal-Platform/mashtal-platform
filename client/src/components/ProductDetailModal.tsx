@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, Send, User, Pencil } from 'lucide-react';
+import { X, Star, Send, User, Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { getImageUrl } from '../shared/api/client';
-import { fetchProductReviews, createReview, ReviewDto } from '../shared/api/reviews';
+import { fetchProductReviews, createReview, deleteReview, ReviewDto } from '../shared/api/reviews';
 import type { ShoppingProductDto } from '../shared/api/products';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,6 +31,7 @@ export function ProductDetailModal({
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const myReview = currentUser?.id && reviews.find((r) => r.user === currentUser.id);
@@ -65,14 +66,16 @@ export function ProductDetailModal({
       const res = await createReview({
         productId: product.id,
         rating,
-        comment: comment.trim() || undefined,
+        comment: comment.trim(),
       });
       const newReview: ReviewDto = {
         id: res.id,
         product: res.product,
-        user: res.user,
+        user: res.user || currentUser?.id || '',
+        userFullName: res.userFullName || currentUser?.fullName || '',
+        userAvatar: res.userAvatar || currentUser?.avatar || '',
         rating: res.rating,
-        comment: res.comment,
+        comment: res.comment ?? '',
         createdAt: res.createdAt ?? new Date().toISOString(),
       };
 
@@ -84,7 +87,13 @@ export function ProductDetailModal({
           const idx = prev.findIndex((r) => r.user === currentUserId);
           if (idx === -1) return [newReview, ...prev];
           const next = [...prev];
-          next[idx] = { ...next[idx], ...newReview };
+          // Preserve existing author fields if the response omitted them
+          next[idx] = {
+            ...next[idx],
+            ...newReview,
+            userFullName: newReview.userFullName || next[idx].userFullName,
+            userAvatar: newReview.userAvatar || next[idx].userAvatar,
+          };
           // Keep the most recent reviews first (backend typically does this).
           next.sort(
             (a, b) =>
@@ -99,12 +108,27 @@ export function ProductDetailModal({
       const avg = res.averageRating ?? rating;
       const count = res.reviewsCount ?? 1;
       onRated?.(product.id, avg, count);
-      setRating(0);
-      setComment('');
     } catch (err: any) {
-      setSubmitError(err?.response?.data?.message || 'Failed to submit rating. Please try again.');
+      setSubmitError(err?.message || err?.response?.data?.message || 'Failed to submit rating. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!product || !myReview) return;
+    setDeleting(true);
+    setSubmitError(null);
+    try {
+      const res = await deleteReview(myReview.id);
+      setReviews((prev) => prev.filter((r) => r.id !== myReview.id));
+      setRating(0);
+      setComment('');
+      onRated?.(product.id, res.averageRating ?? 0, res.reviewsCount ?? 0);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Failed to delete review. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -216,14 +240,28 @@ export function ProductDetailModal({
                   {submitError && (
                     <p className="text-xs text-red-600 mb-1">{submitError}</p>
                   )}
-                  <Button
-                    onClick={handleSubmitRating}
-                    disabled={rating < 1 || submitting}
-                    className="w-full gap-1.5 h-8 text-xs"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {submitting ? 'Saving...' : myReview ? 'Update review' : 'Submit rating'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSubmitRating}
+                      disabled={rating < 1 || submitting || deleting}
+                      className="flex-1 gap-1.5 h-8 text-xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {submitting ? 'Saving...' : myReview ? 'Update review' : 'Submit rating'}
+                    </Button>
+                    {myReview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleDeleteReview}
+                        disabled={submitting || deleting}
+                        className="h-8 text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {deleting ? 'Deleting...' : 'Delete'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -250,12 +288,26 @@ export function ProductDetailModal({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-neutral-800">
-                            {r.userFullName || 'User'}
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-medium text-neutral-800">
+                              {r.userFullName || 'User'}
+                              {r.user === currentUser?.id && (
+                                <span className="ml-1 text-neutral-500 font-normal">(you)</span>
+                              )}
+                            </p>
                             {r.user === currentUser?.id && (
-                              <span className="ml-1 text-neutral-500 font-normal">(you)</span>
+                              <button
+                                type="button"
+                                onClick={handleDeleteReview}
+                                disabled={deleting}
+                                className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                                title="Delete review"
+                                aria-label="Delete review"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             )}
-                          </p>
+                          </div>
                           <div className="flex items-center gap-1 mb-0.5">
                             {[1, 2, 3, 4, 5].map((s) => (
                               <Star
@@ -266,7 +318,9 @@ export function ProductDetailModal({
                               />
                             ))}
                           </div>
-                          {r.comment && <p className="text-xs text-neutral-700 line-clamp-2">{r.comment}</p>}
+                          {r.comment ? (
+                            <p className="text-xs text-neutral-700 line-clamp-2">{r.comment}</p>
+                          ) : null}
                           <p className="text-[10px] text-neutral-400">
                             {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}
                           </p>
