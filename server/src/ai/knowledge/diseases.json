@@ -1,0 +1,64 @@
+{
+  "Powdery mildew": {
+    "description": "A fungal disease that appears as a white, powdery coating on leaves, stems, and sometimes flowers.",
+    "treatment": "Remove heavily infected leaves. Apply a sulfur-based fungicide or a horticultural oil according to label directions.",
+    "prevention": "Improve airflow (avoid overcrowding), reduce leaf wetness, and water at the base. Use resistant varieties when available."
+  },
+  "Downy mildew": {
+    "description": "A fungal-like disease causing yellow patches on the upper leaf surface and gray-purple growth underneath (often in humid conditions).",
+    "treatment": "Remove infected foliage immediately. Use a recommended downy-mildew fungicide (e.g., copper-based or targeted products) and repeat as per label.",
+    "prevention": "Avoid overhead irrigation, space plants for airflow, and keep the canopy dry."
+  },
+  "Late blight": {
+    "description": "A destructive disease (common in potatoes and tomatoes) with dark, water-soaked lesions that can spread rapidly in cool, wet weather.",
+    "treatment": "Remove infected plants/foliage. Use a labeled late-blight fungicide and follow a preventive schedule when conditions are favorable.",
+    "prevention": "Rotate crops, avoid planting too densely, sanitize tools, and water early so leaves dry quickly."
+  },
+  "Leaf spot": {
+    "description": "A group of diseases that create brown/black spots on leaves and may cause premature leaf drop.",
+    "treatment": "Prune infected leaves and destroy plant debris. Apply a suitable fungicide if spots are spreading.",
+    "prevention": "Water at the soil level, keep foliage dry, and avoid working in wet conditions."
+  },
+  "Root rot": {
+    "description": "Often caused by excess moisture and poor drainage; roots become brown/soft and plants wilt or yellow even with adequate watering.",
+    "treatment": "Improve drainage immediately. Remove severely affected plants. Treat soil/containers with appropriate biological or fungicidal products where available.",
+    "prevention": "Use well-draining soil, avoid overwatering, and ensure pots have drainage holes."
+  },
+  "Rust": {
+    "description": "A fungal disease producing orange/brown pustules (rust-colored spots) on leaves and stems.",
+    "treatment": "Remove infected leaves. Apply a labeled rust fungicide and repeat as directed.",
+    "prevention": "Increase airflow, avoid overhead irrigation, and remove volunteer host plants nearby."
+  },
+  "Anthracnose": {
+    "description": "A fungal disease that causes dark, sunken spots on leaves and stems; lesions can expand and coalesce.",
+    "treatment": "Remove infected parts. Apply a labeled anthracnose fungicide if needed and keep repeating per label intervals.",
+    "prevention": "Keep foliage dry, avoid splashing water, and practice crop rotation.",
+    "recommendations": [
+      "Mancozeb fungicide",
+      "Copper fungicide",
+      "Seaweed biostimulant"
+    ]
+  },
+  "Strawberry with Leaf Scorch": {
+    "description": "Leaf scorch in strawberry typically appears as reddish-purple spots that can merge into dry, scorched-looking leaf margins, reducing plant vigor and yield.",
+    "treatment": "Remove heavily infected leaves and improve airflow. Apply a labeled fungicide for strawberry leaf diseases (for example captan or copper-based products), following label rates and intervals.",
+    "prevention": "Avoid overhead irrigation, reduce leaf wetness duration, remove old infected debris, and maintain spacing for good ventilation.",
+    "recommendations": [
+      "Captan fungicide",
+      "Copper fungicide",
+      "Potassium phosphite",
+      "Seaweed biostimulant"
+    ]
+  },
+  "Cedar Apple Rust": {
+    "description": "A fungal rust disease causing bright yellow-orange leaf spots, often affecting apple leaves and reducing photosynthetic capacity.",
+    "treatment": "Prune and remove nearby alternate hosts where possible and apply a labeled rust fungicide during susceptible growth stages.",
+    "prevention": "Use preventive spray programs in high-risk seasons, improve canopy airflow, and remove infected debris.",
+    "recommendations": [
+      "Myclobutanil fungicide",
+      "Copper fungicide",
+      "Potassium sulfate fertilizer"
+    ]
+  }
+}
+

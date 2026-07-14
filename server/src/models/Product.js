@@ -13,7 +13,7 @@ const ProductSchema = new mongoose.Schema(
     image: { type: String },
     category: {
       type: String,
-      enum: ['seeds', 'tools', 'fertilizers', 'plants', 'irrigation'],
+      enum: ['seeds', 'tools', 'fertilizers', 'plants', 'irrigation', 'equipment', 'trees', 'medicament', 'other'],
       required: true,
     },
     stock: { type: Number, default: 0 },

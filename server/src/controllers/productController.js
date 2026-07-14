@@ -46,7 +46,7 @@ function shapeOneProduct(p, businessMap) {
     description: String(p.description ?? ''),
     price: Number(p.price) || 0,
     image: String(p.image ?? ''),
-    category: (p.category && ['seeds', 'tools', 'fertilizers', 'plants', 'irrigation'].includes(p.category)) ? p.category : 'plants',
+    category: (p.category && ['seeds', 'tools', 'fertilizers', 'plants', 'irrigation', 'equipment', 'trees', 'medicament', 'other'].includes(p.category)) ? p.category : 'plants',
     stock: Number(p.stock) || 0,
     rating: Number(p.rating) || 0,
     reviewsCount: Number(p.reviewsCount) || 0,

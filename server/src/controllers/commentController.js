@@ -21,8 +21,17 @@ async function getComments(req, res) {
       targetId: new Types.ObjectId(targetId),
     })
       .sort({ createdAt: 1 })
-      .populate('author', 'fullName avatar verified role')
+      .populate('author', 'fullName avatar verified role businessProfile.companyName')
       .lean();
+
+    function getAuthorDisplayName(author) {
+      if (!author) return 'Unknown';
+      if (author.role === 'business') {
+        const bp = author.businessProfile || {};
+        return (bp.companyName || author.fullName || 'Business').trim();
+      }
+      return (author.fullName || 'Unknown').trim();
+    }
 
     function shapeComment(c) {
       const author = c.author || {};
@@ -30,6 +39,8 @@ async function getComments(req, res) {
       const isLiked = userId
         ? likesArr.some((uid) => uid && String(uid) === userId)
         : false;
+      const id = author._id ? author._id.toString() : '';
+      const isBusiness = author.role === 'business';
       return {
         id: c._id.toString(),
         content: c.content,
@@ -37,11 +48,12 @@ async function getComments(req, res) {
         likes: likesArr.length,
         isLiked,
         author: {
-          id: author._id ? author._id.toString() : '',
-          name: author.fullName || 'Unknown',
+          id,
+          name: getAuthorDisplayName(author),
           avatar: author.avatar || '',
           verified: !!author.verified,
           type: author.role || 'user',
+          businessId: isBusiness ? id : undefined,
         },
         replies: [],
       };
@@ -107,20 +119,27 @@ async function createComment(req, res) {
     }
 
     const populated = await Comment.findById(comment._id)
-      .populate('author', 'fullName avatar verified role')
+      .populate('author', 'fullName avatar verified role businessProfile.companyName')
       .lean();
     const author = populated?.author || {};
+    const authorId = author._id ? author._id.toString() : '';
+    const isBusiness = author.role === 'business';
+    const bp = author.businessProfile || {};
+    const displayName = isBusiness
+      ? (bp.companyName || author.fullName || 'Business').trim()
+      : (author.fullName || 'Unknown').trim();
     res.status(201).json({
       id: comment._id.toString(),
       content: comment.content,
       createdAt: comment.createdAt,
       likes: 0,
       author: {
-        id: author._id ? author._id.toString() : '',
-        name: author.fullName || 'Unknown',
+        id: authorId,
+        name: displayName,
         avatar: author.avatar || '',
         verified: !!author.verified,
         type: author.role || 'user',
+        businessId: isBusiness ? authorId : undefined,
       },
       replies: [],
     });

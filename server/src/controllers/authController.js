@@ -65,6 +65,11 @@ async function register(req, res) {
       }
     }
 
+    const allowedRoles = ['visitor', 'business'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Allowed roles: visitor, business' });
+    }
+
     const normalizedEmail = String(email).trim().toLowerCase();
     const existing = await User.findOne({ email: normalizedEmail }).lean();
     if (existing) return res.status(409).json({ message: 'Email already in use' });
@@ -81,7 +86,6 @@ async function register(req, res) {
       role,
       avatar,
       businessProfile: role === 'business' ? businessProfile : undefined,
-      professionalProfile: role === 'engineer' || role === 'agronomist' ? professionalProfile : undefined,
       verified: false,
       emailVerificationToken,
       emailVerificationExpires,

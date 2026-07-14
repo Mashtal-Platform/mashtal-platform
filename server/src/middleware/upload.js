@@ -9,6 +9,7 @@ const FOLDERS = {
   products: path.join(IMAGES_DIR, 'products'),
   posts: path.join(IMAGES_DIR, 'posts'),
   avatars: path.join(IMAGES_DIR, 'avatars'),
+  covers: path.join(IMAGES_DIR, 'covers'),
 };
 
 // Ensure directories exist
@@ -56,6 +57,7 @@ function multerFor(folderKey) {
 const uploadProductImage = multerFor('products').single('image');
 const uploadPostImage = multerFor('posts').single('image');
 const uploadAvatar = multerFor('avatars').single('avatar');
+const uploadCover = multerFor('covers').single('cover');
 
 /** Relative path from public root, e.g. /images/products/abc.jpg */
 function getRelativePath(folderKey, filename) {
@@ -68,6 +70,7 @@ module.exports = {
   uploadProductImage,
   uploadPostImage,
   uploadAvatar,
+  uploadCover,
   getRelativePath,
   FOLDERS,
 };

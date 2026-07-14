@@ -3,6 +3,8 @@ const {
   getMe,
   updateMe,
   uploadAvatar,
+  uploadCover,
+  convertToBusiness,
   getUserById,
   getBusinesses,
   getBusinessById,
@@ -17,7 +19,7 @@ const {
   removeFollower,
 } = require('../controllers/userController');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { uploadAvatar: uploadAvatarMiddleware } = require('../middleware/upload');
+const { uploadAvatar: uploadAvatarMiddleware, uploadCover: uploadCoverMiddleware } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -34,6 +36,18 @@ router.post(
   },
   uploadAvatar
 );
+router.post(
+  '/me/cover',
+  requireAuth,
+  (req, res, next) => {
+    uploadCoverMiddleware(req, res, (err) => {
+      if (err) return res.status(400).json({ message: err.message || 'Cover upload failed' });
+      next();
+    });
+  },
+  uploadCover
+);
+router.post('/me/convert-to-business', requireAuth, convertToBusiness);
 router.delete('/me/followers/:id', requireAuth, removeFollower);
 
 // Generic users

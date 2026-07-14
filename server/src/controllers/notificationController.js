@@ -2,6 +2,15 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { Types } = require('mongoose');
 
+function getSenderDisplayName(sender) {
+  if (!sender) return null;
+  if (sender.role === 'business') {
+    const bp = sender.businessProfile || {};
+    return (bp.companyName || sender.fullName || 'Business').trim();
+  }
+  return (sender.fullName || null)?.trim() || null;
+}
+
 async function getMyNotifications(req, res) {
   try {
     const userId = req.user.id;
@@ -22,21 +31,23 @@ async function getMyNotifications(req, res) {
       else if (n.type === 'order_created') uiType = 'order';
       else if (n.type === 'chat_message') uiType = 'message';
 
+      const senderName = getSenderDisplayName(n.sender);
+
       let message = 'You have a new notification.';
-      if (n.type === 'follow' && n.sender?.fullName) {
-        message = `${n.sender.fullName} started following you.`;
-      } else if (n.type === 'like_post' && n.sender?.fullName) {
-        message = `${n.sender.fullName} liked your post.`;
-      } else if (n.type === 'like_thread' && n.sender?.fullName) {
-        message = `${n.sender.fullName} liked your thread.`;
+      if (n.type === 'follow' && senderName) {
+        message = `${senderName} started following you.`;
+      } else if (n.type === 'like_post' && senderName) {
+        message = `${senderName} liked your post.`;
+      } else if (n.type === 'like_thread' && senderName) {
+        message = `${senderName} liked your thread.`;
       } else if (n.type === 'order_created') {
         message = 'Your order has been created successfully.';
-      } else if (n.type === 'chat_message' && n.sender?.fullName) {
+      } else if (n.type === 'chat_message' && senderName) {
         const count = n.messageCount && n.messageCount > 0 ? n.messageCount : 1;
         message =
           count === 1
-            ? `${n.sender.fullName} sent you a message.`
-            : `${n.sender.fullName} has sent you ${count} messages.`;
+            ? `${senderName} sent you a message.`
+            : `${senderName} has sent you ${count} messages.`;
       }
 
       const messageCount = n.type === 'chat_message' ? (n.messageCount || 1) : 1;

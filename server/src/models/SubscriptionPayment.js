@@ -33,8 +33,8 @@ const SubscriptionPaymentSchema = new mongoose.Schema(
     // Amounts in SAR
     amountTotal: { type: Number, required: true },
 
-    // Role purchased: 'engineer' or 'business'
-    planRole: { type: String, enum: ['engineer', 'business'], required: true },
+    // Role purchased: 'business'
+    planRole: { type: String, enum: ['business'], required: true },
 
     paymentMethod: {
       type: String,
