@@ -398,7 +398,7 @@ export function ThreadModal({
           {thread.title && (
             <h3 className="font-semibold text-neutral-900 mb-2">{thread.title}</h3>
           )}
-          <p className="text-neutral-700 whitespace-pre-wrap">{thread.content}</p>
+          <p className="text-neutral-700 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
           {thread.tags && thread.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {thread.tags.map((tag, i) => (
