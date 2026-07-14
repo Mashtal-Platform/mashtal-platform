@@ -21,6 +21,8 @@ interface ThreadsFeedProps {
   userThreads?: any[];
   highlightThreadId?: string;
   onClearHighlight?: () => void;
+  feedVersion?: number;
+  lastCreatedThread?: any | null;
 }
 
 interface MentionUser {
@@ -38,7 +40,7 @@ const getTotalCommentCount = (comments: any[]): number => {
   }, 0);
 };
 
-export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight }: ThreadsFeedProps) {
+export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight, feedVersion = 0, lastCreatedThread = null }: ThreadsFeedProps) {
   const { user, isAuthenticated } = useAuth();
   const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
   const [backendThreads, setBackendThreads] = useState<any[]>([]);
@@ -79,7 +81,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
     return () => { isMounted = false; };
   }, []);
 
-  // Load first page of threads (all users, newest first)
+  // Load first page of threads (ranked for authenticated users; newest-first otherwise)
   useEffect(() => {
     let isMounted = true;
     async function loadInitial() {
@@ -88,18 +90,40 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
       try {
         const apiThreads: ThreadDto[] = await fetchThreads({ limit: PAGE_SIZE, skip: 0 });
         if (!isMounted) return;
-        const normalized = apiThreads.map((t) => ({
+        let normalized = apiThreads.map((t) => ({
           ...t,
           comments: typeof t.commentsCount === 'number' ? t.commentsCount : 0,
         }));
+        if (lastCreatedThread?.id && !normalized.some((t) => t.id === lastCreatedThread.id)) {
+          normalized = [
+            {
+              ...lastCreatedThread,
+              comments:
+                typeof lastCreatedThread.commentsCount === 'number'
+                  ? lastCreatedThread.commentsCount
+                  : lastCreatedThread.comments ?? 0,
+            },
+            ...normalized,
+          ];
+        }
         setBackendThreads(normalized);
-        nextSkipRef.current = normalized.length;
-        setHasMoreThreads(normalized.length === PAGE_SIZE);
+        nextSkipRef.current = apiThreads.length;
+        setHasMoreThreads(apiThreads.length === PAGE_SIZE);
       } catch (err: any) {
         if (!isMounted) return;
         console.error('[ThreadsFeed] Failed to load threads from API:', err);
         setThreadsError('Failed to load latest threads.');
-        setBackendThreads([]);
+        if (lastCreatedThread?.id) {
+          setBackendThreads([{
+            ...lastCreatedThread,
+            comments:
+              typeof lastCreatedThread.commentsCount === 'number'
+                ? lastCreatedThread.commentsCount
+                : lastCreatedThread.comments ?? 0,
+          }]);
+        } else {
+          setBackendThreads([]);
+        }
         setHasMoreThreads(false);
       } finally {
         if (isMounted) setIsLoadingThreads(false);
@@ -107,7 +131,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
     }
     loadInitial();
     return () => { isMounted = false; };
-  }, []);
+  }, [feedVersion, lastCreatedThread?.id]);
 
   const allThreads = React.useMemo(() => backendThreads, [backendThreads]);
 

@@ -20,6 +20,8 @@ interface PostsPageProps {
   savedItems?: SavedItem[];
   highlightPostId?: string;
   onClearHighlight?: () => void;
+  feedVersion?: number;
+  lastCreatedPost?: any | null;
 }
 
 export function PostsPage({ 
@@ -36,7 +38,9 @@ export function PostsPage({
   onScrollComplete,
   savedItems = [],
   highlightPostId,
-  onClearHighlight
+  onClearHighlight,
+  feedVersion = 0,
+  lastCreatedPost = null,
 }: PostsPageProps) {
   const { isAuthenticated, user } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -399,17 +403,19 @@ export function PostsPage({
         
         {/* Posts Feed with ref to first post */}
         <div ref={firstPostRef}>
-          <PostsFeed 
+          <PostsFeed
             onSavePost={onSavePost}
             onRemoveSavedItem={onRemoveSavedItem}
             savedItems={savedItems}
-            onNavigateToBusiness={onNavigateToBusiness} 
+            onNavigateToBusiness={onNavigateToBusiness}
             onNavigateToUserProfile={onNavigateToUserProfile}
-            followedBusinesses={followedBusinesses} 
+            followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
             userPosts={userPosts}
             highlightPostId={highlightPostId}
             onClearHighlight={onClearHighlight}
+            feedVersion={feedVersion}
+            lastCreatedPost={lastCreatedPost}
           />
         </div>
 

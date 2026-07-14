@@ -19,6 +19,7 @@ interface HomePageProps {
   onSaveItem?: (item: SavedItem) => void;
   onRemoveSavedItem?: (savedItemId: string) => void;
   savedItems?: SavedItem[];
+  feedVersion?: number;
 }
 
 export function HomePage({ 
@@ -30,7 +31,8 @@ export function HomePage({
   onFollowBusiness,
   onSaveItem,
   onRemoveSavedItem,
-  savedItems = []
+  savedItems = [],
+  feedVersion = 0,
 }: HomePageProps) {
   return (
     <>
@@ -82,6 +84,7 @@ export function HomePage({
             onFollowBusiness={onFollowBusiness}
             maxPosts={8}
             maxThreads={8}
+            feedVersion={feedVersion}
           />
           
           <div className="text-center mt-8">

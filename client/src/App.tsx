@@ -78,6 +78,7 @@ function AppContent() {
             onSaveItem={actions.addSavedItem}
             onRemoveSavedItem={actions.removeSavedItem}
             savedItems={state.savedItems}
+            feedVersion={state.feedVersion}
           />
         );
 
@@ -98,6 +99,8 @@ function AppContent() {
             savedItems={state.savedItems}
             highlightPostId={state.highlightPostId}
             onClearHighlight={() => actions.navigateWithParams('posts', {})}
+            feedVersion={state.feedVersion}
+            lastCreatedPost={state.lastCreatedPost}
           />
         );
 
@@ -118,6 +121,8 @@ function AppContent() {
             savedItems={state.savedItems}
             highlightThreadId={state.highlightThreadId}
             onClearHighlight={() => actions.navigateWithParams('threads', {})}
+            feedVersion={state.feedVersion}
+            lastCreatedThread={state.lastCreatedThread}
           />
         );
 
@@ -328,6 +333,8 @@ function AppContent() {
               savedItems={state.savedItems}
               highlightPostId={state.highlightPostId}
               onClearHighlight={() => actions.navigateWithParams('posts', {})}
+              feedVersion={state.feedVersion}
+              lastCreatedPost={state.lastCreatedPost}
             />
           );
         }
@@ -353,6 +360,8 @@ function AppContent() {
               savedItems={state.savedItems}
               highlightThreadId={state.highlightThreadId}
               onClearHighlight={() => actions.navigateWithParams('threads', {})}
+              feedVersion={state.feedVersion}
+              lastCreatedThread={state.lastCreatedThread}
             />
           );
         }
@@ -410,6 +419,7 @@ function AppContent() {
             onSaveItem={actions.addSavedItem}
             onRemoveSavedItem={actions.removeSavedItem}
             savedItems={state.savedItems}
+            feedVersion={state.feedVersion}
           />
         );
     }

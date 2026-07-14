@@ -41,6 +41,10 @@ interface AppState extends NavigationState {
   userThreads: any[];
   allPosts: any[];
   allThreads: any[];
+  // Bump when a post/thread is created so feeds refetch/prepend
+  feedVersion: number;
+  lastCreatedPost: any | null;
+  lastCreatedThread: any | null;
   // Profile
   userProfile: UserProfile;
   // Following/Followers
@@ -109,6 +113,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     userThreads: [],
     allPosts: [],
     allThreads: [],
+    feedVersion: 0,
+    lastCreatedPost: null,
+    lastCreatedThread: null,
     userProfile: user
       ? {
           id: user.id,
@@ -206,6 +213,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         userThreads: [],
         allPosts: [],
         allThreads: [],
+        feedVersion: 0,
+        lastCreatedPost: null,
+        lastCreatedThread: null,
         followedEntities: [],
         followers: [],
       }));
@@ -481,14 +491,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       postData.content.substring(0, 50) +
         (postData.content.length > 50 ? '...' : '');
 
-    setState((prev) => ({
-      ...prev,
-      currentPage: 'posts',
-      showPostSuccess: true,
-    }));
-
     try {
-      await apiCreatePost(
+      const created = await apiCreatePost(
         {
           title,
           content: postData.content,
@@ -508,10 +512,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         },
         imageFile
       );
-      const allPosts = await fetchPosts({ limit: 500, skip: 0 });
+
+      const createdPost = {
+        ...created,
+        comments: typeof (created as any).commentsCount === 'number' ? (created as any).commentsCount : 0,
+      };
+
       setState((prev) => ({
         ...prev,
-        userPosts: (allPosts as any[]).filter((p) => p.author?.id === user.id),
+        currentPage: 'posts',
+        showPostSuccess: true,
+        feedVersion: prev.feedVersion + 1,
+        lastCreatedPost: createdPost,
+        lastCreatedThread: null,
+        allPosts: [createdPost, ...prev.allPosts.filter((p) => p.id !== createdPost.id)],
+        userPosts: [createdPost, ...prev.userPosts.filter((p) => p.id !== createdPost.id)],
       }));
     } catch (err) {
       console.error('[AppState] Failed to create post in backend:', err);
@@ -532,14 +547,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         threadData.content.substring(0, 50) +
           (threadData.content.length > 50 ? '...' : '');
 
-      setState((prev) => ({
-        ...prev,
-        currentPage: 'threads',
-        showThreadSuccess: true,
-      }));
-
       try {
-        await apiCreateThread({
+        const created = (await apiCreateThread({
           title,
           content: threadData.content,
           tags: threadData.tags || [],
@@ -554,11 +563,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             type: (user.role as any) ?? 'user',
             businessId: user.role === 'business' ? user.id : (user as any)?.businessId,
           },
-        });
-        const allThreads = await fetchThreads({ limit: 500, skip: 0 });
+        })) as any;
+
+        const createdThread = {
+          ...created,
+          comments: typeof created.commentsCount === 'number' ? created.commentsCount : 0,
+        };
+
         setState((prev) => ({
           ...prev,
-          userThreads: (allThreads as any[]).filter((t) => t.author?.id === user.id),
+          currentPage: 'threads',
+          showThreadSuccess: true,
+          feedVersion: prev.feedVersion + 1,
+          lastCreatedThread: createdThread,
+          lastCreatedPost: null,
+          allThreads: [createdThread, ...prev.allThreads.filter((t) => t.id !== createdThread.id)],
+          userThreads: [createdThread, ...prev.userThreads.filter((t) => t.id !== createdThread.id)],
         }));
       } catch (err) {
         console.error('[AppState] Failed to create thread in backend:', err);
