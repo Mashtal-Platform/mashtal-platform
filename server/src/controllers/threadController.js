@@ -4,8 +4,30 @@ const Notification = require('../models/Notification');
 const SavedItem = require('../models/SavedItem');
 const { Types } = require('mongoose');
 
+function getAuthorDisplayName(author) {
+  if (!author) return 'Unknown User';
+  if (author.role === 'business') {
+    const bp = author.businessProfile || {};
+    return (bp.companyName || author.fullName || author.name || 'Business').trim();
+  }
+  return (author.fullName || author.name || 'Unknown User').trim();
+}
+
+function shapeAuthor(author) {
+  const a = author || {};
+  const id = a._id ? a._id.toString() : a.id || '';
+  const isBusiness = a.role === 'business';
+  return {
+    id,
+    name: getAuthorDisplayName(a),
+    avatar: a.avatar || '',
+    verified: !!a.verified,
+    type: a.role || a.type || 'user',
+    businessId: isBusiness ? id : a.businessId || undefined,
+  };
+}
+
 function shapeThread(doc, userId) {
-  const author = doc.author || {};
   const likesArr = Array.isArray(doc.likes) ? doc.likes : [];
   const isLiked = userId
     ? likesArr.some((uid) => (uid && uid.toString()) === userId)
@@ -22,14 +44,7 @@ function shapeThread(doc, userId) {
     isLiked,
     isSaved: !!doc.isSaved,
     timestamp: (doc.createdAt || doc.updatedAt || new Date()).toISOString(),
-    author: {
-      id: author._id ? author._id.toString() : author.id || '',
-      name: author.fullName || author.name || 'Unknown User',
-      avatar: author.avatar || '',
-      verified: !!author.verified,
-      type: author.role || author.type || 'user',
-      businessId: author.businessProfile ? (author._id && author._id.toString()) : author.businessId,
-    },
+    author: shapeAuthor(doc.author),
   };
 }
 
@@ -88,6 +103,9 @@ async function createThread(req, res) {
     const user = await User.findById(authorId);
     if (!user) {
       return res.status(400).json({ message: 'Invalid author id' });
+    }
+    if (user.role !== 'business') {
+      return res.status(403).json({ message: 'Only business accounts can create threads' });
     }
 
     const thread = await Thread.create({

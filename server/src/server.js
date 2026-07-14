@@ -53,20 +53,30 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const stripePaymentRoutes = require('./routes/stripePaymentRoutes');
 const stripeSubscriptionRoutes = require('./routes/stripeSubscriptionRoutes');
 const wishSubscriptionRoutes = require('./routes/wishSubscriptionRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 
 // CORS: when client uses credentials: 'include', origin cannot be '*'
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
+
+function isDevLocalOrigin(origin) {
+  if (!origin || typeof origin !== 'string') return false;
+  return /^http:\/\/(localhost|127\.0\.0\.1):(3000|3001|3002|5173|5174)$/.test(origin);
+}
 
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin || allowedOrigins.includes(origin) || isDevLocalOrigin(origin)) {
+        return cb(null, true);
+      }
       return cb(null, false);
     },
     credentials: true,
@@ -113,6 +123,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/locations', locationRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/payments/stripe', stripePaymentRoutes);
 app.use('/api/payments/stripe/subscription', stripeSubscriptionRoutes);
@@ -128,7 +139,15 @@ const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, {
-    cors: { origin: allowedOrigins, credentials: true },
+    cors: {
+      origin(origin, cb) {
+        if (!origin || allowedOrigins.includes(origin) || isDevLocalOrigin(origin)) {
+          return cb(null, true);
+        }
+        return cb(null, false);
+      },
+      credentials: true,
+    },
     path: '/socket.io',
   });
 

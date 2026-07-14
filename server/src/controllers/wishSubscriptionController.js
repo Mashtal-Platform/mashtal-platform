@@ -5,7 +5,6 @@ const SubscriptionPayment = require('../models/SubscriptionPayment');
 const User = require('../models/User');
 
 function getPlanAmountSars(planRole) {
-  if (planRole === 'engineer') return 299;
   if (planRole === 'business') return 499;
   return 0;
 }
@@ -44,8 +43,8 @@ async function submitWishSubscriptionPayment(req, res) {
 
     const { planRole, senderFullName, senderPhone, transferReference, transferDate, amountTotal } = req.body || {};
 
-    if (planRole !== 'engineer' && planRole !== 'business') {
-      return res.status(400).json({ message: 'planRole must be engineer or business' });
+    if (planRole !== 'business') {
+      return res.status(400).json({ message: 'planRole must be business' });
     }
 
     const expectedAmount = getPlanAmountSars(planRole);

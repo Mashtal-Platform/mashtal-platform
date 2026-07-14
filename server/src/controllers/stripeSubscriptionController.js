@@ -18,7 +18,6 @@ function computeIdempotencyKey({ userId, planRole, amountTotal }) {
 
 function getPlanAmountSars(planRole) {
   // Matches PaymentPage.tsx prices
-  if (planRole === 'engineer') return 299;
   if (planRole === 'business') return 499;
   return 0;
 }
@@ -29,8 +28,8 @@ async function createSubscriptionPaymentIntent(req, res) {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const { planRole } = req.body || {};
-    if (!planRole || (planRole !== 'engineer' && planRole !== 'business')) {
-      return res.status(400).json({ message: 'planRole must be engineer or business' });
+    if (!planRole || planRole !== 'business') {
+      return res.status(400).json({ message: 'planRole must be business' });
     }
 
     const amountTotal = getPlanAmountSars(planRole);

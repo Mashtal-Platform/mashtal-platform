@@ -1,6 +1,11 @@
 const User = require('../models/User');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
+const mongoose = require('mongoose');
+
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
+}
 
 /** Phone: optional + then only digits, spaces, dashes; 10–15 digits. */
 function isValidPhone(phone) {
@@ -76,6 +81,26 @@ async function uploadAvatar(req, res) {
   }
 }
 
+async function uploadCover(req, res) {
+  try {
+    if (!req.file || !req.file.filename) {
+      return res.status(400).json({ message: 'No image file provided' });
+    }
+    const { getRelativePath } = require('../middleware/upload');
+    const coverPath = getRelativePath('covers', req.file.filename);
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { coverImage: coverPath } },
+      { new: true }
+    ).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('[Users] uploadCover error:', err);
+    res.status(500).json({ message: 'Failed to update cover image' });
+  }
+}
+
 async function getUserById(req, res) {
   try {
     const user = await User.findById(req.params.id).lean();
@@ -92,6 +117,7 @@ async function getUserById(req, res) {
       fullName: user.fullName || '',
       email: user.email || '',
       avatar: user.avatar || '',
+      coverImage: user.coverImage || '',
       bio: user.bio || '',
       location: user.location || '',
       role: user.role || 'visitor',
@@ -174,6 +200,7 @@ async function getBusinessById(req, res) {
       companyName: bp.companyName || business.fullName || '',
       email: business.email || '',
       avatar: business.avatar || '',
+      coverImage: business.coverImage || '',
       location: bp.location || business.location || '',
       bio: bp.bio || business.bio || '',
       phone: bp.phone || business.phone || '',
@@ -406,11 +433,19 @@ function shapeUserForList(u) {
 
 async function getFollowers(req, res) {
   try {
-    const user = await User.findById(req.params.id).populate('followers').lean();
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+    const user = await User.findById(id).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    const list = (user.followers || []).map(shapeUserForList).filter(Boolean);
+    const followerIds = (user.followers || []).filter((fid) => isValidObjectId(fid));
+    const followers = followerIds.length
+      ? await User.find({ _id: { $in: followerIds } }).lean()
+      : [];
+    const list = followers.map(shapeUserForList).filter(Boolean);
     res.json(list);
   } catch (err) {
     console.error('[Users] getFollowers error:', err);
@@ -420,11 +455,19 @@ async function getFollowers(req, res) {
 
 async function getFollowing(req, res) {
   try {
-    const user = await User.findById(req.params.id).populate('following').lean();
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+    const user = await User.findById(id).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    const list = (user.following || []).map(shapeUserForList).filter(Boolean);
+    const followingIds = (user.following || []).filter((fid) => isValidObjectId(fid));
+    const following = followingIds.length
+      ? await User.find({ _id: { $in: followingIds } }).lean()
+      : [];
+    const list = following.map(shapeUserForList).filter(Boolean);
     res.json(list);
   } catch (err) {
     console.error('[Users] getFollowing error:', err);
@@ -450,10 +493,10 @@ async function followUser(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const followableRoles = ['business', 'agronomist', 'engineer'];
+    const followableRoles = ['business'];
     if (!followableRoles.includes(targetUser.role)) {
       return res.status(400).json({
-        message: 'You can only follow businesses, agronomists, or engineers. This account cannot be followed.',
+        message: 'You can only follow businesses. This account cannot be followed.',
       });
     }
 
@@ -551,10 +594,72 @@ async function removeFollower(req, res) {
   }
 }
 
+async function convertToBusiness(req, res) {
+  try {
+    const userId = req.user.id;
+    const body = req.body || {};
+    const bp = body.businessProfile || {};
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (user.role === 'business') {
+      if (bp.phone && !isValidPhone(bp.phone)) {
+        return res.status(400).json({
+          message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567).',
+        });
+      }
+      if (!user.businessProfile) user.businessProfile = {};
+      if (bp.companyName != null) user.businessProfile.companyName = String(bp.companyName);
+      if (bp.bio != null) user.businessProfile.bio = String(bp.bio);
+      if (bp.phone != null) user.businessProfile.phone = String(bp.phone);
+      if (bp.location != null) user.businessProfile.location = String(bp.location);
+      if (Array.isArray(bp.specialties)) user.businessProfile.specialties = bp.specialties;
+      user.markModified('businessProfile');
+      await user.save();
+      return res.json(user.toJSON ? user.toJSON() : user);
+    }
+
+    if (user.role !== 'visitor' && user.role !== 'admin') {
+      return res.status(400).json({ message: 'Only visitor accounts can convert to business' });
+    }
+
+    if (!bp.companyName || !String(bp.companyName).trim()) {
+      return res.status(400).json({ message: 'Business name (companyName) is required' });
+    }
+    if (bp.phone && !isValidPhone(bp.phone)) {
+      return res.status(400).json({
+        message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567).',
+      });
+    }
+
+    user.role = 'business';
+    user.businessProfile = {
+      companyName: String(bp.companyName).trim(),
+      bio: bp.bio != null ? String(bp.bio) : '',
+      phone: bp.phone != null ? String(bp.phone) : '',
+      location: bp.location != null ? String(bp.location) : '',
+      specialties: Array.isArray(bp.specialties) ? bp.specialties : [],
+      rating: 3.5,
+      reviewsCount: 0,
+    };
+    // Payment will activate subscription later; leave inactive for now
+    if (!user.subscriptionStatus) user.subscriptionStatus = 'inactive';
+
+    await user.save();
+    res.json(user.toJSON ? user.toJSON() : user);
+  } catch (err) {
+    console.error('[Users] convertToBusiness error:', err);
+    res.status(500).json({ message: 'Failed to convert to business account' });
+  }
+}
+
 module.exports = {
   getMe,
   updateMe,
   uploadAvatar,
+  uploadCover,
+  convertToBusiness,
   getUserById,
   getBusinesses,
   getBusinessById,

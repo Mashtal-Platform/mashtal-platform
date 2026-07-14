@@ -76,13 +76,15 @@ const UserSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ['visitor', 'agronomist', 'engineer', 'business', 'admin'],
+      enum: ['visitor', 'business', 'admin'],
       default: 'visitor',
     },
 
     avatar: String,
+    /** Horizontal profile header / cover image */
+    coverImage: String,
     verified: { type: Boolean, default: false },
-    // Subscription status for engineer/business paid accounts.
+    // Subscription status for business paid accounts.
     subscriptionStatus: { type: String, enum: ['active', 'inactive'], default: 'inactive' },
     // Visitor base profile fields.
     // These exist at the top-level because the frontend edits visitor profiles
