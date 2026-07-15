@@ -34,12 +34,18 @@ interface Product {
 const PREDEFINED_CATEGORIES = ['Seeds', 'Plants', 'Trees', 'Fertilizers', 'Tools', 'Equipment', 'Irrigation', 'Medicament'];
 
 interface DashboardPageProps {
-  targetSection?: 'analytics' | 'products' | null;
+  targetSection?: 'analytics' | 'products' | 'orders' | null;
   highlightProductId?: string | null;
+  highlightOrderId?: string | null;
   onClearHighlight?: () => void;
 }
 
-export function DashboardPage({ targetSection, highlightProductId, onClearHighlight }: DashboardPageProps = {}) {
+export function DashboardPage({
+  targetSection,
+  highlightProductId,
+  highlightOrderId,
+  onClearHighlight,
+}: DashboardPageProps = {}) {
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('month');
   const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders'>('analytics');
@@ -48,6 +54,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
   const [productsLoading, setProductsLoading] = useState(false);
   const [orders, setOrders] = useState<BusinessOrderDto[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
 
   const loadProducts = async () => {
     const businessId = user?.businessId || user?.id;
@@ -144,6 +151,10 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
 
   // Handle initial scroll to product management section if targetSection is 'products'
   useEffect(() => {
+    if (targetSection === 'orders') {
+      setActiveTab('orders');
+      return;
+    }
     if (targetSection === 'products') {
       // Set the active tab to products immediately
       setActiveTab('products');
@@ -187,6 +198,39 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
       return () => clearTimeout(timer);
     }
   }, [targetSection]);
+
+  const highlightedOrderIdHandledRef = useRef<string | null>(null);
+
+  // Open Orders tab when arriving from an order notification
+  useEffect(() => {
+    if (!highlightOrderId) {
+      highlightedOrderIdHandledRef.current = null;
+      return;
+    }
+    setActiveTab('orders');
+    setHighlightedOrderId(highlightOrderId);
+  }, [highlightOrderId]);
+
+  // Scroll to and mark the order for 3 seconds once the list is loaded
+  useEffect(() => {
+    if (!highlightOrderId || !highlightedOrderId) return;
+    if (ordersLoading) return;
+    if (highlightedOrderIdHandledRef.current === highlightOrderId) return;
+
+    const row = document.querySelector(`[data-order-id="${highlightOrderId}"]`);
+    if (!row) return;
+
+    highlightedOrderIdHandledRef.current = highlightOrderId;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const clearTimer = setTimeout(() => {
+      setHighlightedOrderId(null);
+      // Clear parent highlight state only — never re-navigate (that caused an unwanted re-scroll)
+      onClearHighlightRef.current?.();
+    }, 3000);
+
+    return () => clearTimeout(clearTimer);
+  }, [highlightOrderId, highlightedOrderId, orders, ordersLoading]);
 
   // Handle highlighting a specific product (run only when highlightProductId changes, not when parent re-renders)
   useEffect(() => {
@@ -863,6 +907,7 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                       <tr className="bg-neutral-50 border-b border-neutral-200 text-left">
                         <th className="px-4 py-3 font-semibold text-neutral-700">Date</th>
                         <th className="px-4 py-3 font-semibold text-neutral-700">Buyer</th>
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Phone</th>
                         <th className="px-4 py-3 font-semibold text-neutral-700">Products</th>
                         <th className="px-4 py-3 font-semibold text-neutral-700">Revenue</th>
                         <th className="px-4 py-3 font-semibold text-neutral-700">Status</th>
@@ -870,7 +915,15 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                     </thead>
                     <tbody>
                       {orders.map((order) => (
-                        <tr key={order.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50/80">
+                        <tr
+                          key={order.id}
+                          data-order-id={order.id}
+                          className={`border-b border-neutral-100 last:border-0 transition-colors duration-500 ${
+                            highlightedOrderId === order.id
+                              ? 'bg-green-100 ring-2 ring-green-500 ring-inset'
+                              : 'hover:bg-neutral-50/80'
+                          }`}
+                        >
                           <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
                             {order.createdAt
                               ? new Date(order.createdAt).toLocaleString()
@@ -881,9 +934,9 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                             {order.buyer?.email ? (
                               <div className="text-xs text-neutral-500">{order.buyer.email}</div>
                             ) : null}
-                            {order.buyer?.phone ? (
-                              <div className="text-xs text-neutral-500">{order.buyer.phone}</div>
-                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
+                            {order.buyer?.phone || '—'}
                           </td>
                           <td className="px-4 py-3">
                             <ul className="space-y-1">

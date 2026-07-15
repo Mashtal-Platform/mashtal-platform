@@ -12,6 +12,7 @@ interface Notification {
   postId?: string;         // For post-related notifications
   commentId?: string;      // For comment-related notifications
   threadId?: string;       // For thread-related notifications
+  orderId?: string;        // For order_created notifications
   authorId?: string;       // For the author of the post/thread (who created it)
 }
 
@@ -126,6 +127,11 @@ export function NotificationsPage({
         } else {
           onNavigate('user-profile', { userId: notification.relatedUserId });
         }
+      } else if (notification.type === 'order') {
+        onNavigate('dashboard', {
+          section: 'orders',
+          highlightOrderId: notification.orderId,
+        });
       }
     }
   };

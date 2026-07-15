@@ -184,8 +184,9 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   Sign In
                 </button>
               ) : (
-                // Only show Register Business button if user is not already a business
-                user?.role !== 'business' && (
+                // Hide Register Business for business and admin accounts
+                user?.role !== 'business' &&
+                user?.role !== 'admin' && (
                   <button 
                     onClick={() => onNavigate('register-business')}
                     className="hidden sm:block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
@@ -289,7 +290,9 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   </button>
                 ) : (
                   // Only show Register Business button if user is not already a business
-                  user?.role !== 'business' && (
+                  // Hide Register Business for business and admin accounts
+                  user?.role !== 'business' &&
+                  user?.role !== 'admin' && (
                     <button 
                       onClick={() => { onNavigate('register-business'); setMobileMenuOpen(false); }}
                       className="text-left px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors sm:hidden"

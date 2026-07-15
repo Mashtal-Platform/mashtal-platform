@@ -190,13 +190,21 @@ export interface FollowedEntity {
 // ============= Notification Types =============
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'message' | 'order' | 'review';
-  title: string;
+  type: 'like' | 'comment' | 'follow' | 'message' | 'order' | 'review' | 'alert' | 'mention';
+  title?: string;
   message: string;
-  timestamp: string;
+  timestamp?: string;
+  time?: string;
   read: boolean;
   avatar?: string;
   actionUrl?: string;
+  relatedUserId?: string;
+  postId?: string;
+  commentId?: string;
+  threadId?: string;
+  orderId?: string;
+  authorId?: string;
+  messageCount?: number;
 }
 
 // ============= Navigation Params =============
@@ -207,6 +215,9 @@ export interface NavigationParams {
   highlightThreadId?: string;
   productId?: string;
   userId?: string;
+  section?: 'analytics' | 'products' | 'orders';
+  highlightOrderId?: string;
+  orderId?: string;
 }
 
 // ============= Mock Data Types =============

@@ -424,13 +424,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (page === 'dashboard') {
-        setState(prev => ({
+        const focusingOrder = !!(params.highlightOrderId || params.orderId);
+        const focusingProduct = !!params.productId;
+        setState((prev) => ({
           ...prev,
           currentPage: 'dashboard',
-          highlightProductId: params.productId ?? undefined,
-          dashboardTargetSection: params.productId ? 'products' : undefined
+          highlightProductId: params.productId ?? null,
+          highlightOrderId: params.highlightOrderId ?? params.orderId ?? null,
+          dashboardTargetSection:
+            params.section ||
+            (focusingOrder ? 'orders' : focusingProduct ? 'products' : null),
         }));
-        scrollToTop();
+        // Opening a specific order uses row scroll — skipping scrollToTop avoids a jump-back.
+        // Clearing highlight params ({}) must also not re-scroll.
+        if (!focusingOrder && (focusingProduct || params.section)) {
+          scrollToTop();
+        }
         return;
       }
     }

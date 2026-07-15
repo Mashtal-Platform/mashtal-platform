@@ -14,6 +14,7 @@ export interface NotificationDto {
   commentId?: string;
   threadId?: string;
   authorId?: string;
+  orderId?: string;
 }
 
 export async function fetchNotifications(): Promise<NotificationDto[]> {

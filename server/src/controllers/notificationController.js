@@ -70,6 +70,10 @@ async function getMyNotifications(req, res) {
           ? new Date(n.createdAt).toLocaleString()
           : new Date().toLocaleString(),
         relatedUserId: n.sender ? n.sender._id.toString() : undefined,
+        orderId:
+          n.type === 'order_created' && n.entityId
+            ? n.entityId.toString()
+            : undefined,
         postId:
           n.type === 'like_post' || n.type === 'comment_post'
             ? n.entityId?.toString()

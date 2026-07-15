@@ -12,7 +12,8 @@ export interface NavigationState {
   highlightThreadId: string | undefined;
   highlightProductId: string | null;
   highlightShoppingProductId: string | null;
-  dashboardTargetSection: 'analytics' | 'products' | null;
+  highlightOrderId: string | null;
+  dashboardTargetSection: 'analytics' | 'products' | 'orders' | null;
 }
 
 export const initialNavigationState: NavigationState = {
@@ -25,6 +26,7 @@ export const initialNavigationState: NavigationState = {
   highlightThreadId: undefined,
   highlightProductId: null,
   highlightShoppingProductId: null,
+  highlightOrderId: null,
   dashboardTargetSection: null,
 };
 

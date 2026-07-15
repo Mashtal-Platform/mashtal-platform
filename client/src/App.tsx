@@ -341,6 +341,7 @@ function AppContent() {
           <DashboardPage
             targetSection={state.dashboardTargetSection}
             highlightProductId={state.highlightProductId}
+            highlightOrderId={state.highlightOrderId}
             onClearHighlight={() => actions.navigateWithParams('dashboard', {})}
           />
         );

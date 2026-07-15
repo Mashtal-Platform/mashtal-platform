@@ -287,6 +287,7 @@ async function getBusinessOrders(req, res) {
               fullName: '$buyer.fullName',
               email: '$buyer.email',
               phone: '$buyer.phone',
+              businessPhone: '$buyer.businessProfile.phone',
             },
           },
           items: {
@@ -315,7 +316,8 @@ async function getBusinessOrders(req, res) {
         r.buyer?.fullName ||
         'Customer';
       const buyerEmail = shipping.email || r.buyer?.email || '';
-      const buyerPhone = shipping.phone || r.buyer?.phone || '';
+      const buyerPhone =
+        shipping.phone || r.buyer?.phone || r.buyer?.businessPhone || '';
       return {
         id: String(r._id),
         createdAt: r.createdAt,
