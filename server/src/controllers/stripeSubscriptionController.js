@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const { getStripe } = require('../services/stripeClient');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
 const User = require('../models/User');
+const { getSubscriptionPeriodMs } = require('../utils/subscription');
 
 function toMoneyNumber(n) {
   const num = Number(n);
@@ -12,13 +13,17 @@ function toMoneyNumber(n) {
 }
 
 function computeIdempotencyKey({ userId, planRole, amountTotal }) {
-  const payload = { userId, planRole, amountTotal };
+  // Include calendar day so renewals after expiry can create a new PaymentIntent
+  const day = new Date().toISOString().slice(0, 10);
+  const payload = { userId, planRole, amountTotal, day };
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
-function getPlanAmountSars(planRole) {
-  // Matches PaymentPage.tsx prices
-  if (planRole === 'business') return 499;
+function getPlanAmountUsd(planRole) {
+  if (planRole === 'business') {
+    const fee = Number(process.env.BUSINESS_FEE_USD);
+    return Number.isFinite(fee) && fee > 0 ? fee : 499;
+  }
   return 0;
 }
 
@@ -32,7 +37,7 @@ async function createSubscriptionPaymentIntent(req, res) {
       return res.status(400).json({ message: 'planRole must be business' });
     }
 
-    const amountTotal = getPlanAmountSars(planRole);
+    const amountTotal = getPlanAmountUsd(planRole);
     if (!amountTotal) return res.status(400).json({ message: 'Invalid plan' });
 
     const idempotencyKey = computeIdempotencyKey({ userId, planRole, amountTotal });
@@ -42,7 +47,7 @@ async function createSubscriptionPaymentIntent(req, res) {
       payment = await SubscriptionPayment.create({
         user: new mongoose.Types.ObjectId(userId),
         idempotencyKey,
-        currency: 'SAR',
+        currency: 'USD',
         amountTotal: toMoneyNumber(amountTotal),
         planRole,
       });
@@ -65,7 +70,7 @@ async function createSubscriptionPaymentIntent(req, res) {
     const pi = await stripe.paymentIntents.create(
       {
         amount: amountCents,
-        currency: 'sar',
+        currency: 'usd',
         automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
         metadata: {
           paymentKind: 'subscription',

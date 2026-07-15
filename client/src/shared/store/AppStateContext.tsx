@@ -14,6 +14,12 @@ import {
   removeCartItem,
 } from '../utils/cart';
 import {
+  loadCartFromStorage,
+  loadUserCart,
+  normalizeCartEmail,
+  saveCartToStorage,
+} from '../utils/cartStorage';
+import {
   scrollToTop,
   initialNavigationState,
   NavigationState,
@@ -102,12 +108,20 @@ interface AppStateContextType {
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
 
+function cartOwnerKey(user: { email?: string; id?: string } | null | undefined): string {
+  return normalizeCartEmail(user?.email) || 'guest';
+}
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const cartOwnerRef = useRef<string>(cartOwnerKey(user));
+  const skipCartSaveRef = useRef(false);
 
   const [state, setState] = useState<AppState>(() => ({
     ...initialNavigationState,
-    cartItems: [],
+    cartItems: user?.email
+      ? loadUserCart({ email: user.email, userId: user.id })
+      : loadCartFromStorage(null),
     savedItems: [],
     userPosts: [],
     userThreads: [],
@@ -158,6 +172,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, currentPage: 'verify-email' }));
     }
   }, []);
+
+  // Per device + email: switch cart on login/logout without leaking items across accounts
+  useEffect(() => {
+    const nextOwner = cartOwnerKey(user);
+    if (cartOwnerRef.current === nextOwner) return;
+    cartOwnerRef.current = nextOwner;
+    // Prevent the save effect from writing the previous account's in-memory cart into this key
+    skipCartSaveRef.current = true;
+    const nextItems = user?.email
+      ? loadUserCart({ email: user.email, userId: user.id })
+      : loadCartFromStorage(null);
+    setState((prev) => ({
+      ...prev,
+      cartItems: nextItems,
+    }));
+  }, [user?.email, user?.id]);
+
+  useEffect(() => {
+    if (skipCartSaveRef.current) {
+      skipCartSaveRef.current = false;
+      return;
+    }
+    const owner = cartOwnerKey(user);
+    if (cartOwnerRef.current !== owner) return;
+    saveCartToStorage(user?.email ?? null, state.cartItems);
+  }, [user?.email, state.cartItems]);
 
   // Load notifications from backend when auth changes
   useEffect(() => {

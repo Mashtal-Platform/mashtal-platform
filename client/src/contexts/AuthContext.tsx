@@ -80,6 +80,11 @@ interface AuthContextType {
       phone?: string;
       companyName?: string;
       specialties?: string[];
+      address?: string;
+      contactEmail?: string;
+      website?: string;
+      wishPhone?: string;
+      wishAccountNumber?: string;
     };
     professionalProfile?: {
       bio?: string;
@@ -100,7 +105,12 @@ interface AuthContextType {
     bio?: string;
     phone?: string;
     location?: string;
+    address?: string;
+    contactEmail?: string;
+    website?: string;
     specialties?: string[];
+    wishPhone?: string;
+    wishAccountNumber?: string;
   }) => Promise<User>;
   refreshUser: () => Promise<User | null>;
   switchUser: (userId: string) => void;
@@ -163,6 +173,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phone?: string;
       companyName?: string;
       specialties?: string[];
+      address?: string;
+      contactEmail?: string;
+      website?: string;
+      wishPhone?: string;
+      wishAccountNumber?: string;
     };
     professionalProfile?: {
       bio?: string;
@@ -296,7 +311,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     bio?: string;
     phone?: string;
     location?: string;
+    address?: string;
+    contactEmail?: string;
+    website?: string;
     specialties?: string[];
+    wishPhone?: string;
+    wishAccountNumber?: string;
   }): Promise<User> => {
     const updated = await apiPost<any>('/users/me/convert-to-business', { businessProfile });
     const normalized = normalizeUser(updated);

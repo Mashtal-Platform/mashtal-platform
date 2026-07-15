@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { assertBusinessSubscriptionActive } = require('../utils/subscription');
 let Product;
 let User;
 try {
@@ -238,6 +239,19 @@ async function createProduct(req, res) {
 
     if (!business) {
       return res.status(400).json({ message: 'Invalid businessId' });
+    }
+
+    const subCheck = await assertBusinessSubscriptionActive(business);
+    if (!subCheck.ok) {
+      return res.status(403).json({
+        message: subCheck.message || 'Business subscription is inactive. Complete payment to list products.',
+      });
+    }
+    const wishPhone = business.businessProfile?.wishPhone;
+    if (!wishPhone || !String(wishPhone).trim()) {
+      return res.status(400).json({
+        message: 'Set your Whish Money phone on your business profile before listing products.',
+      });
     }
 
     const product = await Product.create({

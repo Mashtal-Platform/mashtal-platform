@@ -81,6 +81,16 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                   Dashboard
                 </button>
               )}
+              {(user?.role === 'admin') && (
+                <button 
+                  onClick={() => onNavigate('admin')}
+                  className={`transition-colors ${
+                    currentPage === 'admin' ? 'text-green-600' : 'text-neutral-700 hover:text-green-600'
+                  }`}
+                >
+                  Admin
+                </button>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -243,10 +253,15 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                     Dashboard
                   </button>
                 )}
-                
-                {/* Separator */}
-                {isAuthenticated && (
-                  <div className="border-t border-neutral-200 my-2" />
+                {(user?.role === 'admin') && (
+                  <button 
+                    onClick={() => { onNavigate('admin'); setMobileMenuOpen(false); }}
+                    className={`text-left px-4 py-2 rounded-lg transition-colors ${
+                      currentPage === 'admin' ? 'bg-green-50 text-green-600' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    Admin
+                  </button>
                 )}
                 
                 {/* Mobile - Logout */}

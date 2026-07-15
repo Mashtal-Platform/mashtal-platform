@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendVerificationEmail } = require('../services/emailService');
+const {
+  isValidPhone,
+  normalizeBusinessProfile,
+  validateBusinessProfile,
+} = require('../utils/businessProfile');
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -23,15 +28,6 @@ function signToken(user) {
 function toUserResponse(userDoc) {
   const u = userDoc.toJSON ? userDoc.toJSON() : userDoc;
   return u;
-}
-
-function isValidPhone(phone) {
-  if (!phone || typeof phone !== 'string') return true;
-  const trimmed = phone.trim();
-  if (!trimmed) return true;
-  if (!/^\+?[\d\s\-]*$/.test(trimmed)) return false;
-  const digits = trimmed.replace(/\D/g, '');
-  return digits.length >= 10 && digits.length <= 15;
 }
 
 async function register(req, res) {
@@ -55,12 +51,13 @@ async function register(req, res) {
 
     const phoneFields = [
       businessProfile?.phone,
+      businessProfile?.wishPhone,
       professionalProfile?.phone,
     ].filter(Boolean);
     for (const p of phoneFields) {
       if (!isValidPhone(p)) {
         return res.status(400).json({
-          message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567). Only digits, +, spaces and dashes allowed.',
+          message: 'Phone must be a valid number with country code (e.g. +961 70 123 456). Only digits, +, spaces and dashes allowed.',
         });
       }
     }
@@ -68,6 +65,19 @@ async function register(req, res) {
     const allowedRoles = ['visitor', 'business'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role. Allowed roles: visitor, business' });
+    }
+
+    let normalizedBusinessProfile;
+    if (role === 'business') {
+      const errMsg = validateBusinessProfile(businessProfile || {}, { requireAll: true });
+      if (errMsg) return res.status(400).json({ message: errMsg });
+      normalizedBusinessProfile = {
+        ...normalizeBusinessProfile(businessProfile || {}),
+        rating: 3.5,
+        reviewsCount: 0,
+      };
+      delete normalizedBusinessProfile.hours;
+      if (!normalizedBusinessProfile.about) delete normalizedBusinessProfile.about;
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -85,8 +95,9 @@ async function register(req, res) {
       passwordHash,
       role,
       avatar,
-      businessProfile: role === 'business' ? businessProfile : undefined,
+      businessProfile: role === 'business' ? normalizedBusinessProfile : undefined,
       verified: false,
+      subscriptionStatus: role === 'business' ? 'inactive' : undefined,
       emailVerificationToken,
       emailVerificationExpires,
     });

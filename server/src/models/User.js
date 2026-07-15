@@ -34,6 +34,12 @@ const BusinessProfileSchema = new mongoose.Schema(
     companyName: String,
     specialties: [String],
 
+    /** Optional street / detailed address (city goes in location) */
+    address: String,
+    /** Optional public contact email (account email stays on User.email) */
+    contactEmail: String,
+    website: String,
+
     rating: { type: Number, default: 3.5, min: 0, max: 5 },
     reviewsCount: { type: Number, default: 0 },
 
@@ -43,6 +49,10 @@ const BusinessProfileSchema = new mongoose.Schema(
       type: Map,
       of: mongoose.Schema.Types.Mixed,
     },
+
+    /** Whish Money payout identity (phone required to sell) */
+    wishPhone: String,
+    wishAccountNumber: String,
   },
   { _id: false }
 );
@@ -86,6 +96,12 @@ const UserSchema = new mongoose.Schema(
     verified: { type: Boolean, default: false },
     // Subscription status for business paid accounts.
     subscriptionStatus: { type: String, enum: ['active', 'inactive'], default: 'inactive' },
+    /** When the current paid period began */
+    subscriptionStartedAt: { type: Date },
+    /** When the current paid period ends (default 60 days from start) */
+    subscriptionExpiresAt: { type: Date, index: true },
+    /** Last time we sent "expires tomorrow" reminder */
+    subscriptionExpiryReminderSentAt: { type: Date },
     // Visitor base profile fields.
     // These exist at the top-level because the frontend edits visitor profiles
     // the same way it edits business/professional basics.

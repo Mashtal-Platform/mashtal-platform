@@ -77,6 +77,7 @@ export type Page =
   | 'verify-email'
   | 'payment'
   | 'dashboard'
+  | 'admin'
   | 'create-post'
   | 'create-thread'
   | 'user-profile'

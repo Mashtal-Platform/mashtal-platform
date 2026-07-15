@@ -2,19 +2,14 @@ const User = require('../models/User');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
+const {
+  isValidPhone,
+  normalizeBusinessProfile,
+  validateBusinessProfile,
+} = require('../utils/businessProfile');
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
-}
-
-/** Phone: optional + then only digits, spaces, dashes; 10–15 digits. */
-function isValidPhone(phone) {
-  if (!phone || typeof phone !== 'string') return true;
-  const trimmed = phone.trim();
-  if (!trimmed) return true;
-  if (!/^\+?[\d\s\-]*$/.test(trimmed)) return false;
-  const digits = trimmed.replace(/\D/g, '');
-  return digits.length >= 10 && digits.length <= 15;
 }
 
 async function getMe(req, res) {
@@ -42,13 +37,36 @@ async function updateMe(req, res) {
     const phoneFields = [
       updates.phone,
       updates.businessProfile?.phone,
+      updates.businessProfile?.wishPhone,
       updates.professionalProfile?.phone,
     ].filter(Boolean);
     for (const p of phoneFields) {
       if (!isValidPhone(p)) {
         return res.status(400).json({
-          message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567). Only digits, +, spaces and dashes allowed.',
+          message: 'Phone must be a valid number with country code (e.g. +961 70 123 456). Only digits, +, spaces and dashes allowed.',
         });
+      }
+    }
+
+    if (updates.businessProfile && typeof updates.businessProfile === 'object') {
+      const existing = await User.findById(req.user.id).lean();
+      if (!existing) return res.status(404).json({ message: 'User not found' });
+      if (existing.role === 'business') {
+        const merged = {
+          ...(existing.businessProfile || {}),
+          ...updates.businessProfile,
+        };
+        const errMsg = validateBusinessProfile(merged, { requireAll: true });
+        if (errMsg) return res.status(400).json({ message: errMsg });
+        const normalized = normalizeBusinessProfile(merged);
+        updates.businessProfile = {
+          ...merged,
+          ...normalized,
+          rating: existing.businessProfile?.rating ?? 3.5,
+          reviewsCount: existing.businessProfile?.reviewsCount ?? 0,
+          hours: updates.businessProfile.hours ?? existing.businessProfile?.hours,
+          about: updates.businessProfile.about ?? existing.businessProfile?.about,
+        };
       }
     }
 
@@ -204,6 +222,9 @@ async function getBusinessById(req, res) {
       location: bp.location || business.location || '',
       bio: bp.bio || business.bio || '',
       phone: bp.phone || business.phone || '',
+      wishPhone: bp.wishPhone || '',
+      wishAccountNumber: bp.wishAccountNumber || '',
+      subscriptionStatus: business.subscriptionStatus || 'inactive',
       verified: !!business.verified,
       rating: typeof bp.rating === 'number' ? bp.rating : 0,
       reviewsCount: typeof bp.reviewsCount === 'number' ? bp.reviewsCount : 0,
@@ -604,17 +625,14 @@ async function convertToBusiness(req, res) {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (user.role === 'business') {
-      if (bp.phone && !isValidPhone(bp.phone)) {
-        return res.status(400).json({
-          message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567).',
-        });
-      }
+      const merged = { ...(user.businessProfile?.toObject?.() || user.businessProfile || {}), ...bp };
+      const errMsg = validateBusinessProfile(merged, { requireAll: true });
+      if (errMsg) return res.status(400).json({ message: errMsg });
+      const n = normalizeBusinessProfile(merged);
       if (!user.businessProfile) user.businessProfile = {};
-      if (bp.companyName != null) user.businessProfile.companyName = String(bp.companyName);
-      if (bp.bio != null) user.businessProfile.bio = String(bp.bio);
-      if (bp.phone != null) user.businessProfile.phone = String(bp.phone);
-      if (bp.location != null) user.businessProfile.location = String(bp.location);
-      if (Array.isArray(bp.specialties)) user.businessProfile.specialties = bp.specialties;
+      Object.assign(user.businessProfile, n);
+      if (n.hours) user.businessProfile.hours = n.hours;
+      if (n.about) user.businessProfile.about = n.about;
       user.markModified('businessProfile');
       await user.save();
       return res.json(user.toJSON ? user.toJSON() : user);
@@ -624,30 +642,22 @@ async function convertToBusiness(req, res) {
       return res.status(400).json({ message: 'Only visitor accounts can convert to business' });
     }
 
-    if (!bp.companyName || !String(bp.companyName).trim()) {
-      return res.status(400).json({ message: 'Business name (companyName) is required' });
-    }
-    if (bp.phone && !isValidPhone(bp.phone)) {
-      return res.status(400).json({
-        message: 'Phone must be a valid number with country code (e.g. +966 50 123 4567).',
-      });
-    }
+    const errMsg = validateBusinessProfile(bp, { requireAll: true });
+    if (errMsg) return res.status(400).json({ message: errMsg });
+    const n = normalizeBusinessProfile(bp);
 
     user.role = 'business';
     user.businessProfile = {
-      companyName: String(bp.companyName).trim(),
-      bio: bp.bio != null ? String(bp.bio) : '',
-      phone: bp.phone != null ? String(bp.phone) : '',
-      location: bp.location != null ? String(bp.location) : '',
-      specialties: Array.isArray(bp.specialties) ? bp.specialties : [],
+      ...n,
       rating: 3.5,
       reviewsCount: 0,
     };
-    // Payment will activate subscription later; leave inactive for now
-    if (!user.subscriptionStatus) user.subscriptionStatus = 'inactive';
+    // Card payment on PaymentPage activates subscription
+    user.subscriptionStatus = 'inactive';
 
     await user.save();
-    res.json(user.toJSON ? user.toJSON() : user);
+    const json = user.toJSON ? user.toJSON() : user;
+    res.json({ ...json, needsPayment: true });
   } catch (err) {
     console.error('[Users] convertToBusiness error:', err);
     res.status(500).json({ message: 'Failed to convert to business account' });

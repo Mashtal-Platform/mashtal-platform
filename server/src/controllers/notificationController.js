@@ -41,7 +41,15 @@ async function getMyNotifications(req, res) {
       } else if (n.type === 'like_thread' && senderName) {
         message = `${senderName} liked your thread.`;
       } else if (n.type === 'order_created') {
-        message = 'Your order has been created successfully.';
+        message = senderName
+          ? `${senderName} placed an order with you.`
+          : 'Your order has been created successfully.';
+      } else if (n.type === 'subscription_expiring') {
+        message =
+          'Your Mashtal business subscription ends tomorrow. Renew payment to keep selling.';
+      } else if (n.type === 'subscription_expired') {
+        message =
+          'Your Mashtal business subscription has ended. Renew payment to list products again.';
       } else if (n.type === 'chat_message' && senderName) {
         const count = n.messageCount && n.messageCount > 0 ? n.messageCount : 1;
         message =

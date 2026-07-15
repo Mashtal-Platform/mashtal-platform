@@ -25,6 +25,8 @@ const NotificationSchema = new mongoose.Schema(
         'product_review',
         'order_created',
         'chat_message',
+        'subscription_expiring',
+        'subscription_expired',
       ],
       required: true,
     },

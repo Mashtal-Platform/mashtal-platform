@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { Lock, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Lock, CheckCircle, Loader2, AlertCircle, CreditCard } from 'lucide-react';
 import { UserRole, useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Page } from '../App';
+import { Elements, CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import {
-  fetchWishSubscriptionPaymentStatus,
-  submitWishSubscriptionPayment,
+  createStripeSubscriptionPaymentIntent,
+  fetchStripeSubscriptionPaymentStatus,
   type SubscriptionPlanRole,
 } from '../shared/api/payments';
 
@@ -17,267 +17,230 @@ interface PaymentPageProps {
   onPaymentSuccess: () => void;
 }
 
+function SubscriptionPayButton({
+  clientSecret,
+  onConfirmed,
+  onError,
+}: {
+  clientSecret: string;
+  onConfirmed: () => void;
+  onError: (message: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!stripe || !elements) return;
+    const card = elements.getElement(CardElement);
+    if (!card) return;
+    setSubmitting(true);
+    try {
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card },
+      });
+      if (result.error) {
+        onError(result.error.message || 'Payment failed');
+        return;
+      }
+      onConfirmed();
+    } catch (e: any) {
+      onError(e?.message || 'Payment failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleConfirm}
+      disabled={!stripe || submitting}
+      className="w-full h-11 bg-green-600 hover:bg-green-700"
+    >
+      {submitting ? (
+        <>
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          Processing…
+        </>
+      ) : (
+        <>
+          <Lock className="w-4 h-4 mr-2" />
+          Pay business fee
+        </>
+      )}
+    </Button>
+  );
+}
+
 export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageProps) {
-  const { isAuthenticated } = useAuth();
-
-  const subscriptionPrice = 499;
-  const subscriptionPeriod = 'month';
-
+  const { isAuthenticated, refreshUser } = useAuth() as any;
+  const subscriptionPrice = Number((import.meta as any).env?.VITE_BUSINESS_FEE_USD) || 499;
   const planRole: SubscriptionPlanRole = 'business';
 
-  const [loading, setLoading] = useState(false);
+  const stripePublicKey = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+  const stripePromise = useMemo(
+    () => (stripePublicKey ? loadStripe(stripePublicKey) : null),
+    [stripePublicKey]
+  );
+
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [form, setForm] = useState({
-    senderFullName: '',
-    senderPhone: '',
-    transferReference: '',
-    transferDate: new Date().toISOString().slice(0, 10),
-  });
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [amountTotal, setAmountTotal] = useState(subscriptionPrice);
 
-  const validate = () => {
+  useEffect(() => {
     if (!isAuthenticated) {
-      setError('Please sign in before completing payment.');
-      return false;
-    }
-    if (!form.senderFullName.trim() || form.senderFullName.trim().length < 3) {
-      setError('Sender full name is required.');
-      return false;
-    }
-    if (!/^\+?[\d\s\-]{8,20}$/.test(form.senderPhone.trim())) {
-      setError('Please enter a valid sender phone number.');
-      return false;
-    }
-    const normalizedRef = form.transferReference.trim().toUpperCase();
-    if (!/^[A-Z0-9\-]{6,40}$/.test(normalizedRef)) {
-      setError('Transfer reference must be 6-40 chars (A-Z, 0-9, -).');
-      return false;
-    }
-    if (!form.transferDate) {
-      setError('Transfer date is required.');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmitWish = async () => {
-    setError('');
-    if (!validate()) return;
-
-    setLoading(true);
-    try {
-      const submitRes = await submitWishSubscriptionPayment({
-        planRole,
-        senderFullName: form.senderFullName.trim(),
-        senderPhone: form.senderPhone.trim(),
-        transferReference: form.transferReference.trim().toUpperCase(),
-        transferDate: form.transferDate,
-        amountTotal: subscriptionPrice,
-      });
-
-      const start = Date.now();
-      const poll = async (): Promise<void> => {
-        const status = await fetchWishSubscriptionPaymentStatus(submitRes.paymentId);
-        if (status.status === 'succeeded') {
-          setSuccess(true);
-          setTimeout(() => {
-            onPaymentSuccess();
-            onNavigate('home');
-          }, 1000);
-          return;
-        }
-        if (status.status === 'failed' || status.status === 'canceled' || status.status === 'refunded') {
-          setError(`Payment ${status.status}. Please contact support if needed.`);
-          return;
-        }
-        if (Date.now() - start > 90000) {
-          setError('Payment submitted and pending verification. We will notify you once approved.');
-          return;
-        }
-        setTimeout(() => void poll(), 2000);
-      };
-
-      await poll();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to submit Wish Money transfer.');
-    } finally {
       setLoading(false);
+      setError('Please sign in before completing payment.');
+      return;
     }
-  };
+    if (!stripePromise) {
+      setLoading(false);
+      setError('Stripe is not configured (VITE_STRIPE_PUBLISHABLE_KEY).');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await createStripeSubscriptionPaymentIntent({ planRole });
+        if (cancelled) return;
+        setPaymentId(res.paymentId);
+        setClientSecret(res.clientSecret);
+        setAmountTotal(res.amountTotal);
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Failed to start subscription payment');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, stripePromise, planRole]);
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-10 h-10 text-green-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-neutral-900 mb-2">Payment Successful!</h1>
-            <p className="text-neutral-600">Your {role} account has been activated.</p>
-            <p className="text-sm text-neutral-500 mt-4">Redirecting to home page...</p>
-          </div>
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-sm border border-neutral-100">
+          <CheckCircle className="w-14 h-14 text-green-600 mx-auto mb-4" />
+          <h1 className="text-2xl font-semibold text-neutral-900 mb-2">Business account activated</h1>
+          <p className="text-neutral-600 mb-6">
+            Your subscription payment succeeded. You can now sell products on Mashtal.
+          </p>
+          <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => onPaymentSuccess()}>
+            Continue to dashboard
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="grid md:grid-cols-5">
-            {/* Payment Form - Left Side */}
-            <div className="md:col-span-3 p-8">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-neutral-900 mb-2">Complete Your Payment</h1>
-                <p className="text-neutral-600">Secure payment to activate your {role} account</p>
+    <div className="min-h-screen bg-neutral-50 py-10 px-4">
+      <div className="max-w-lg mx-auto bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-green-700 to-green-600 text-white p-6">
+          <h1 className="text-2xl font-semibold mb-1">Business subscription</h1>
+          <p className="text-green-50 text-sm">
+            Pay with card (Whish Visa works). Card data goes to Stripe only — never stored on Mashtal.
+          </p>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="flex justify-between items-center p-4 rounded-xl bg-neutral-50 border border-neutral-100">
+            <div>
+              <div className="text-sm text-neutral-500">Plan</div>
+              <div className="font-semibold text-neutral-900">
+                {role === 'business' ? 'Business' : 'Business'} · monthly
               </div>
+            </div>
+            <div className="text-2xl font-bold text-green-700">${Number(amountTotal).toFixed(2)}</div>
+          </div>
 
-              {/* Error Message */}
+          {loading ? (
+            <div className="flex items-center justify-center py-8 text-neutral-500 gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Preparing secure payment…
+            </div>
+          ) : error && !clientSecret ? (
+            <div className="flex gap-2 p-4 rounded-lg bg-red-50 text-red-700 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              {error}
+            </div>
+          ) : stripePromise && clientSecret ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Card details
+                </label>
+                <div className="p-3 border border-neutral-200 rounded-lg">
+                  <Elements stripe={stripePromise} options={{ clientSecret }}>
+                    <CardElement
+                      options={{
+                        hidePostalCode: true,
+                        style: {
+                          base: { fontSize: '14px', color: '#111827' },
+                        },
+                      }}
+                    />
+                    <div className="mt-4">
+                      <SubscriptionPayButton
+                        clientSecret={clientSecret}
+                        onError={setError}
+                        onConfirmed={async () => {
+                          if (!paymentId) return;
+                          const start = Date.now();
+                          const poll = async () => {
+                            try {
+                              const status = await fetchStripeSubscriptionPaymentStatus(paymentId);
+                              if (
+                                status.status === 'succeeded' ||
+                                status.userSubscriptionStatus === 'active'
+                              ) {
+                                if (typeof refreshUser === 'function') await refreshUser();
+                                setSuccess(true);
+                                return;
+                              }
+                              if (
+                                status.status === 'failed' ||
+                                status.status === 'canceled' ||
+                                status.status === 'refunded'
+                              ) {
+                                setError(`Payment ${status.status}`);
+                                return;
+                              }
+                            } catch {
+                              /* ignore */
+                            }
+                            if (Date.now() - start > 90000) {
+                              setError('Payment sent but confirmation timed out. Try refreshing.');
+                              return;
+                            }
+                            setTimeout(poll, 1500);
+                          };
+                          void poll();
+                        }}
+                      />
+                    </div>
+                  </Elements>
+                </div>
+              </div>
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+                  {error}
                 </div>
               )}
-
-              {/* Security Badge */}
-              <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                <Lock className="w-5 h-5 text-green-600" />
-                <p className="text-sm text-green-700">
-                  <strong>Secure payment.</strong> Your information is encrypted and protected.
-                </p>
-              </div>
-
-              {/* Wish Money Form */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="senderFullName">Sender full name (Wish Money)</Label>
-                  <Input
-                    id="senderFullName"
-                    value={form.senderFullName}
-                    onChange={(e) => setForm((p) => ({ ...p, senderFullName: e.target.value }))}
-                    placeholder="Full name used in transfer"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="senderPhone">Sender phone</Label>
-                  <Input
-                    id="senderPhone"
-                    value={form.senderPhone}
-                    onChange={(e) => setForm((p) => ({ ...p, senderPhone: e.target.value }))}
-                    placeholder="+961 70 123 456"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="transferReference">Transfer reference</Label>
-                  <Input
-                    id="transferReference"
-                    value={form.transferReference}
-                    onChange={(e) => setForm((p) => ({ ...p, transferReference: e.target.value.toUpperCase() }))}
-                    placeholder="e.g. WM-8A9B2C"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="transferDate">Transfer date</Label>
-                  <Input
-                    id="transferDate"
-                    type="date"
-                    value={form.transferDate}
-                    onChange={(e) => setForm((p) => ({ ...p, transferDate: e.target.value }))}
-                  />
-                </div>
-                <Button type="button" className="w-full" onClick={handleSubmitWish} disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Verifying transfer...
-                    </>
-                  ) : (
-                    `Submit Wish Money $ ${subscriptionPrice}/${subscriptionPeriod}`
-                  )}
-                </Button>
-              </div>
-
-              <p className="text-xs text-neutral-500 text-center mt-4">
-                By completing this payment, you agree to our Terms of Service and Subscription Policy
-              </p>
             </div>
+          ) : null}
 
-            {/* Order Summary - Right Side */}
-            <div className="md:col-span-2 bg-neutral-50 p-8 border-l border-neutral-200">
-              <h2 className="font-semibold text-neutral-900 mb-4">Order Summary</h2>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-white rounded-lg border border-neutral-200">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      🏢
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-neutral-900 capitalize">{role} Account</h3>
-                      <p className="text-sm text-neutral-600">Monthly subscription</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-600">Subscription</span>
-                      <span className="font-medium">$ {subscriptionPrice}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-600">Setup fee</span>
-                      <span className="font-medium">$ 0</span>
-                    </div>
-                    <div className="border-t border-neutral-200 pt-2 flex justify-between">
-                      <span className="font-semibold">Total due today</span>
-                      <span className="font-bold text-green-600">$ {subscriptionPrice}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <h3 className="font-medium text-neutral-900">What's included:</h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-neutral-600">Full platform access</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-neutral-600">Email verification</span>
-                    </li>
-                    {role === 'business' && (
-                      <>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-neutral-600">Sell products online</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-neutral-600">Business dashboard</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-neutral-600">Order management</span>
-                        </li>
-                      </>
-                    )}
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-neutral-600">Priority support</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="text-xs text-neutral-500 pt-4 border-t border-neutral-200">
-                  <p>Send the exact amount via Wish Money, then submit your transfer reference.</p>
-                  <p className="mt-2">Activation only happens after secure server-side verification.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <button
+            type="button"
+            className="text-sm text-neutral-500 hover:text-neutral-800 underline"
+            onClick={() => onNavigate('home')}
+          >
+            Cancel and go home
+          </button>
         </div>
       </div>
     </div>
