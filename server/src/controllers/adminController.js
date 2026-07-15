@@ -424,6 +424,7 @@ async function listTransactions(req, res) {
       const shapedRow = shaped[i];
       const groupKey =
         (raw.payment && String(raw.payment._id || raw.payment)) ||
+        (raw.subscriptionPayment && String(raw.subscriptionPayment._id || raw.subscriptionPayment)) ||
         (raw.stripePaymentIntentId
           ? `pi:${raw.stripePaymentIntentId}`
           : `solo:${shapedRow.id}`);

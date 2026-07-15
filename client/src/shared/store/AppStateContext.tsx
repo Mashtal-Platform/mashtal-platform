@@ -424,13 +424,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (page === 'dashboard') {
-        setState(prev => ({
+        const focusingOrder = !!(params.highlightOrderId || params.orderId);
+        const focusingProduct = !!params.productId;
+        setState((prev) => ({
           ...prev,
           currentPage: 'dashboard',
-          highlightProductId: params.productId ?? undefined,
-          dashboardTargetSection: params.productId ? 'products' : undefined
+          highlightProductId: params.productId ?? null,
+          highlightOrderId: params.highlightOrderId ?? params.orderId ?? null,
+          dashboardTargetSection:
+            params.section ||
+            (focusingOrder ? 'orders' : focusingProduct ? 'products' : null),
         }));
-        scrollToTop();
+        // Skip scrollToTop when focusing an order or silently clearing highlight
+        if (!focusingOrder && (focusingProduct || params.section)) {
+          scrollToTop();
+        }
+        return;
+      }
+      if (page === 'admin') {
+        const focusingPayment = !!(params.highlightPaymentId || params.paymentId);
+        setState((prev) => ({
+          ...prev,
+          currentPage: 'admin',
+          highlightPaymentId: params.highlightPaymentId ?? params.paymentId ?? null,
+          adminTargetTab:
+            params.section ||
+            (focusingPayment ? 'transactions' : null),
+        }));
+        // No scroll jump when focusing a transaction or clearing highlight
         return;
       }
     }

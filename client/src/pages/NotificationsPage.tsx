@@ -3,16 +3,18 @@ import { Bell, Package, MessageCircle, Heart, AlertCircle, Trash2, CheckCheck, U
 
 interface Notification {
   id: string;
-  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment';
+  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction';
   message: string;
   read: boolean;
   time: string;
-  // Navigation properties
-  relatedUserId?: string;  // For message/follow notifications
-  postId?: string;         // For post-related notifications
-  commentId?: string;      // For comment-related notifications
-  threadId?: string;       // For thread-related notifications
-  authorId?: string;       // For the author of the post/thread (who created it)
+  relatedUserId?: string;
+  postId?: string;
+  commentId?: string;
+  threadId?: string;
+  orderId?: string;
+  paymentId?: string;
+  authorId?: string;
+  messageCount?: number;
 }
 
 interface NotificationsPageProps {
@@ -40,6 +42,8 @@ export function NotificationsPage({
     switch (type) {
       case 'order':
         return <Package className="w-5 h-5 text-green-600" />;
+      case 'transaction':
+        return <Package className="w-5 h-5 text-emerald-700" />;
       case 'message':
         return <MessageCircle className="w-5 h-5 text-blue-600" />;
       case 'follow':
@@ -126,6 +130,16 @@ export function NotificationsPage({
         } else {
           onNavigate('user-profile', { userId: notification.relatedUserId });
         }
+      } else if (notification.type === 'order') {
+        onNavigate('dashboard', {
+          section: 'orders',
+          highlightOrderId: notification.orderId,
+        });
+      } else if (notification.type === 'transaction') {
+        onNavigate('admin', {
+          section: 'transactions',
+          highlightPaymentId: notification.paymentId,
+        });
       }
     }
   };

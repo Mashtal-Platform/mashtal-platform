@@ -27,6 +27,7 @@ const NotificationSchema = new mongoose.Schema(
         'chat_message',
         'subscription_expiring',
         'subscription_expired',
+        'payment_received',
       ],
       required: true,
     },

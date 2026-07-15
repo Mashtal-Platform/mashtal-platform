@@ -271,6 +271,22 @@ async function finalizeCartPaymentIfComplete(paymentDoc, session) {
     );
   }
 
+  // Notify all admins about the new payment / transaction group
+  const admins = session
+    ? await User.find({ role: 'admin' }).select('_id').session(session).lean()
+    : await User.find({ role: 'admin' }).select('_id').lean();
+  if (admins.length) {
+    await Notification.insertMany(
+      admins.map((a) => ({
+        recipient: a._id,
+        sender: payment.user,
+        type: 'payment_received',
+        entityId: payment._id,
+      })),
+      session ? { session } : undefined
+    );
+  }
+
   return order._id;
 }
 
@@ -737,6 +753,19 @@ async function handleStripeWebhook(req, res) {
             },
             { upsert: true, session, new: true }
           );
+
+          const admins = await User.find({ role: 'admin' }).select('_id').session(session).lean();
+          if (admins.length) {
+            await Notification.insertMany(
+              admins.map((a) => ({
+                recipient: a._id,
+                sender: latestPayment.user,
+                type: 'payment_received',
+                entityId: latestPayment._id,
+              })),
+              { session }
+            );
+          }
         });
         session.endSession();
         return res.status(200).send('OK');
