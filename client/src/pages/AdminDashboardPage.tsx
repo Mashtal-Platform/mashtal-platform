@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -57,8 +57,16 @@ function fmtMoney(n: number) {
   return `$${Number(n || 0).toFixed(2)}`;
 }
 
-export function AdminDashboardPage() {
-  const [tab, setTab] = useState<Tab>('overview');
+export function AdminDashboardPage({
+  initialTab = null,
+  highlightPaymentId = null,
+  onClearHighlight,
+}: {
+  initialTab?: Tab | null;
+  highlightPaymentId?: string | null;
+  onClearHighlight?: () => void;
+} = {}) {
+  const [tab, setTab] = useState<Tab>(initialTab || 'overview');
   const [overview, setOverview] = useState<AdminOverviewDto | null>(null);
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [businesses, setBusinesses] = useState<AdminUserDto[]>([]);
@@ -71,12 +79,32 @@ export function AdminDashboardPage() {
   const [userSearch, setUserSearch] = useState('');
   const [txType, setTxType] = useState('');
   const [subStatus, setSubStatus] = useState('');
+  const [highlightedPaymentId, setHighlightedPaymentId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({
     fullName: '',
     email: '',
     password: '',
     role: 'visitor',
   });
+  const onClearHighlightRef = useRef(onClearHighlight);
+  const highlightedPaymentHandledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    onClearHighlightRef.current = onClearHighlight;
+  }, [onClearHighlight]);
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (!highlightPaymentId) {
+      highlightedPaymentHandledRef.current = null;
+      return;
+    }
+    setTab('transactions');
+    setHighlightedPaymentId(highlightPaymentId);
+  }, [highlightPaymentId]);
 
   const loadOverview = useCallback(async () => {
     const data = await fetchAdminOverview();
@@ -132,6 +160,25 @@ export function AdminDashboardPage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!highlightPaymentId || !highlightedPaymentId) return;
+    if (loading && tab === 'transactions' && txGroups.length === 0) return;
+    if (highlightedPaymentHandledRef.current === highlightPaymentId) return;
+
+    const el = document.querySelector(`[data-payment-id="${highlightPaymentId}"]`);
+    if (!el) return;
+
+    highlightedPaymentHandledRef.current = highlightPaymentId;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const clearTimer = setTimeout(() => {
+      setHighlightedPaymentId(null);
+      onClearHighlightRef.current?.();
+    }, 3000);
+
+    return () => clearTimeout(clearTimer);
+  }, [highlightPaymentId, highlightedPaymentId, txGroups, loading, tab]);
 
   const pieData = overview
     ? [
@@ -640,7 +687,12 @@ export function AdminDashboardPage() {
                 {txGroups.map((g) => (
                   <div
                     key={g.id}
-                    className="bg-white rounded-xl border border-neutral-200 overflow-hidden"
+                    data-payment-id={g.id}
+                    className={`bg-white rounded-xl border overflow-hidden transition-colors duration-500 ${
+                      highlightedPaymentId === g.id
+                        ? 'border-green-500 ring-2 ring-green-500 bg-green-50/40'
+                        : 'border-neutral-200'
+                    }`}
                   >
                     <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-100 flex flex-wrap gap-x-6 gap-y-2 text-sm">
                       <div>

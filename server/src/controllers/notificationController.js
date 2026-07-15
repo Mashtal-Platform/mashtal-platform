@@ -29,6 +29,7 @@ async function getMyNotifications(req, res) {
       else if (n.type === 'comment_post' || n.type === 'comment_thread')
         uiType = 'comment';
       else if (n.type === 'order_created') uiType = 'order';
+      else if (n.type === 'payment_received') uiType = 'transaction';
       else if (n.type === 'chat_message') uiType = 'message';
 
       const senderName = getSenderDisplayName(n.sender);
@@ -44,6 +45,10 @@ async function getMyNotifications(req, res) {
         message = senderName
           ? `${senderName} placed an order with you.`
           : 'Your order has been created successfully.';
+      } else if (n.type === 'payment_received') {
+        message = senderName
+          ? `New payment from ${senderName}. Open the transaction in Admin.`
+          : 'A new payment was received. Open the transaction in Admin.';
       } else if (n.type === 'subscription_expiring') {
         message =
           'Your Mashtal business subscription ends tomorrow. Renew payment to keep selling.';
@@ -70,6 +75,14 @@ async function getMyNotifications(req, res) {
           ? new Date(n.createdAt).toLocaleString()
           : new Date().toLocaleString(),
         relatedUserId: n.sender ? n.sender._id.toString() : undefined,
+        orderId:
+          n.type === 'order_created' && n.entityId
+            ? n.entityId.toString()
+            : undefined,
+        paymentId:
+          n.type === 'payment_received' && n.entityId
+            ? n.entityId.toString()
+            : undefined,
         postId:
           n.type === 'like_post' || n.type === 'comment_post'
             ? n.entityId?.toString()
@@ -138,7 +151,6 @@ async function clearAllNotifications(req, res) {
 async function markOneAsRead(req, res) {
   try {
     const userId = req.user.id;
-
     const { id } = req.params;
 
     const updated = await Notification.findOneAndUpdate(
@@ -168,4 +180,3 @@ module.exports = {
   clearAllNotifications,
   markOneAsRead,
 };
-

@@ -334,13 +334,20 @@ function AppContent() {
             />
           );
         }
-        return <AdminDashboardPage />;
+        return (
+          <AdminDashboardPage
+            initialTab={state.adminTargetTab}
+            highlightPaymentId={state.highlightPaymentId}
+            onClearHighlight={() => actions.navigateWithParams('admin', {})}
+          />
+        );
 
       case 'dashboard':
         return (
           <DashboardPage
             targetSection={state.dashboardTargetSection}
             highlightProductId={state.highlightProductId}
+            highlightOrderId={state.highlightOrderId}
             onClearHighlight={() => actions.navigateWithParams('dashboard', {})}
           />
         );
