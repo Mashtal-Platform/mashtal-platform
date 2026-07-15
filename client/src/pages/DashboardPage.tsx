@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   TrendingUp, Users, ShoppingBag, Package, 
   BarChart3, Calendar, DollarSign, Plus, Trash2, Edit, X, Upload, Save,
-  AlertTriangle, ArrowUpRight, Activity, Percent, Store, Crown, Medal, Award
+  AlertTriangle, ArrowUpRight, Activity, Percent, Store, Crown, Medal, Award,
+  ClipboardList, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
@@ -11,7 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { fetchProducts, createProduct, updateProduct } from '../shared/api/products';
-import { fetchBusinessDashboardAnalytics, type DashboardPeriod, type BusinessDashboardDto } from '../shared/api/dashboard';
+import {
+  fetchBusinessDashboardAnalytics,
+  fetchBusinessOrders,
+  type DashboardPeriod,
+  type BusinessDashboardDto,
+  type BusinessOrderDto,
+} from '../shared/api/dashboard';
 import { getImageUrl } from '../shared/api/client';
 
 interface Product {
@@ -35,12 +42,14 @@ interface DashboardPageProps {
 export function DashboardPage({ targetSection, highlightProductId, onClearHighlight }: DashboardPageProps = {}) {
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('month');
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders'>('analytics');
   
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [orders, setOrders] = useState<BusinessOrderDto[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
-  useEffect(() => {
+  const loadProducts = async () => {
     const businessId = user?.businessId || user?.id;
     if (!businessId) {
       setProducts([]);
@@ -48,29 +57,61 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
       return;
     }
     setProductsLoading(true);
-    fetchProducts({ businessId })
-      .then((apiProducts) => {
-        if (!Array.isArray(apiProducts)) {
-          setProducts([]);
-          return;
-        }
-        const mapped: Product[] = apiProducts.map((p: any) => ({
-          id: p.id ?? '',
-          name: p.name ?? '',
-          price: Number(p.price) ?? 0,
-          stock: Number(p.stock) ?? 0,
-          image: p.image ?? '',
-          description: p.description ?? '',
-          category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
-        }));
-        setProducts(mapped);
-      })
-      .catch((err) => {
-        console.error('[Dashboard] fetchProducts failed:', err);
+    try {
+      const apiProducts = await fetchProducts({ businessId });
+      if (!Array.isArray(apiProducts)) {
         setProducts([]);
-      })
-      .finally(() => setProductsLoading(false));
+        return;
+      }
+      const mapped: Product[] = apiProducts.map((p: any) => ({
+        id: p.id ?? '',
+        name: p.name ?? '',
+        price: Number(p.price) ?? 0,
+        stock: Number(p.stock) ?? 0,
+        image: p.image ?? '',
+        description: p.description ?? '',
+        category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
+      }));
+      setProducts(mapped);
+    } catch (err) {
+      console.error('[Dashboard] fetchProducts failed:', err);
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.businessId]);
+
+  const loadOrders = async () => {
+    const businessId = user?.businessId || user?.id;
+    if (!businessId) {
+      setOrders([]);
+      return;
+    }
+    setOrdersLoading(true);
+    try {
+      const list = await fetchBusinessOrders({ businessId });
+      setOrders(list);
+      // Keep Products tab stock in sync after sales
+      await loadProducts();
+    } catch (err) {
+      console.error('[Dashboard] fetchBusinessOrders failed:', err);
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      void loadOrders();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user?.id, user?.businessId]);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -517,11 +558,15 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'analytics' | 'products')} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'analytics' | 'products' | 'orders')} className="w-full">
           <TabsList className="bg-white shadow-sm border border-neutral-200">
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics & Insights
+            </TabsTrigger>
+            <TabsTrigger value="orders">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Orders
             </TabsTrigger>
             <TabsTrigger value="products">
               <Package className="w-4 h-4 mr-2" />
@@ -776,6 +821,95 @@ export function DashboardPage({ targetSection, highlightProductId, onClearHighli
                 </table>
                 )}
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* Orders Tab */}
+          <TabsContent value="orders" className="mt-6">
+            <Card className="p-8 bg-white shadow-lg border border-neutral-100">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold text-neutral-900">Customer Orders</h3>
+                  <p className="text-neutral-600 mt-1">
+                    Paid cart items for your products appear here after checkout
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => void loadOrders()}
+                  disabled={ordersLoading}
+                  className="h-11"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${ordersLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+
+              {ordersLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                  <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
+                  Loading orders…
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-16 text-neutral-500 border border-dashed border-neutral-200 rounded-2xl">
+                  <ClipboardList className="w-12 h-12 mx-auto mb-3 text-neutral-300" />
+                  <p className="font-medium text-neutral-700">No orders yet</p>
+                  <p className="text-sm mt-1">Sales appear here after customers pay</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-neutral-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200 text-left">
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Date</th>
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Buyer</th>
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Products</th>
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Revenue</th>
+                        <th className="px-4 py-3 font-semibold text-neutral-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50/80">
+                          <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
+                            {order.createdAt
+                              ? new Date(order.createdAt).toLocaleString()
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-neutral-900">{order.buyer?.fullName || 'Customer'}</div>
+                            {order.buyer?.email ? (
+                              <div className="text-xs text-neutral-500">{order.buyer.email}</div>
+                            ) : null}
+                            {order.buyer?.phone ? (
+                              <div className="text-xs text-neutral-500">{order.buyer.phone}</div>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3">
+                            <ul className="space-y-1">
+                              {order.items.map((it) => (
+                                <li key={`${order.id}-${it.productId}`} className="text-neutral-700">
+                                  {it.name}{' '}
+                                  <span className="text-neutral-500">×{it.quantity}</span>
+                                  <span className="text-neutral-400"> · ${Number(it.lineTotal).toFixed(2)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-green-700 whitespace-nowrap">
+                            ${Number(order.sellerRevenue).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 capitalize">
+                              {order.status || 'processing'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Card>
           </TabsContent>
 

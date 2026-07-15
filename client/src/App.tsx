@@ -28,6 +28,7 @@ import { CreateThreadPage } from './pages/CreateThreadPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { PurchaseHistoryPage } from './pages/PurchaseHistoryPage';
 import { ShoppingPage } from './pages/ShoppingPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PostInteractionsProvider } from './contexts/PostInteractionsContext';
 import { AppStateProvider, useAppState } from './shared/store/AppStateContext';
@@ -274,7 +275,14 @@ function AppContent() {
         );
 
       case 'register-business':
-        return <RegisterBusinessPage onNavigate={actions.navigate} />;
+        return (
+          <RegisterBusinessPage
+            onNavigate={(page) => {
+              if (page === 'payment') actions.setPaymentRole('business');
+              actions.navigate(page);
+            }}
+          />
+        );
 
       case 'signin':
         return (
@@ -305,9 +313,28 @@ function AppContent() {
           <PaymentPage
             role={state.paymentRole}
             onNavigate={actions.navigate}
-            onPaymentSuccess={() => actions.navigate('verify-email')}
+            onPaymentSuccess={() => actions.navigate('dashboard')}
           />
         );
+
+      case 'admin':
+        if (user?.role !== 'admin') {
+          return (
+            <HomePage
+              onViewBusiness={actions.navigateToBusiness}
+              onNavigate={actions.navigate}
+              onBusinessesClick={handleBusinessesNavigation}
+              onNavigateToUserProfile={actions.navigateToUserProfile}
+              followedBusinesses={state.followedEntities}
+              onFollowBusiness={actions.followEntity}
+              onSaveItem={actions.addSavedItem}
+              onRemoveSavedItem={actions.removeSavedItem}
+              savedItems={state.savedItems}
+              feedVersion={state.feedVersion}
+            />
+          );
+        }
+        return <AdminDashboardPage />;
 
       case 'dashboard':
         return (

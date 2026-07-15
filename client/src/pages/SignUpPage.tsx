@@ -9,6 +9,7 @@ import { Page } from '../App';
 import { PhoneInput } from '../components/PhoneInput';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
+import { BUSINESS_TYPES } from '../shared/constants/business';
 
 interface SignUpPageProps {
   onNavigate: (page: Page) => void;
@@ -28,9 +29,14 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     confirmPassword: '',
     phone: '',
     location: '',
+    address: '',
     bio: '',
     companyName: '',
     businessType: '',
+    contactEmail: '',
+    website: '',
+    wishPhone: '',
+    wishAccountNumber: '',
     specialization: '',
     yearsExperience: '',
   });
@@ -57,12 +63,49 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     }
 
     const phone = formData.phone?.trim() ?? '';
+    if (selectedRole === 'business') {
+      if (!formData.companyName.trim()) {
+        setError('Business name is required');
+        return;
+      }
+      if (!formData.businessType.trim()) {
+        setError('Business type is required');
+        return;
+      }
+      if (!formData.bio.trim()) {
+        setError('Business description is required');
+        return;
+      }
+      if (!formData.location.trim()) {
+        setError('City / village is required');
+        return;
+      }
+      if (!phone) {
+        setError('Contact phone is required');
+        return;
+      }
+      if (!formData.wishPhone.trim()) {
+        setError('Whish Money phone is required for receiving payouts');
+        return;
+      }
+    }
     if (phone) {
       const parsed = parsePhoneNumberFromString(phone, 'LB');
       if (!parsed?.isValid()) {
         setError('Please enter a valid phone number (example: +961 70 123 456).');
         return;
       }
+    }
+    if (formData.wishPhone.trim()) {
+      const parsedWish = parsePhoneNumberFromString(formData.wishPhone.trim(), 'LB');
+      if (!parsedWish?.isValid()) {
+        setError('Please enter a valid Whish phone (example: +961 70 123 456).');
+        return;
+      }
+    }
+    if (formData.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail.trim())) {
+      setError('Business contact email is invalid');
+      return;
     }
 
     setLoading(true);
@@ -82,25 +125,29 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
           ? {
               ...base,
               businessProfile: {
-                phone: formData.phone || undefined,
-                location: formData.location || undefined,
-                bio: formData.bio || undefined,
-                companyName: formData.companyName || undefined,
-                specialties: [],
+                phone: formData.phone.trim(),
+                location: formData.location.trim(),
+                address: formData.address.trim() || undefined,
+                bio: formData.bio.trim(),
+                companyName: formData.companyName.trim(),
+                specialties: formData.businessType ? [formData.businessType] : [],
+                contactEmail: formData.contactEmail.trim() || undefined,
+                website: formData.website.trim() || undefined,
+                wishPhone: formData.wishPhone.trim(),
+                wishAccountNumber: formData.wishAccountNumber.trim() || undefined,
               },
             }
           : base;
 
-      const result = await signUp(input as any);
+      await signUp(input as any);
 
-      // Payment for business will be wired later — go to email verification for all roles.
-      if (result?.requiresVerification || selectedRole === 'business' || selectedRole === 'visitor') {
-        onVerificationNeeded();
+      if (selectedRole === 'business') {
+        onPaymentNeeded('business');
       } else {
         onVerificationNeeded();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to create account. Please try again.';
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create account. Please try again.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -192,7 +239,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className={`w-full ${selectedRole === 'business' ? 'max-w-2xl' : 'max-w-md'}`}>
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -311,47 +358,12 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             {/* Role-specific profile fields */}
             {selectedRole === 'business' && (
               <>
-                <PhoneInput
-                  label="Phone"
-                  value={formData.phone}
-                  required={selectedRole === 'business'}
-                  defaultCountry="LB"
-                  placeholder="e.g. +961 70 123 456"
-                  onChange={(v) => setFormData({ ...formData, phone: v })}
-                />
+                <p className="text-sm text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2">
+                  Fields marked * are required to sell on Mashtal.
+                </p>
 
                 <div>
-                  <LebanonLocationPicker
-                    label="Location"
-                    value={formData.location}
-                    required={selectedRole === 'business'}
-                    placeholder="Search city or village in Lebanon…"
-                    onChange={(v) => setFormData({ ...formData, location: v })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    placeholder={
-                      selectedRole === 'business'
-                        ? 'Tell customers about your business...'
-                        : 'Tell others about your experience...'
-                    }
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    rows={3}
-                    required={selectedRole === 'business'}
-                  />
-                </div>
-              </>
-            )}
-
-            {selectedRole === 'business' && (
-              <>
-                <div>
-                  <Label htmlFor="companyName">Business Name</Label>
+                  <Label htmlFor="companyName">Business Name *</Label>
                   <div className="relative mt-1">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                     <Input
@@ -367,15 +379,109 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 </div>
 
                 <div>
-                  <Label htmlFor="businessType">Business Type</Label>
+                  <Label htmlFor="businessType">Business Type *</Label>
+                  <select
+                    id="businessType"
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                    className="mt-1 w-full px-3 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600 bg-white"
+                    required
+                  >
+                    <option value="">Select type</option>
+                    {BUSINESS_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">Description *</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Tell customers about your business..."
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="address">Street address (optional)</Label>
+                    <Input
+                      id="address"
+                      type="text"
+                      placeholder="Street address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <LebanonLocationPicker
+                    label="City / Village (Lebanon) *"
+                    value={formData.location}
+                    required
+                    placeholder="Search city or village…"
+                    onChange={(v) => setFormData({ ...formData, location: v })}
+                  />
+                </div>
+
+                <PhoneInput
+                  label="Contact phone *"
+                  value={formData.phone}
+                  required
+                  defaultCountry="LB"
+                  placeholder="e.g. +961 70 123 456"
+                  onChange={(v) => setFormData({ ...formData, phone: v })}
+                />
+
+                <div>
+                  <Label htmlFor="contactEmail">Business contact email (optional)</Label>
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    placeholder="info@business.com"
+                    value={formData.contactEmail}
+                    onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-neutral-500 mt-1">Public email for customers (login email is above)</p>
+                </div>
+
+                <PhoneInput
+                  label="Whish Money phone * (payouts)"
+                  value={formData.wishPhone}
+                  required
+                  defaultCountry="LB"
+                  placeholder="Whish wallet phone"
+                  onChange={(v) => setFormData({ ...formData, wishPhone: v })}
+                />
+
+                <div>
+                  <Label htmlFor="wishAccountNumber">Whish account / card number (optional)</Label>
+                  <Input
+                    id="wishAccountNumber"
+                    type="text"
+                    placeholder="Optional wallet or card ref"
+                    value={formData.wishAccountNumber}
+                    onChange={(e) => setFormData({ ...formData, wishAccountNumber: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="website">Website (optional)</Label>
                   <div className="relative mt-1">
                     <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                     <Input
-                      id="businessType"
-                      type="text"
-                      placeholder="Nursery / Tools / Services..."
-                      value={formData.businessType}
-                      onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                      id="website"
+                      type="url"
+                      placeholder="https://www.yourbusiness.com"
+                      value={formData.website}
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                       className="pl-10"
                     />
                   </div>

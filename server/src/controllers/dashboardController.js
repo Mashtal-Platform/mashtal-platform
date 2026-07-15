@@ -236,7 +236,119 @@ async function getBusinessDashboard(req, res) {
   }
 }
 
+async function getBusinessOrders(req, res) {
+  try {
+    const { businessId: businessIdParam } = req.params;
+
+    const businessId =
+      req.user?.role === 'business' ? req.user.id : businessIdParam;
+
+    if (!businessId) return res.status(400).json({ message: 'businessId is required' });
+
+    if (req.user?.role === 'business' && String(req.user.id) !== String(businessIdParam)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const businessObjectId = new Types.ObjectId(businessId);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+
+    const rows = await Order.aggregate([
+      { $sort: { createdAt: -1 } },
+      { $limit: 500 },
+      { $unwind: '$items' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: '$product' },
+      { $match: { 'product.business': businessObjectId } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'buyer',
+        },
+      },
+      { $unwind: { path: '$buyer', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: '$_id',
+          createdAt: { $first: '$createdAt' },
+          status: { $first: '$status' },
+          shipping: { $first: '$shipping' },
+          buyer: {
+            $first: {
+              id: '$buyer._id',
+              fullName: '$buyer.fullName',
+              email: '$buyer.email',
+              phone: '$buyer.phone',
+            },
+          },
+          items: {
+            $push: {
+              productId: '$product._id',
+              name: '$product.name',
+              image: '$product.image',
+              quantity: '$items.quantity',
+              priceAtPurchase: '$items.priceAtPurchase',
+              lineTotal: { $multiply: ['$items.quantity', '$items.priceAtPurchase'] },
+            },
+          },
+          sellerRevenue: {
+            $sum: { $multiply: ['$items.quantity', '$items.priceAtPurchase'] },
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: limit },
+    ]);
+
+    const orders = (rows || []).map((r) => {
+      const shipping = r.shipping || {};
+      const buyerName =
+        shipping.fullName ||
+        r.buyer?.fullName ||
+        'Customer';
+      const buyerEmail = shipping.email || r.buyer?.email || '';
+      const buyerPhone = shipping.phone || r.buyer?.phone || '';
+      return {
+        id: String(r._id),
+        createdAt: r.createdAt,
+        status: r.status || 'processing',
+        buyer: {
+          id: r.buyer?.id ? String(r.buyer.id) : undefined,
+          fullName: buyerName,
+          email: buyerEmail,
+          phone: buyerPhone,
+          address: shipping.address || '',
+          city: shipping.city || '',
+        },
+        items: (r.items || []).map((it) => ({
+          productId: String(it.productId),
+          name: it.name || 'Product',
+          image: it.image || '',
+          quantity: Number(it.quantity) || 0,
+          priceAtPurchase: Number(it.priceAtPurchase) || 0,
+          lineTotal: Number(it.lineTotal) || 0,
+        })),
+        sellerRevenue: Number(r.sellerRevenue) || 0,
+      };
+    });
+
+    res.json({ orders });
+  } catch (err) {
+    console.error('[Dashboard] getBusinessOrders error:', err);
+    res.status(500).json({ message: 'Failed to fetch business orders' });
+  }
+}
+
 module.exports = {
   getBusinessDashboard,
+  getBusinessOrders,
 };
 

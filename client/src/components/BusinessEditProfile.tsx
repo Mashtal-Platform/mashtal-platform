@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Building2, Save, X, Plus, Trash2, Clock } from 'lucide-react';
+import { Building2, Save, X, Plus, Trash2, Clock, Globe } from 'lucide-react';
 import { LebanonLocationPicker } from './LebanonLocationPicker';
 import { PhoneInput } from './PhoneInput';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { BUSINESS_TYPES } from '../shared/constants/business';
 
 // Backend validation compatibility (server/src/controllers/userController.js)
 function isServerPhoneCompatible(phone: string) {
@@ -34,6 +36,12 @@ export interface BusinessProfileForm {
     bio?: string;
     location?: string;
     phone?: string;
+    address?: string;
+    contactEmail?: string;
+    website?: string;
+    wishPhone?: string;
+    wishAccountNumber?: string;
+    specialties?: string[];
     hours?: Array<{ day: string; closed?: boolean; open?: Array<{ from: string; to: string }> }>;
     about?: Record<string, string>;
   };
@@ -122,7 +130,15 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
   const [companyName, setCompanyName] = useState(bp.companyName || profile.companyName || '');
   const [bio, setBio] = useState(bp.bio || profile.bio || '');
   const [location, setLocation] = useState(bp.location || profile.location || '');
+  const [address, setAddress] = useState(bp.address || '');
   const [phone, setPhone] = useState(bp.phone || profile.phone || '');
+  const [contactEmail, setContactEmail] = useState(bp.contactEmail || '');
+  const [website, setWebsite] = useState(bp.website || '');
+  const [wishPhone, setWishPhone] = useState(bp.wishPhone || '');
+  const [wishAccountNumber, setWishAccountNumber] = useState(bp.wishAccountNumber || '');
+  const [businessType, setBusinessType] = useState(
+    Array.isArray(bp.specialties) && bp.specialties[0] ? String(bp.specialties[0]) : ''
+  );
   const [hours, setHours] = useState(() => parseHours(profile.hours || bp.hours));
   const [customFields, setCustomFields] = useState<CustomField[]>(() =>
     aboutToCustomFields(profile.about || bp.about)
@@ -195,12 +211,54 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
       return;
     }
     setHoursErrors({});
-    if (phone.trim()) {
-      if (!isServerPhoneCompatible(phone)) {
-        setSaveError('Please enter a valid phone number (digits with optional +, spaces/dashes; e.g. +961 70 123 456).');
-        return;
-      }
+
+    if (!companyName.trim()) {
+      setSaveError('Business name is required.');
+      return;
     }
+    if (!businessType.trim()) {
+      setSaveError('Business type is required.');
+      return;
+    }
+    if (!bio.trim()) {
+      setSaveError('Business description is required.');
+      return;
+    }
+    if (!location.trim()) {
+      setSaveError('City / village is required.');
+      return;
+    }
+    if (!phone.trim()) {
+      setSaveError('Contact phone is required.');
+      return;
+    }
+    if (!isServerPhoneCompatible(phone)) {
+      setSaveError('Please enter a valid contact phone (e.g. +961 70 123 456).');
+      return;
+    }
+    const parsedPhone = parsePhoneNumberFromString(phone.trim(), 'LB');
+    if (!parsedPhone?.isValid()) {
+      setSaveError('Please enter a valid contact phone (e.g. +961 70 123 456).');
+      return;
+    }
+    if (!wishPhone.trim()) {
+      setSaveError('Whish Money phone is required for receiving payouts.');
+      return;
+    }
+    if (!isServerPhoneCompatible(wishPhone)) {
+      setSaveError('Please enter a valid Whish phone (e.g. +961 70 123 456).');
+      return;
+    }
+    const parsedWish = parsePhoneNumberFromString(wishPhone.trim(), 'LB');
+    if (!parsedWish?.isValid()) {
+      setSaveError('Please enter a valid Whish phone (e.g. +961 70 123 456).');
+      return;
+    }
+    if (contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+      setSaveError('Business contact email is invalid.');
+      return;
+    }
+
     const hoursForApi = hours.map((h) => ({
       day: h.day,
       closed: h.closed,
@@ -213,10 +271,16 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
       await onSave({
         fullName,
         businessProfile: {
-          companyName,
-          bio,
-          location,
-          phone,
+          companyName: companyName.trim(),
+          bio: bio.trim(),
+          location: location.trim(),
+          address: address.trim(),
+          phone: phone.trim(),
+          contactEmail: contactEmail.trim(),
+          website: website.trim(),
+          wishPhone: wishPhone.trim(),
+          wishAccountNumber: wishAccountNumber.trim(),
+          specialties: [businessType.trim()],
           hours: hoursForApi,
           about: Object.keys(about).length ? about : {},
         },
@@ -257,10 +321,13 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
             )}
 
             <section className="bg-neutral-50/50 rounded-xl p-6 border border-neutral-100">
-              <h3 className="text-base font-semibold text-neutral-800 mb-4 tracking-tight">Basic information</h3>
+              <h3 className="text-base font-semibold text-neutral-800 mb-1 tracking-tight">Basic information</h3>
+              <p className="text-sm text-neutral-600 mb-4">
+                Fields marked <span className="font-semibold">*</span> are required to sell on Mashtal.
+              </p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Your name</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Your name (optional)</label>
                   <input
                     type="text"
                     value={fullName}
@@ -270,7 +337,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Business / Company name</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Business / Company name *</label>
                   <input
                     type="text"
                     value={companyName}
@@ -281,7 +348,22 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                 </div>
               </div>
               <div className="mt-4">
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Bio / Description</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Business type *</label>
+                <select
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none bg-white"
+                >
+                  <option value="">Select type</option>
+                  {BUSINESS_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Bio / Description *</label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
@@ -292,27 +374,93 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
               </div>
               <div className="grid md:grid-cols-2 gap-4 mt-4">
                 <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Street address (optional)</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none"
+                    placeholder="Street address"
+                  />
+                </div>
+                <div>
                   <LebanonLocationPicker
-                    label="Location"
+                    label="City / Village (Lebanon) *"
                     value={location}
+                    required
                     placeholder="Search city or village in Lebanon…"
                     onChange={setLocation}
                   />
                 </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
                 <PhoneInput
-                  label="Phone"
+                  label="Contact phone *"
                   value={phone}
+                  required
                   defaultCountry="LB"
                   placeholder="e.g. +961 70 123 456"
                   onChange={setPhone}
                 />
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Business contact email (optional)</label>
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none"
+                    placeholder="info@business.com"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-neutral-400" />
+                  Website (optional)
+                </label>
+                <input
+                  type="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none"
+                  placeholder="https://www.yourbusiness.com"
+                />
+              </div>
+            </section>
+
+            <section className="bg-neutral-50/50 rounded-xl p-6 border border-neutral-100">
+              <h3 className="text-base font-semibold text-neutral-800 mb-1 tracking-tight">Payout (Whish)</h3>
+              <p className="text-sm text-neutral-600 mb-4">
+                Required so Mashtal can pay you for sales. Customers never see your card number.
+              </p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <PhoneInput
+                  label="Whish Money phone *"
+                  value={wishPhone}
+                  required
+                  defaultCountry="LB"
+                  placeholder="Whish wallet phone"
+                  onChange={setWishPhone}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Whish account / card number (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={wishAccountNumber}
+                    onChange={(e) => setWishAccountNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:border-green-600 focus:ring-2 focus:ring-green-100 outline-none"
+                    placeholder="Optional wallet or card ref"
+                  />
+                </div>
               </div>
             </section>
 
             <section className="bg-neutral-50/50 rounded-xl p-6 border border-neutral-100">
               <h3 className="text-base font-semibold text-neutral-800 mb-1 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-green-600" />
-                Working hours
+                Working hours (optional)
               </h3>
               <p className="text-sm text-neutral-600 mb-4">Opening time must be before closing time for each day.</p>
               <div className="rounded-xl border border-neutral-200 overflow-hidden bg-white shadow-sm">
@@ -364,7 +512,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
 
             <section className="bg-neutral-50/50 rounded-xl p-6 border border-neutral-100">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base font-semibold text-neutral-800 tracking-tight">About section fields</h3>
+                <h3 className="text-base font-semibold text-neutral-800 tracking-tight">About section fields (optional)</h3>
                 <button
                   type="button"
                   onClick={addCustomField}

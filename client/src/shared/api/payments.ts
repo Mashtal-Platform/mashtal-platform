@@ -1,9 +1,35 @@
 import { apiGet, apiPost } from './client';
 
+export interface PaymentLegDto {
+  legKey: string;
+  type: 'order_seller' | 'order_tax' | string;
+  toLabel: string;
+  toWishPhone?: string;
+  toWishAccount?: string;
+  amount: number;
+  status: string;
+  clientSecret: string;
+  stripePaymentIntentId: string;
+}
+
+export interface LedgerLegDto {
+  legKey: string;
+  type: string;
+  toLabel: string;
+  amount: number;
+  status: string;
+}
+
 export interface CreateStripePaymentIntentDto {
   paymentId: string;
-  clientSecret: string;
+  clientSecret: string | null;
   amountTotal: number;
+  amountSubtotal?: number;
+  amountTax?: number;
+  currency?: string;
+  taxRate?: number;
+  legs: PaymentLegDto[];
+  ledgerLegs?: LedgerLegDto[];
 }
 
 export interface PaymentStatusDto {
@@ -11,6 +37,16 @@ export interface PaymentStatusDto {
   status: 'initiated' | 'processing' | 'succeeded' | 'failed' | 'canceled' | 'refunded';
   order: any | null;
   amountTotal: number;
+  amountSubtotal?: number;
+  amountTax?: number;
+  currency?: string;
+  legs?: Array<{
+    legKey: string;
+    type: string;
+    toLabel: string;
+    amount: number;
+    status: string;
+  }>;
 }
 
 export async function createStripePaymentIntent(input: {
@@ -47,37 +83,8 @@ export async function createStripeSubscriptionPaymentIntent(input: {
   return apiPost('/payments/stripe/subscription/create-intent', input);
 }
 
-export async function fetchStripeSubscriptionPaymentStatus(paymentId: string): Promise<SubscriptionPaymentStatusDto> {
+export async function fetchStripeSubscriptionPaymentStatus(
+  paymentId: string
+): Promise<SubscriptionPaymentStatusDto> {
   return apiGet(`/payments/stripe/subscription/${paymentId}`);
 }
-
-export interface SubmitWishSubscriptionPaymentDto {
-  paymentId: string;
-  status: 'processing' | 'succeeded' | 'failed' | 'canceled' | 'initiated' | 'refunded';
-  message: string;
-}
-
-export interface WishSubscriptionPaymentStatusDto {
-  id: string;
-  status: 'initiated' | 'processing' | 'succeeded' | 'failed' | 'canceled' | 'refunded';
-  amountTotal: number;
-  planRole: SubscriptionPlanRole;
-  transferReference: string | null;
-  userSubscriptionStatus: 'active' | 'inactive';
-}
-
-export async function submitWishSubscriptionPayment(input: {
-  planRole: SubscriptionPlanRole;
-  senderFullName: string;
-  senderPhone: string;
-  transferReference: string;
-  transferDate: string;
-  amountTotal: number;
-}): Promise<SubmitWishSubscriptionPaymentDto> {
-  return apiPost('/payments/wish/subscription/submit', input);
-}
-
-export async function fetchWishSubscriptionPaymentStatus(paymentId: string): Promise<WishSubscriptionPaymentStatusDto> {
-  return apiGet(`/payments/wish/subscription/${paymentId}`);
-}
-

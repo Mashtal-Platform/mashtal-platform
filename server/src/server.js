@@ -125,6 +125,7 @@ app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/locations', locationRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/payments/stripe', stripePaymentRoutes);
 app.use('/api/payments/stripe/subscription', stripeSubscriptionRoutes);
 app.use('/api/payments/wish/subscription', wishSubscriptionRoutes);
@@ -256,6 +257,12 @@ connectDB().then(() => {
 
   httpServer.listen(PORT, () => {
     console.log(`[Server] Running on port ${PORT} (HTTP + WebSocket)`);
+    try {
+      const { startSubscriptionMaintenance } = require('./utils/subscription');
+      startSubscriptionMaintenance();
+    } catch (err) {
+      console.error('[Server] Failed to start subscription maintenance:', err?.message || err);
+    }
   });
 });
 

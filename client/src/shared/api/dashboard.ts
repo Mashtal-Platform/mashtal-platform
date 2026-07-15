@@ -44,6 +44,31 @@ export interface BusinessDashboardDto {
   topProducts: DashboardTopProductDto[];
 }
 
+export interface BusinessOrderItemDto {
+  productId: string;
+  name: string;
+  image: string;
+  quantity: number;
+  priceAtPurchase: number;
+  lineTotal: number;
+}
+
+export interface BusinessOrderDto {
+  id: string;
+  createdAt: string;
+  status: string;
+  buyer: {
+    id?: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+  };
+  items: BusinessOrderItemDto[];
+  sellerRevenue: number;
+}
+
 export async function fetchBusinessDashboardAnalytics(params: {
   businessId: string;
   period: DashboardPeriod;
@@ -52,5 +77,17 @@ export async function fetchBusinessDashboardAnalytics(params: {
   const q = new URLSearchParams({ period });
   // GET /api/dashboard/business/:businessId?period=month
   return apiGet<BusinessDashboardDto>(`/dashboard/business/${businessId}?${q.toString()}`);
+}
+
+export async function fetchBusinessOrders(params: {
+  businessId: string;
+  limit?: number;
+}): Promise<BusinessOrderDto[]> {
+  const { businessId, limit = 50 } = params;
+  const q = new URLSearchParams({ limit: String(limit) });
+  const data = await apiGet<{ orders: BusinessOrderDto[] }>(
+    `/dashboard/business/${businessId}/orders?${q.toString()}`
+  );
+  return Array.isArray(data?.orders) ? data.orders : [];
 }
 

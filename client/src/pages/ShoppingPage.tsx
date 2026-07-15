@@ -30,6 +30,7 @@ import {
 import { fetchProducts, ShoppingProductDto } from '../shared/api/products';
 import { getImageUrl } from '../shared/api/client';
 import { ProductDetailModal } from '../components/ProductDetailModal';
+import type { SavedItem } from '../shared/types';
 
 const productCategories = ['all', 'seeds', 'plants', 'trees', 'fertilizers', 'tools', 'equipment', 'irrigation', 'medicament', 'other'] as const;
 type ProductCategory = (typeof productCategories)[number];
@@ -55,7 +56,6 @@ const priceRanges = [
 ] as const;
 type PriceRangeId = (typeof priceRanges)[number]['id'];
 type ShoppingProduct = ShoppingProductDto;
-import { SavedItem } from '../App';
 
 interface ShoppingPageProps {
   onNavigateToBusiness?: (businessId: string) => void;

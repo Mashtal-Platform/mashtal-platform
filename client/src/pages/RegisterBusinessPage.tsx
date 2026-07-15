@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { PhoneInput } from '../components/PhoneInput';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
+import { BUSINESS_TYPES } from '../shared/constants/business';
 
 interface RegisterBusinessPageProps {
   onNavigate: (page: Page) => void;
@@ -23,6 +24,8 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
     phone: '',
     email: '',
     website: '',
+    wishPhone: '',
+    wishAccountNumber: '',
   });
   const [error, setError] = useState('');
 
@@ -42,31 +45,61 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
       setError('Business name is required.');
       return;
     }
+    if (!formData.businessType.trim()) {
+      setError('Business type is required.');
+      return;
+    }
+    if (!formData.description.trim()) {
+      setError('Business description is required.');
+      return;
+    }
+    if (!formData.location.trim()) {
+      setError('City / village is required.');
+      return;
+    }
     const phone = formData.phone?.trim() ?? '';
-    if (phone) {
-      const parsed = parsePhoneNumberFromString(phone, 'LB');
-      if (!parsed?.isValid()) {
-        setError('Please enter a valid phone number (example: +961 70 123 456).');
-        return;
-      }
+    if (!phone) {
+      setError('Contact phone is required.');
+      return;
+    }
+    const parsed = parsePhoneNumberFromString(phone, 'LB');
+    if (!parsed?.isValid()) {
+      setError('Please enter a valid contact phone (example: +961 70 123 456).');
+      return;
+    }
+    if (!formData.wishPhone.trim()) {
+      setError('Whish Money phone is required for receiving payouts.');
+      return;
+    }
+    const wishPhone = formData.wishPhone?.trim() ?? '';
+    const parsedWish = parsePhoneNumberFromString(wishPhone, 'LB');
+    if (!parsedWish?.isValid()) {
+      setError('Please enter a valid Whish phone number (example: +961 70 123 456).');
+      return;
+    }
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      setError('Business contact email is invalid.');
+      return;
     }
 
     setSubmitting(true);
     try {
-      const locationStr = formData.address
-        ? `${formData.address}, ${formData.location}`
-        : formData.location;
       await convertToBusiness({
         companyName: formData.businessName.trim(),
-        bio: formData.description || undefined,
-        phone: formData.phone || undefined,
-        location: locationStr || undefined,
+        bio: formData.description.trim(),
+        phone: formData.phone.trim(),
+        location: formData.location.trim(),
+        address: formData.address.trim() || undefined,
+        contactEmail: formData.email.trim() || undefined,
+        website: formData.website.trim() || undefined,
         specialties: formData.businessType ? [formData.businessType] : [],
-      });
+        wishPhone: formData.wishPhone.trim(),
+        wishAccountNumber: formData.wishAccountNumber.trim() || undefined,
+      } as any);
       setStep('success');
       setTimeout(() => {
-        onNavigate('profile');
-      }, 2500);
+        onNavigate('payment');
+      }, 1500);
     } catch (err: any) {
       setError(err?.message || err?.response?.data?.message || 'Failed to register business. Please try again.');
     } finally {
@@ -179,10 +212,12 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-neutral-700 mb-2">
-                Confirmation sent to <span className="text-green-600 font-medium">{formData.email}</span>
+                Next step: complete business payment to activate selling.
               </p>
               <p className="text-xs text-neutral-600">
-                You can now start adding products and growing your business!
+                {formData.email
+                  ? `Contact email on file: ${formData.email}`
+                  : 'You can manage products after payment activates your subscription.'}
               </p>
             </div>
             <p className="text-sm text-neutral-500">Redirecting to your dashboard...</p>
@@ -208,13 +243,18 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
           )}
 
           <div className="space-y-6">
-            {/* Business Logo Upload */}
+            <p className="text-sm text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3">
+              Fields marked with <span className="font-semibold text-neutral-900">*</span> are required.
+              Optional fields help customers find and trust your business.
+            </p>
+
+            {/* Business Logo Upload — optional */}
             <div>
-              <label className="block text-sm text-neutral-700 mb-2">Business Logo</label>
+              <label className="block text-sm text-neutral-700 mb-2">Business Logo (optional)</label>
               <div className="border-2 border-dashed border-neutral-200 rounded-lg p-8 text-center hover:border-green-600 transition-colors cursor-pointer">
                 <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
                 <p className="text-sm text-neutral-600">Click to upload or drag and drop</p>
-                <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB</p>
+                <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB — you can also set this later in Edit Profile</p>
               </div>
             </div>
 
@@ -240,11 +280,11 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
                   className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
                 >
                   <option value="">Select type</option>
-                  <option value="nursery">Nursery</option>
-                  <option value="farm">Farm</option>
-                  <option value="tools">Agricultural Tools Shop</option>
-                  <option value="services">Agricultural Services</option>
-                  <option value="other">Other</option>
+                  {BUSINESS_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -263,7 +303,7 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">Address *</label>
+                <label className="block text-sm text-neutral-700 mb-2">Street address (optional)</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <input
@@ -291,7 +331,7 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <PhoneInput
-                  label="Phone *"
+                  label="Contact phone *"
                   value={formData.phone}
                   required
                   defaultCountry="LB"
@@ -301,7 +341,7 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
               </div>
 
               <div>
-                <label className="block text-sm text-neutral-700 mb-2">Email *</label>
+                <label className="block text-sm text-neutral-700 mb-2">Business contact email (optional)</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <input
@@ -313,11 +353,38 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
                     placeholder="info@business.com"
                   />
                 </div>
+                <p className="text-xs text-neutral-500 mt-1">Public email shown to customers (not your login email)</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <PhoneInput
+                  label="Whish Money phone * (for payouts)"
+                  value={formData.wishPhone}
+                  required
+                  defaultCountry="LB"
+                  placeholder="Whish wallet phone"
+                  onChange={(v) => setFormData({ ...formData, wishPhone: v })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-700 mb-2">
+                  Whish account / card number (optional)
+                </label>
+                <input
+                  type="text"
+                  name="wishAccountNumber"
+                  value={formData.wishAccountNumber}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
+                  placeholder="Optional wallet or card ref"
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-neutral-700 mb-2">Website (Optional)</label>
+              <label className="block text-sm text-neutral-700 mb-2">Website (optional)</label>
               <div className="relative">
                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <input
@@ -326,7 +393,7 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
                   value={formData.website}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                  placeholder="www.yourbusiness.com"
+                  placeholder="https://www.yourbusiness.com"
                 />
               </div>
             </div>
