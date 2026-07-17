@@ -82,7 +82,9 @@ const UserSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true, index: true },
-    passwordHash: { type: String, required: true, select: false },
+    // Password is absent for accounts created exclusively through Google.
+    passwordHash: { type: String, select: false },
+    googleId: { type: String, unique: true, sparse: true, select: false },
 
     role: {
       type: String,
@@ -127,6 +129,7 @@ UserSchema.set('toJSON', {
     ret.id = ret._id.toString();
     delete ret._id;
     delete ret.passwordHash;
+    delete ret.googleId;
     delete ret.emailVerificationToken;
     delete ret.emailVerificationExpires;
     return ret;

@@ -67,7 +67,13 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (
+    credential: string,
+    registration?: {
+      role?: 'visitor' | 'business';
+      businessProfile?: Record<string, unknown>;
+    }
+  ) => Promise<User>;
   signUp: (input: {
     email: string;
     password: string;
@@ -157,8 +163,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
   };
 
-  const signInWithGoogle = async () => {
-    throw new Error('Google sign-in is not implemented yet');
+  const signInWithGoogle = async (
+    credential: string,
+    registration?: {
+      role?: 'visitor' | 'business';
+      businessProfile?: Record<string, unknown>;
+    }
+  ) => {
+    if (!credential) throw new Error('Google did not return a sign-in credential');
+    const data = await apiPost<{ token: string; user: any }>('/auth/google', {
+      credential,
+      ...registration,
+    });
+    localStorage.setItem('mashtal_token', data.token);
+    const nextUser = normalizeUser(data.user);
+    localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
+    setPendingVerification(null);
+    setUser(nextUser);
+    return nextUser;
   };
 
   const signUp = async (input: {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, Building2, Mail, Lock, CheckCircle2, Store, Loader2, Shield, Chrome } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { ArrowLeft, User, Building2, Mail, Lock, CheckCircle2, Store, Loader2, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -154,21 +155,56 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignUp = async (credential?: string) => {
     setError('');
-    setLoading(true);
 
     try {
-      await signInWithGoogle();
-      
-      // After Google sign-up, continue to verification / home (payment later)
+      if (!credential) throw new Error('Google did not return a credential');
+
+      let businessProfile: Record<string, unknown> | undefined;
       if (selectedRole === 'business') {
-        onVerificationNeeded();
+        if (
+          !formData.companyName.trim() ||
+          !formData.businessType.trim() ||
+          !formData.bio.trim() ||
+          !formData.location.trim() ||
+          !formData.phone.trim() ||
+          !formData.wishPhone.trim()
+        ) {
+          throw new Error('Complete all required business fields before continuing with Google');
+        }
+        const phone = parsePhoneNumberFromString(formData.phone.trim(), 'LB');
+        const wishPhone = parsePhoneNumberFromString(formData.wishPhone.trim(), 'LB');
+        if (!phone?.isValid() || !wishPhone?.isValid()) {
+          throw new Error('Enter valid contact and Whish phone numbers');
+        }
+        businessProfile = {
+          phone: formData.phone.trim(),
+          location: formData.location.trim(),
+          address: formData.address.trim() || undefined,
+          bio: formData.bio.trim(),
+          companyName: formData.companyName.trim(),
+          specialties: [formData.businessType],
+          contactEmail: formData.contactEmail.trim() || undefined,
+          website: formData.website.trim() || undefined,
+          wishPhone: formData.wishPhone.trim(),
+          wishAccountNumber: formData.wishAccountNumber.trim() || undefined,
+        };
+      }
+
+      setLoading(true);
+      const googleUser = await signInWithGoogle(credential, {
+        role: selectedRole === 'business' ? 'business' : 'visitor',
+        businessProfile,
+      });
+
+      if (googleUser.role === 'business') {
+        onPaymentNeeded('business');
       } else {
         onNavigate('home');
       }
-    } catch (err) {
-      setError('Failed to sign up with Google');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to sign up with Google');
     } finally {
       setLoading(false);
     }
@@ -268,16 +304,16 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
           )}
 
           {/* Google Sign Up */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-6"
-            onClick={handleGoogleSignUp}
-            disabled={loading}
-          >
-            <Chrome className="w-5 h-5 mr-2" />
-            Continue with Google
-          </Button>
+          <div className={`mb-6 flex justify-center ${loading ? 'pointer-events-none opacity-60' : ''}`}>
+            <GoogleLogin
+              onSuccess={(response) => handleGoogleSignUp(response.credential)}
+              onError={() => setError('Google sign-up was cancelled or failed')}
+              text="continue_with"
+              shape="rectangular"
+              size="large"
+              width={selectedRole === 'business' ? '400' : '352'}
+            />
+          </div>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
