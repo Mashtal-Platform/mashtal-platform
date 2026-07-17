@@ -4,3 +4,17 @@ server/.env
 !.env.example
 !client/.env.example
 !server/.env.example
+
+# Installed dependencies
+node_modules/
+**/node_modules/
+
+# Generated build output
+build/
+dist/
+**/build/
+**/dist/
+
+# Local tooling caches
+.vite/
+**/.vite/
