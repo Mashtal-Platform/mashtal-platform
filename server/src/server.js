@@ -258,6 +258,16 @@ connectDB().then(() => {
   httpServer.listen(PORT, () => {
     console.log(`[Server] Running on port ${PORT} (HTTP + WebSocket)`);
     try {
+      const { isSmtpConfigured } = require('./services/emailService');
+      console.log(
+        isSmtpConfigured()
+          ? '[Email] SMTP configured. Verification links will be emailed to users.'
+          : '[Email] SMTP NOT configured (set SMTP_HOST/SMTP_USER/SMTP_PASS in .env). Verification links will print to this console.'
+      );
+    } catch (err) {
+      console.error('[Server] Email service check failed:', err?.message || err);
+    }
+    try {
       const { startSubscriptionMaintenance } = require('./utils/subscription');
       startSubscriptionMaintenance();
     } catch (err) {
