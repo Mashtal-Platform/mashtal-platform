@@ -755,8 +755,8 @@ export function ProfilePage({
       {/* Profile Header Card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative -mt-20">
-          <div className="bg-white rounded-xl shadow-xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row gap-6">
+          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
               {/* Profile Image */}
               <div className="relative">
                 <div 
@@ -794,7 +794,7 @@ export function ProfilePage({
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold text-neutral-900">{displayProfile.fullName}</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{displayProfile.fullName}</h1>
                       {userRole=== 'business' && (
                         <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-blue-200 flex items-center gap-1">
                           <Building2 className="w-3 h-3" />
@@ -848,7 +848,7 @@ export function ProfilePage({
                 </div>
 
                 {/* Stats Section */}
-                <div className="grid grid-cols-3 gap-8 mt-8 pt-6 border-t border-neutral-100">
+                <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{userPosts.length}</div>
                     <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Posts</div>
@@ -868,12 +868,12 @@ export function ProfilePage({
         </div>
 
         {/* NEW SECTION: Purchases, Following, Followers & Saved Items */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Purchased Products Card */}
           <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow">
             <button
               onClick={() => setExpandedSection(expandedSection === 'purchases' ? null : 'purchases')}
-              className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors"
+              className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
@@ -947,7 +947,7 @@ export function ProfilePage({
           <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow">
             <button
               onClick={() => setExpandedSection(expandedSection === 'following' ? null : 'following')}
-              className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors"
+              className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
@@ -1017,7 +1017,7 @@ export function ProfilePage({
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                  onClick={() => onNavigate('followers')}
             >
-              <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+              <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
                     <Heart className="w-6 h-6 text-white" />
@@ -1041,7 +1041,7 @@ export function ProfilePage({
                  document.getElementById('profile-content-tabs')?.scrollIntoView({ behavior: 'smooth' });
                }}
           >
-            <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+            <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg">
                   <Bookmark className="w-6 h-6 text-white" />
@@ -1116,7 +1116,7 @@ export function ProfilePage({
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {activeTab === 'posts' && (
                 <div>
                   {userPosts.length > 0 ? (
@@ -1184,7 +1184,7 @@ export function ProfilePage({
                     userThreads.map((thread) => (
                       <div 
                         key={thread.id} 
-                        className="group border border-neutral-200 rounded-xl p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
+                        className="group border border-neutral-200 rounded-xl p-4 sm:p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
                         onClick={() => handleThreadClick(thread)}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -1256,7 +1256,7 @@ export function ProfilePage({
               )}
 
               {activeTab === 'saved' && (
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Saved Items Filter */}
                   <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                     {(['all', 'post', 'thread', 'product'] as const).map((filter) => (
@@ -1277,7 +1277,7 @@ export function ProfilePage({
                   </div>
 
                   {getFilteredSavedItems().length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                       {getFilteredSavedItems().map((item) => (
                         <div key={item.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
                           <div className="relative h-48 bg-gradient-to-br from-neutral-50 to-neutral-100">
@@ -1452,7 +1452,7 @@ export function ProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       About
                     </h3>
-                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-6 rounded-xl border border-neutral-100 text-sm">
+                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-4 sm:p-6 rounded-xl border border-neutral-100 text-sm">
                       {displayProfile.bio}
                     </p>
                   </section>
@@ -1462,7 +1462,7 @@ export function ProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Details
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
                         <div className="p-2.5 bg-white rounded-lg shadow-sm">
                           <MapPin className="w-5 h-5 text-green-600" />
@@ -1511,7 +1511,7 @@ export function ProfilePage({
                       <div className="space-y-4">
                         {displayProfile.customFields!.map((field) => (
                           field.title && field.content && (
-                            <div key={field.id} className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm hover:border-green-200 transition-all group">
+                            <div key={field.id} className="bg-white border border-neutral-200 rounded-xl p-4 sm:p-6 shadow-sm hover:border-green-200 transition-all group">
                               <h4 className="font-bold text-neutral-900 mb-3 flex items-center justify-between">
                                 <span>{field.title}</span>
                                 <div className="w-8 h-1 bg-green-100 group-hover:bg-green-600 transition-colors rounded-full" />

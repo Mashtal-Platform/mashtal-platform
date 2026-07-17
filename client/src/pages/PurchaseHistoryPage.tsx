@@ -256,13 +256,13 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
     <div className="min-h-screen bg-neutral-50">
       {/* Header Section */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-green-50 rounded-lg">
               <ShoppingBag className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-neutral-900">Purchase History</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">Purchase History</h1>
               <p className="text-sm text-neutral-600 mt-0.5">
                 Track and manage all your orders
               </p>
@@ -339,7 +339,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
       </div>
 
       {/* Filters and Search Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="bg-white rounded-lg border p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
@@ -478,7 +478,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
         <div className="space-y-4">
           {filteredPurchases.length === 0 ? (
             <Card>
-              <CardContent className="p-12 text-center">
+              <CardContent className="p-6 sm:p-12 text-center">
                 <div className="flex flex-col items-center gap-3">
                   <div className="p-4 bg-neutral-100 rounded-full">
                     <ShoppingBag className="w-8 h-8 text-neutral-400" />
@@ -509,7 +509,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <Card key={purchase.id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardContent className="p-0">
                   {/* Order Header */}
-                  <div className="bg-neutral-50 px-6 py-4 border-b">
+                  <div className="bg-neutral-50 px-4 sm:px-6 py-4 border-b">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-4">
                         <div>
@@ -568,7 +568,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                   </div>
 
                   {/* Order Details */}
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="flex gap-4">
                       {/* Product Image */}
                       <div className="flex-shrink-0">

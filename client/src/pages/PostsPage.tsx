@@ -290,7 +290,7 @@ export function PostsPage({
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       {/* Pull-to-Refresh Indicator */}
       {(isPulling || isRefreshing) && (
         <div
@@ -331,9 +331,9 @@ export function PostsPage({
           transition: isRefreshing || !isPulling ? 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
         }}
       >
-        <div className="mb-12 flex items-start justify-between gap-4">
+        <div className="mb-6 sm:mb-12 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl text-neutral-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
               Agricultural Updates & Posts
             </h1>
             <p className="text-neutral-600">

@@ -339,8 +339,8 @@ export function CombinedFeed({
               className="bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             >
               {/* Item Header */}
-              <div className="p-6 pb-4">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="p-4 pb-3 sm:p-6 sm:pb-4">
+                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
                   {/* Profile picture with role icon at bottom-right */}
                   <div className="relative flex-shrink-0">
                     <img
@@ -348,7 +348,7 @@ export function CombinedFeed({
                       alt={item.author.name}
                       onClick={(e) => handleAuthorClick(item, e)}
                       draggable="false"
-                      className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
+                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
                     />
                     <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
                       {getRoleIcon(item.author.type)}
@@ -423,8 +423,8 @@ export function CombinedFeed({
 
                 {/* Item Content */}
                 <div onClick={() => handleItemClick(item)}>
-                  <h3 className="text-xl text-neutral-900 mb-3">{item.title}</h3>
-                  <p className="text-neutral-600 mb-4">
+                  <h3 className="text-lg sm:text-xl text-neutral-900 mb-2 sm:mb-3">{item.title}</h3>
+                  <p className="text-sm sm:text-base text-neutral-600 mb-3 sm:mb-4">
                     {truncateText(item.content, 150)}
                   </p>
 
@@ -452,7 +452,7 @@ export function CombinedFeed({
               {/* Item Image */}
               {item.image && (
                 <div 
-                  className="relative h-80 overflow-hidden cursor-pointer bg-neutral-100"
+                  className="relative h-52 sm:h-80 overflow-hidden cursor-pointer bg-neutral-100"
                   onClick={() => handleItemClick(item)}
                 >
                   <img
@@ -472,8 +472,8 @@ export function CombinedFeed({
               )}
 
               {/* Item Actions */}
-              <div className="p-6 pt-4 border-t border-neutral-100">
-                <div className="flex items-center gap-6">
+              <div className="p-4 pt-3 sm:p-6 sm:pt-4 border-t border-neutral-100">
+                <div className="flex items-center gap-4 sm:gap-6">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

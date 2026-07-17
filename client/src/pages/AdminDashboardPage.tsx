@@ -189,10 +189,10 @@ export function AdminDashboardPage({
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900">Admin dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Admin dashboard</h1>
             <p className="text-neutral-600 mt-1">
               Mashtal income, subscriptions, and payment ledgers
             </p>
@@ -251,7 +251,7 @@ export function AdminDashboardPage({
               ].map(([label, value]) => (
                 <div key={String(label)} className="bg-white rounded-xl border border-neutral-100 p-5">
                   <div className="text-sm text-neutral-500">{label}</div>
-                  <div className="text-3xl font-bold text-neutral-900 mt-1">{value}</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mt-1">{value}</div>
                 </div>
               ))}
             </div>
@@ -259,7 +259,7 @@ export function AdminDashboardPage({
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <div className="text-sm text-neutral-500">Mashtal income (all time)</div>
-                <div className="text-2xl font-bold text-green-700 mt-1">
+                <div className="text-xl sm:text-2xl font-bold text-green-700 mt-1">
                   {fmtMoney(overview.mashtalIncomeTotal)}
                 </div>
                 <div className="text-xs text-neutral-500 mt-2">
@@ -268,7 +268,7 @@ export function AdminDashboardPage({
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <div className="text-sm text-neutral-500">Mashtal income (this year)</div>
-                <div className="text-2xl font-bold text-green-700 mt-1">
+                <div className="text-xl sm:text-2xl font-bold text-green-700 mt-1">
                   {fmtMoney(overview.mashtalIncomeYear)}
                 </div>
                 <div className="text-xs text-neutral-500 mt-2">
@@ -278,19 +278,19 @@ export function AdminDashboardPage({
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <div className="text-sm text-neutral-500">Seller GMV</div>
-                <div className="text-2xl font-bold text-neutral-900 mt-1">
+                <div className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">
                   {fmtMoney(overview.gmvSellers)}
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <div className="text-sm text-neutral-500">Orders</div>
-                <div className="text-2xl font-bold text-neutral-900 mt-1">
+                <div className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">
                   {overview.ordersCount}
                 </div>
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <h3 className="font-semibold text-neutral-900 mb-4">
                   Mashtal income by month
@@ -417,22 +417,22 @@ export function AdminDashboardPage({
             </div>
 
             <div className="bg-white rounded-xl border border-neutral-100 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="bg-neutral-50 text-left text-neutral-500">
                   <tr>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Role</th>
-                    <th className="p-3">Sub</th>
-                    <th className="p-3">Actions</th>
+                    <th className="p-2 sm:p-3">Name</th>
+                    <th className="p-2 sm:p-3">Email</th>
+                    <th className="p-2 sm:p-3">Role</th>
+                    <th className="p-2 sm:p-3">Sub</th>
+                    <th className="p-2 sm:p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="border-t border-neutral-100">
-                      <td className="p-3 font-medium">{u.fullName}</td>
-                      <td className="p-3">{u.email}</td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3 font-medium">{u.fullName}</td>
+                      <td className="p-2 sm:p-3">{u.email}</td>
+                      <td className="p-2 sm:p-3">
                         <select
                           className="border rounded px-2 py-1"
                           value={u.role}
@@ -446,7 +446,7 @@ export function AdminDashboardPage({
                           <option value="admin">admin</option>
                         </select>
                       </td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         {u.role === 'business' ? (
                           <select
                             className="border rounded px-2 py-1"
@@ -465,7 +465,7 @@ export function AdminDashboardPage({
                           '—'
                         )}
                       </td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         <button
                           type="button"
                           className="text-red-600 hover:bg-red-50 p-2 rounded"
@@ -488,24 +488,24 @@ export function AdminDashboardPage({
 
         {tab === 'businesses' && (
           <div className="bg-white rounded-xl border border-neutral-100 overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-neutral-50 text-left text-neutral-500">
                 <tr>
-                  <th className="p-3">Business</th>
-                  <th className="p-3">Email</th>
-                  <th className="p-3">Whish phone</th>
-                  <th className="p-3">Subscription</th>
-                  <th className="p-3">Expires</th>
-                  <th className="p-3">Actions</th>
+                  <th className="p-2 sm:p-3">Business</th>
+                  <th className="p-2 sm:p-3">Email</th>
+                  <th className="p-2 sm:p-3">Whish phone</th>
+                  <th className="p-2 sm:p-3">Subscription</th>
+                  <th className="p-2 sm:p-3">Expires</th>
+                  <th className="p-2 sm:p-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {businesses.map((b) => (
                   <tr key={b.id} className="border-t border-neutral-100">
-                    <td className="p-3 font-medium">{b.companyName || b.fullName}</td>
-                    <td className="p-3">{b.email}</td>
-                    <td className="p-3">{b.wishPhone || '—'}</td>
-                    <td className="p-3">
+                    <td className="p-2 sm:p-3 font-medium">{b.companyName || b.fullName}</td>
+                    <td className="p-2 sm:p-3">{b.email}</td>
+                    <td className="p-2 sm:p-3">{b.wishPhone || '—'}</td>
+                    <td className="p-2 sm:p-3">
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${
                           b.subscriptionStatus === 'active'
@@ -516,8 +516,8 @@ export function AdminDashboardPage({
                         {b.subscriptionStatus || 'inactive'}
                       </span>
                     </td>
-                    <td className="p-3 whitespace-nowrap">{fmtDate(b.subscriptionExpiresAt)}</td>
-                    <td className="p-3 flex gap-2">
+                    <td className="p-2 sm:p-3 whitespace-nowrap">{fmtDate(b.subscriptionExpiresAt)}</td>
+                    <td className="p-2 sm:p-3 flex gap-2">
                       <Button
                         size="sm"
                         className="h-8 bg-green-600 hover:bg-green-700"
@@ -586,16 +586,16 @@ export function AdminDashboardPage({
             </div>
 
             <div className="bg-white rounded-xl border border-neutral-100 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="bg-neutral-50 text-left text-neutral-500">
                   <tr>
-                    <th className="p-3">Business</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Started</th>
-                    <th className="p-3">Expires</th>
-                    <th className="p-3">Days left</th>
-                    <th className="p-3">Months</th>
-                    <th className="p-3">Actions</th>
+                    <th className="p-2 sm:p-3">Business</th>
+                    <th className="p-2 sm:p-3">Status</th>
+                    <th className="p-2 sm:p-3">Started</th>
+                    <th className="p-2 sm:p-3">Expires</th>
+                    <th className="p-2 sm:p-3">Days left</th>
+                    <th className="p-2 sm:p-3">Months</th>
+                    <th className="p-2 sm:p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -606,14 +606,14 @@ export function AdminDashboardPage({
                         s.expiresSoon ? 'bg-amber-50/60' : ''
                       }`}
                     >
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         <div className="font-medium">{s.companyName || s.fullName}</div>
                         <div className="text-xs text-neutral-500">{s.email}</div>
                         {s.phone ? (
                           <div className="text-xs text-neutral-500">{s.phone}</div>
                         ) : null}
                       </td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         <span
                           className={`px-2 py-0.5 rounded text-xs font-medium ${
                             s.subscriptionStatus === 'active'
@@ -624,19 +624,19 @@ export function AdminDashboardPage({
                           {s.subscriptionStatus || 'inactive'}
                         </span>
                       </td>
-                      <td className="p-3 whitespace-nowrap">{fmtDate(s.subscriptionStartedAt)}</td>
-                      <td className="p-3 whitespace-nowrap">{fmtDate(s.subscriptionExpiresAt)}</td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3 whitespace-nowrap">{fmtDate(s.subscriptionStartedAt)}</td>
+                      <td className="p-2 sm:p-3 whitespace-nowrap">{fmtDate(s.subscriptionExpiresAt)}</td>
+                      <td className="p-2 sm:p-3">
                         {s.daysRemaining == null
                           ? '—'
                           : s.daysRemaining < 0
                             ? `Ended ${Math.abs(s.daysRemaining)}d ago`
                             : `${s.daysRemaining}d`}
                       </td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         {s.monthsActive != null ? `${s.monthsActive} mo` : '—'}
                       </td>
-                      <td className="p-3">
+                      <td className="p-2 sm:p-3">
                         <Button
                           size="sm"
                           variant="outline"
@@ -679,7 +679,7 @@ export function AdminDashboardPage({
             </div>
 
             {txGroups.length === 0 ? (
-              <div className="bg-white rounded-xl border border-neutral-100 p-8 text-center text-neutral-500 text-sm">
+              <div className="bg-white rounded-xl border border-neutral-100 p-4 sm:p-8 text-center text-neutral-500 text-sm">
                 No transactions yet
               </div>
             ) : (
@@ -735,14 +735,14 @@ export function AdminDashboardPage({
                     ) : null}
 
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs sm:text-sm">
                         <thead className="text-left text-neutral-500">
                           <tr>
-                            <th className="p-3">Type</th>
-                            <th className="p-3">From</th>
-                            <th className="p-3">To</th>
-                            <th className="p-3">Amount</th>
-                            <th className="p-3">Status</th>
+                            <th className="p-2 sm:p-3">Type</th>
+                            <th className="p-2 sm:p-3">From</th>
+                            <th className="p-2 sm:p-3">To</th>
+                            <th className="p-2 sm:p-3">Amount</th>
+                            <th className="p-2 sm:p-3">Status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -752,8 +752,8 @@ export function AdminDashboardPage({
                               t.toPhone || t.toWishPhone || t.toUser?.phone || '';
                             return (
                             <tr key={t.id} className="border-t border-neutral-100">
-                              <td className="p-3">{t.type}</td>
-                              <td className="p-3">
+                              <td className="p-2 sm:p-3">{t.type}</td>
+                              <td className="p-2 sm:p-3">
                                 <div className="font-medium text-neutral-900">
                                   {t.fromUser?.fullName || '—'}
                                 </div>
@@ -761,7 +761,7 @@ export function AdminDashboardPage({
                                   {fromPhone || 'No phone'}
                                 </div>
                               </td>
-                              <td className="p-3">
+                              <td className="p-2 sm:p-3">
                                 <div className="font-medium text-neutral-900">
                                   {t.toLabel || t.toUser?.fullName || 'Mashtal'}
                                 </div>
@@ -769,10 +769,10 @@ export function AdminDashboardPage({
                                   {toPhone || (t.type === 'order_tax' ? 'Platform' : 'No phone')}
                                 </div>
                               </td>
-                              <td className="p-3 font-medium">
+                              <td className="p-2 sm:p-3 font-medium">
                                 {t.currency} {Number(t.amount).toFixed(2)}
                               </td>
-                              <td className="p-3">{t.status}</td>
+                              <td className="p-2 sm:p-3">{t.status}</td>
                             </tr>
                             );
                           })}                        </tbody>

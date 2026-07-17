@@ -506,11 +506,11 @@ export function DashboardPage({
 
   // Helper for Stats Cards
   const StatsCard = ({ title, value, growth, icon: Icon, colorClass, bgClass, trend }: any) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 hover:shadow-lg transition-all duration-300 group">
+    <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-neutral-100 hover:shadow-lg transition-all duration-300 group">
       <div className="flex items-start justify-between mb-4">
         <div>
           <p className="text-sm font-medium text-neutral-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">{value}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 tracking-tight">{value}</h3>
         </div>
         <div className={`p-3 rounded-xl ${bgClass} group-hover:scale-110 transition-transform duration-300`}>
           <Icon className={`w-6 h-6 ${colorClass}`} />
@@ -527,12 +527,12 @@ export function DashboardPage({
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-neutral-900 mb-2">Business Analytics</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-2">Business Analytics</h1>
             <p className="text-lg text-neutral-600">
               Welcome back, <span className="text-green-600 font-semibold">{user?.fullName || 'John Doe'}</span>
             </p>
@@ -551,12 +551,12 @@ export function DashboardPage({
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
           {(['week', 'month', 'year'] as const).map((period) => (
             <button
               key={period}
               onClick={() => setSelectedPeriod(period)}
-              className={`px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
                 selectedPeriod === period
                   ? 'bg-green-600 text-white shadow-md'
                   : 'bg-white text-neutral-700 border border-neutral-200 hover:border-green-600'
@@ -569,7 +569,7 @@ export function DashboardPage({
         </div>
 
         {/* Stats Cards - Redesigned */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatsCard 
             title="Total Revenue" 
             value={`$${currentData.totalRevenue.toLocaleString()}`} 
@@ -601,28 +601,32 @@ export function DashboardPage({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'analytics' | 'products' | 'orders')} className="w-full">
-          <TabsList className="bg-white shadow-sm border border-neutral-200">
-            <TabsTrigger value="analytics">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics & Insights
-            </TabsTrigger>
-            <TabsTrigger value="orders">
-              <ClipboardList className="w-4 h-4 mr-2" />
-              Orders
-            </TabsTrigger>
-            <TabsTrigger value="products">
-              <Package className="w-4 h-4 mr-2" />
-              Product Management
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="bg-white shadow-sm border border-neutral-200">
+              <TabsTrigger value="analytics">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Analytics & Insights</span>
+                <span className="sm:hidden">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders">
+                <ClipboardList className="w-4 h-4 mr-2" />
+                Orders
+              </TabsTrigger>
+              <TabsTrigger value="products">
+                <Package className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Product Management</span>
+                <span className="sm:hidden">Products</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6 mt-6">
             
             {/* Sales & Revenue Distribution Charts */}
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Sales Distribution Pie Chart */}
-              <Card className="p-6 bg-white shadow-lg border border-neutral-100">
+              <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-neutral-900">Sales Distribution</h3>
                   <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">By Units Sold</div>
@@ -665,7 +669,7 @@ export function DashboardPage({
               </Card>
 
               {/* Revenue Distribution Pie Chart */}
-              <Card className="p-6 bg-white shadow-lg border border-neutral-100">
+              <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-neutral-900">Revenue Distribution</h3>
                   <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">By Product Revenue</div>
@@ -709,7 +713,7 @@ export function DashboardPage({
             </div>
 
             {/* Performance Overview Chart */}
-            <Card className="p-6 bg-white shadow-lg border border-neutral-100">
+            <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-bold text-neutral-900">Performance Overview</h3>
@@ -762,10 +766,10 @@ export function DashboardPage({
             </Card>
 
             {/* Top Performing Products Table */}
-            <Card className="p-8 bg-white shadow-lg border border-neutral-100">
+            <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-neutral-900">Top Performing Products</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Top Performing Products</h3>
                   <p className="text-neutral-600 mt-1">Ranked by revenue for the selected period</p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
@@ -776,7 +780,7 @@ export function DashboardPage({
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-neutral-200">
+              <div className="overflow-x-auto rounded-xl border border-neutral-200">
                 {productsLoading || dashboardLoading ? (
                   <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
                     <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
@@ -789,15 +793,15 @@ export function DashboardPage({
                     <p className="text-sm mt-1">Add products in the Product Inventory tab to see performance here.</p>
                   </div>
                 ) : (
-                <table className="w-full">
+                <table className="w-full text-sm sm:text-base">
                   <thead>
                     <tr className="bg-neutral-50 border-b border-neutral-200">
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Rank</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Category</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Units Sold</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Revenue</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">% of Total</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Rank</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Product</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Category</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Units Sold</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Revenue</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">% of Total</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-neutral-100">
@@ -809,7 +813,7 @@ export function DashboardPage({
 
                       return (
                         <tr key={product.id} className="hover:bg-neutral-50 transition-colors">
-                          <td className="px-6 py-5">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5">
                             <div className="flex items-center gap-3">
                               {rankIcon ? (
                                 rankIcon
@@ -820,12 +824,12 @@ export function DashboardPage({
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-4">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5">
+                            <div className="flex items-center gap-2 sm:gap-4">
                               <ImageWithFallback 
                                 src={getImageUrl(product.image)} 
                                 alt={product.name} 
-                                className="w-14 h-14 rounded-lg object-cover border-2 border-neutral-100"
+                                className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover border-2 border-neutral-100"
                               />
                               <div>
                                 <p className="font-semibold text-neutral-900">{product.name}</p>
@@ -833,19 +837,19 @@ export function DashboardPage({
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-5">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                               {product.category}
                             </span>
                           </td>
-                          <td className="px-6 py-5 text-right">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5 text-right">
                             <p className="font-semibold text-neutral-900">{product.sold}</p>
                             <p className="text-xs text-neutral-500">units</p>
                           </td>
-                          <td className="px-6 py-5 text-right">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5 text-right">
                             <p className="font-bold text-green-600">${product.revenue.toLocaleString()}</p>
                           </td>
-                          <td className="px-6 py-5 text-right">
+                          <td className="px-3 py-3 sm:px-6 sm:py-5 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden">
                                 <div 
@@ -868,10 +872,10 @@ export function DashboardPage({
 
           {/* Orders Tab */}
           <TabsContent value="orders" className="mt-6">
-            <Card className="p-8 bg-white shadow-lg border border-neutral-100">
-              <div className="flex items-center justify-between mb-8">
+            <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-2xl font-bold text-neutral-900">Customer Orders</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Customer Orders</h3>
                   <p className="text-neutral-600 mt-1">
                     Paid cart items for your products appear here after checkout
                   </p>
@@ -899,16 +903,16 @@ export function DashboardPage({
                   <p className="text-sm mt-1">Sales appear here after customers pay</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-neutral-200">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto rounded-xl border border-neutral-200">
+                  <table className="w-full text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200 text-left">
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Date</th>
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Buyer</th>
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Phone</th>
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Products</th>
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Revenue</th>
-                        <th className="px-4 py-3 font-semibold text-neutral-700">Status</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Date</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Buyer</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Phone</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Products</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Revenue</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -922,21 +926,21 @@ export function DashboardPage({
                               : 'hover:bg-neutral-50/80'
                           }`}
                         >
-                          <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-neutral-600 whitespace-nowrap">
                             {order.createdAt
                               ? new Date(order.createdAt).toLocaleString()
                               : '—'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3">
                             <div className="font-medium text-neutral-900">{order.buyer?.fullName || 'Customer'}</div>
                             {order.buyer?.email ? (
                               <div className="text-xs text-neutral-500">{order.buyer.email}</div>
                             ) : null}
                           </td>
-                          <td className="px-4 py-3 text-neutral-700 whitespace-nowrap">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-neutral-700 whitespace-nowrap">
                             {order.buyer?.phone || '—'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3">
                             <ul className="space-y-1">
                               {order.items.map((it) => (
                                 <li key={`${order.id}-${it.productId}`} className="text-neutral-700">
@@ -947,10 +951,10 @@ export function DashboardPage({
                               ))}
                             </ul>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-green-700 whitespace-nowrap">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-green-700 whitespace-nowrap">
                             ${Number(order.sellerRevenue).toFixed(2)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-2 sm:px-4 sm:py-3">
                             <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 capitalize">
                               {order.status || 'processing'}
                             </span>
@@ -966,10 +970,10 @@ export function DashboardPage({
 
           {/* Products Management Tab */}
           <TabsContent value="products" className="mt-6">
-            <Card className="p-8 bg-white shadow-lg border border-neutral-100">
-              <div className="flex items-center justify-between mb-8">
+            <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
+              <div className="flex items-center justify-between mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-2xl font-bold text-neutral-900">Product Inventory</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Product Inventory</h3>
                   <p className="text-neutral-600 mt-1">Manage your product catalog</p>
                 </div>
                 <Button 
@@ -977,7 +981,7 @@ export function DashboardPage({
                     resetProductForm();
                     setShowAddProductModal(true);
                   }}
-                  className="bg-green-600 hover:bg-green-700 shadow-md px-6 h-11"
+                  className="bg-green-600 hover:bg-green-700 shadow-md px-4 sm:px-6 h-11"
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   Add Product
@@ -1003,7 +1007,7 @@ export function DashboardPage({
                   </Button>
                 </div>
               ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {products.map((product) => (
                   <div key={product.id} className="group relative bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-green-500 transition-all duration-300" data-product-id={product.id}>
                     {/* Product Image */}
@@ -1076,9 +1080,9 @@ export function DashboardPage({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             {/* Header - Fixed */}
-            <div className="flex-none bg-gradient-to-r from-green-600 to-green-700 px-8 py-6 flex items-center justify-between rounded-t-2xl">
+            <div className="flex-none bg-gradient-to-r from-green-600 to-green-700 px-4 py-4 sm:px-8 sm:py-6 flex items-center justify-between rounded-t-2xl">
               <div>
-                <h3 className="text-2xl font-bold text-white">
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </h3>
                 <p className="text-green-100 text-sm mt-1">
@@ -1097,11 +1101,11 @@ export function DashboardPage({
             </div>
 
             {/* Body - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-neutral-900 mb-3">Product Image *</label>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     {imagePreview ? (
                       <div className="relative w-48 h-48 rounded-xl overflow-hidden border-2 border-green-500 shadow-lg shrink-0">
                         <img src={getImageUrl(imagePreview) || imagePreview} alt="Preview" className="w-full h-full object-cover" />
@@ -1154,7 +1158,7 @@ export function DashboardPage({
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-neutral-900 mb-2">Product Name *</label>
                     <input
@@ -1210,7 +1214,7 @@ export function DashboardPage({
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-neutral-900 mb-2">Price ($) *</label>
                     <div className="relative">
@@ -1240,10 +1244,10 @@ export function DashboardPage({
             </div>
 
             {productSubmitError && (
-              <div className="px-8 py-2 text-red-600 text-sm">{productSubmitError}</div>
+              <div className="px-4 sm:px-8 py-2 text-red-600 text-sm">{productSubmitError}</div>
             )}
             {/* Footer - Fixed */}
-            <div className="flex-none border-t border-neutral-200 px-8 py-6 bg-neutral-50 flex gap-4 rounded-b-2xl">
+            <div className="flex-none border-t border-neutral-200 px-4 py-4 sm:px-8 sm:py-6 bg-neutral-50 flex gap-4 rounded-b-2xl">
               <Button
                 variant="outline"
                 className="flex-1 border-2 h-11"
@@ -1272,7 +1276,7 @@ export function DashboardPage({
       {showDeleteModal && productToDelete && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-5">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-white" />
@@ -1284,7 +1288,7 @@ export function DashboardPage({
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <p className="text-neutral-700 mb-4">
                 Are you sure you want to delete this product?
               </p>

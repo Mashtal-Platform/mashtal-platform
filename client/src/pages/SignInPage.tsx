@@ -58,13 +58,13 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl font-bold text-white">M</span>
             </div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Welcome Back</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Welcome Back</h1>
             <p className="text-neutral-600">Sign in to your Mashtal account</p>
           </div>
 
@@ -83,7 +83,6 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
               text="continue_with"
               shape="rectangular"
               size="large"
-              width="352"
             />
           </div>
 

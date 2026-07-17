@@ -150,22 +150,22 @@ export function NotificationsPage({
   const readCount = notifications.filter((n) => n.read).length;
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl text-neutral-900 mb-2">Notifications</h1>
+            <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Notifications</h1>
             <p className="text-neutral-600">
               {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
             </p>
           </div>
           {notifications.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Mark All as Read */}
               {unreadCount > 0 && onMarkAllAsRead && (
                 <button
                   onClick={onMarkAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-sm font-medium"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-xs sm:text-sm font-medium"
                   title="Mark all notifications as read"
                 >
                   <CheckCheck className="w-4 h-4" />
@@ -176,7 +176,7 @@ export function NotificationsPage({
               {readCount > 0 && onDeleteRead && (
                 <button
                   onClick={onDeleteRead}
-                  className="flex items-center gap-2 px-4 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-sm font-medium"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-xs sm:text-sm font-medium"
                   title="Delete all read notifications"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -186,7 +186,7 @@ export function NotificationsPage({
               {/* Clear All */}
               <button
                 onClick={onClearAll}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs sm:text-sm font-medium"
                 title="Clear all notifications"
               >
                 <Trash2 className="w-4 h-4" />
@@ -197,37 +197,37 @@ export function NotificationsPage({
         </div>
 
         {notifications.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center shadow-sm">
+          <div className="bg-white rounded-xl p-6 sm:p-12 text-center shadow-sm">
             <Bell className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
             <h3 className="text-xl text-neutral-900 mb-2">No notifications</h3>
             <p className="text-neutral-600">You're all caught up!</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`bg-white rounded-xl p-4 flex items-start gap-4 cursor-pointer transition-all hover:shadow-md ${
+                className={`bg-white rounded-xl p-3 sm:p-4 flex items-start gap-3 sm:gap-4 cursor-pointer transition-all hover:shadow-md ${
                   !notification.read 
                     ? 'border-2 border-green-500 shadow-sm' 
                     : 'border border-neutral-200'
                 }`}
               >
-                <div className={`p-2.5 rounded-lg shrink-0 ${
+                <div className={`p-2 sm:p-2.5 rounded-lg shrink-0 ${
                   !notification.read ? 'bg-green-50' : 'bg-neutral-50'
                 }`}>
                   {getIcon(notification.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`${
+                  <p className={`text-sm sm:text-base ${
                     !notification.read 
                       ? 'text-neutral-900 font-medium' 
                       : 'text-neutral-700'
                   }`}>
                     {notification.message}
                   </p>
-                  <p className="text-sm text-neutral-500 mt-1">{notification.time}</p>
+                  <p className="text-xs sm:text-sm text-neutral-500 mt-1">{notification.time}</p>
                 </div>
                 {!notification.read && (
                   <div className="w-2.5 h-2.5 bg-green-600 rounded-full mt-2 shrink-0 animate-pulse"></div>

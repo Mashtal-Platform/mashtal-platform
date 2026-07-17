@@ -11,20 +11,20 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
   const { user } = useAuth();
   
   return (
-    <section className="py-20 bg-white">
+    <section className="py-10 sm:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-neutral-900 mb-4">
             How Mashtal Works
           </h2>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
             Connect with trusted agricultural businesses in four simple steps
           </p>
         </div>
 
         {/* Steps Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
@@ -53,11 +53,11 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
         </div>
 
         {/* CTA Section */}
-        <div className="mt-16 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-8 md:p-12 text-center text-white">
-          <h3 className="text-3xl mb-4">
+        <div className="mt-10 sm:mt-16 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 sm:p-8 md:p-12 text-center text-white">
+          <h3 className="text-2xl sm:text-3xl mb-4">
             Ready to Get Started?
           </h3>
-          <p className="text-green-50 mb-8 text-lg max-w-2xl mx-auto">
+          <p className="text-green-50 mb-6 sm:mb-8 text-base sm:text-lg max-w-2xl mx-auto">
             Join thousands of farmers and agricultural businesses already using Mashtal
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -65,14 +65,14 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
             {user?.role !== 'business' && (
               <button
                 onClick={() => onNavigate('register-business')}
-                className="bg-white text-green-600 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors"
+                className="bg-white text-green-600 px-6 sm:px-8 py-3 rounded-lg hover:bg-green-50 transition-colors"
               >
                 Create Business Account
               </button>
             )}
             <button
               onClick={() => onNavigate('search')}
-              className="border-2 border-white text-white px-8 py-3 rounded-lg hover:bg-white/10 transition-colors"
+              className="border-2 border-white text-white px-6 sm:px-8 py-3 rounded-lg hover:bg-white/10 transition-colors"
             >
               Browse as Visitor
             </button>

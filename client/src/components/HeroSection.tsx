@@ -8,21 +8,21 @@ interface HeroSectionProps {
 export function HeroSection({ onNavigate }: HeroSectionProps) {
   return (
     <section className="relative bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 lg:py-24">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
           {/* Left Content */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-200">
                 <Leaf className="w-4 h-4" />
                 <span className="text-sm">Trusted Agricultural Marketplace</span>
               </div>
 
-              <h1 className="text-4xl lg:text-5xl text-neutral-900 leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl text-neutral-900 leading-tight">
                 Connect With Trusted Nurseries & Agricultural Experts
               </h1>
 
-              <p className="text-lg text-neutral-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-neutral-600 leading-relaxed">
                 Discover quality plants, farming tools, and professional agricultural services. 
                 Shop online, chat with experts, and grow your farming business with Mashtal.
               </p>
@@ -32,21 +32,21 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
                 onClick={() => onNavigate('search')}
-                className="flex items-center justify-center gap-2 bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/30"
+                className="flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/30"
               >
                 <span>Start Shopping</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => onNavigate('posts')}
-                className="flex items-center justify-center gap-2 border-2 border-neutral-300 text-neutral-700 px-8 py-4 rounded-lg hover:border-green-600 hover:text-green-600 transition-colors"
+                className="flex items-center justify-center gap-2 border-2 border-neutral-300 text-neutral-700 px-6 py-3 sm:px-8 sm:py-4 rounded-lg hover:border-green-600 hover:text-green-600 transition-colors"
               >
                 Browse Updates
               </button>
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-3 gap-6 pt-8">
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-6 sm:pt-8">
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                   <Shield className="w-6 h-6 text-green-600" />
@@ -106,18 +106,18 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             </div>
 
             {/* Floating Stats Card */}
-            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl p-6 border border-neutral-200 w-11/12">
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-2xl p-4 sm:p-6 border border-neutral-200 w-11/12">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-2xl text-green-600">250+</div>
+                  <div className="text-xl sm:text-2xl text-green-600">250+</div>
                   <div className="text-xs text-neutral-600">Verified Nurseries</div>
                 </div>
                 <div className="border-l border-neutral-200">
-                  <div className="text-2xl text-green-600">5K+</div>
+                  <div className="text-xl sm:text-2xl text-green-600">5K+</div>
                   <div className="text-xs text-neutral-600">Active Users</div>
                 </div>
                 <div className="border-l border-neutral-200">
-                  <div className="text-2xl text-green-600">1K+</div>
+                  <div className="text-xl sm:text-2xl text-green-600">1K+</div>
                   <div className="text-xs text-neutral-600">Products</div>
                 </div>
               </div>

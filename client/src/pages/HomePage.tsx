@@ -41,18 +41,18 @@ export function HomePage({
       <FeaturedBusinesses onViewBusiness={onViewBusiness} onViewAll={onBusinessesClick} />
       
       {/* Latest Updates Section - Combined Posts & Threads */}
-      <section className="py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
             <div>
-              <h2 className="text-3xl text-neutral-900 mb-2">
+              <h2 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
                 Latest Updates
               </h2>
               <p className="text-neutral-600">
                 Recent posts and discussions from the agricultural community
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
                 onClick={() => onNavigate('posts')}
                 variant="outline"
@@ -100,14 +100,14 @@ export function HomePage({
       </section>
       
       {/* Shopping Section */}
-      <section className="py-16 bg-gradient-to-br from-green-50 to-emerald-50">
+      <section className="py-8 sm:py-16 bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-4">
               <Sparkles className="w-4 h-4 text-green-600" />
               <span className="text-sm font-medium text-green-600">Shop Agricultural Products</span>
             </div>
-            <h2 className="text-3xl text-neutral-900 mb-3">
+            <h2 className="text-2xl sm:text-3xl text-neutral-900 mb-3">
               Browse Quality Products
             </h2>
             <p className="text-neutral-600 max-w-2xl mx-auto">
@@ -115,9 +115,9 @@ export function HomePage({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg group">
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-4 sm:p-6 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">🌱</span>
                 </div>
@@ -127,7 +127,7 @@ export function HomePage({
             </Card>
 
             <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg group">
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-4 sm:p-6 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">🔧</span>
                 </div>
@@ -137,7 +137,7 @@ export function HomePage({
             </Card>
 
             <Card className="border-2 border-green-100 hover:border-green-300 transition-all hover:shadow-lg group">
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-4 sm:p-6 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">💧</span>
                 </div>

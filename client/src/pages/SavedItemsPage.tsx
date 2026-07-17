@@ -19,10 +19,10 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
     : validItems.filter(item => item.type === filter);
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl text-neutral-900 mb-2">Saved Items</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Saved Items</h1>
           <p className="text-neutral-600">{validItems.length} items saved for later</p>
         </div>
 
@@ -71,7 +71,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
         </div>
 
         {filteredItems.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center">
+          <div className="bg-white rounded-xl p-6 sm:p-12 text-center">
             <Bookmark className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
             <h3 className="text-xl text-neutral-900 mb-2">No saved items</h3>
             <p className="text-neutral-600">
@@ -82,7 +82,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
             </p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredItems.map((item) => (
               <div
                 key={item.id}

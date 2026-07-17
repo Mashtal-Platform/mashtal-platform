@@ -214,12 +214,12 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="text-center mb-8">
+          <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
+            <div className="text-center mb-6 sm:mb-8">
               <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">M</span>
               </div>
-              <h1 className="text-3xl font-bold text-neutral-900 mb-2">Join Mashtal</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Join Mashtal</h1>
               <p className="text-neutral-600">Choose your account type</p>
             </div>
 
@@ -227,7 +227,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               {/* Visitor */}
               <button
                 onClick={() => handleRoleSelect('visitor')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
+                className="p-4 sm:p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
               >
                 <div className="w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-neutral-200 transition-colors">
                   <User className="w-6 h-6 text-neutral-600" />
@@ -242,7 +242,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               {/* Business */}
               <button
                 onClick={() => handleRoleSelect('business')}
-                className="p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
+                className="p-4 sm:p-6 border-2 border-neutral-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all group"
               >
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
                   <Building2 className="w-6 h-6 text-blue-600" />
@@ -276,9 +276,9 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
       <div className={`w-full ${selectedRole === 'business' ? 'max-w-2xl' : 'max-w-md'}`}>
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <button
               onClick={() => setStep('role')}
               className="text-sm text-neutral-600 hover:text-green-600 mb-4 inline-block"
@@ -289,7 +289,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               {selectedRole === 'visitor' && <User className="w-8 h-8 text-white" />}
               {selectedRole === 'business' && <Building2 className="w-8 h-8 text-white" />}
             </div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Create Account</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Create Account</h1>
             <p className="text-neutral-600">
               {selectedRole === 'visitor' && 'Free account with email verification'}
               {selectedRole === 'business' && 'Business account — verify your email to continue'}
@@ -311,7 +311,6 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               text="continue_with"
               shape="rectangular"
               size="large"
-              width={selectedRole === 'business' ? '400' : '352'}
             />
           </div>
 

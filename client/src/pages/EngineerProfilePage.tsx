@@ -491,8 +491,8 @@ export function EngineerProfilePage({
       {/* Profile Header Card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative -mt-20">
-          <div className="bg-white rounded-xl shadow-xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row gap-6">
+          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
               {/* Profile Image */}
               <div className="relative">
                 <img
@@ -512,7 +512,7 @@ export function EngineerProfilePage({
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold text-neutral-900">{engineer.fullName}</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{engineer.fullName}</h1>
                       <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-green-200 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
                         {roleBadgeText}
@@ -626,7 +626,7 @@ export function EngineerProfilePage({
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-8 mt-8 pt-6 border-t border-neutral-100">
+                <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{engineer.followers || 245}</div>
                     <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Followers</div>
@@ -698,7 +698,7 @@ export function EngineerProfilePage({
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {/* Posts Tab */}
               {activeTab === 'posts' && (
                 <div>
@@ -767,7 +767,7 @@ export function EngineerProfilePage({
                     filteredUserThreads.map((thread) => (
                       <div
                         key={thread.id}
-                        className="group border border-neutral-200 rounded-xl p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
+                        className="group border border-neutral-200 rounded-xl p-4 sm:p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
                         id={`thread-${thread.id}`}
                         onClick={() => setSelectedThread(thread)}
                       >
@@ -842,7 +842,7 @@ export function EngineerProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Professional Biography
                     </h3>
-                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-6 rounded-xl border border-neutral-100 text-sm">
+                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-4 sm:p-6 rounded-xl border border-neutral-100 text-sm">
                       {engineer.bio}
                     </p>
                   </section>
@@ -852,7 +852,7 @@ export function EngineerProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Professional Details
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
                         <div className="p-2.5 bg-white rounded-lg shadow-sm">
                           <Briefcase className="w-5 h-5 text-green-600" />
@@ -881,11 +881,11 @@ export function EngineerProfilePage({
                       Activity Summary
                     </h3>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-100 text-center">
+                      <div className="bg-neutral-50 rounded-xl p-4 sm:p-6 border border-neutral-100 text-center">
                         <div className="text-2xl font-bold text-neutral-900 mb-1">{engineer.consultations || 156}</div>
                         <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Consults</div>
                       </div>
-                      <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-100 text-center">
+                      <div className="bg-neutral-50 rounded-xl p-4 sm:p-6 border border-neutral-100 text-center">
                         <div className="text-2xl font-bold text-neutral-900 mb-1">{engineerPosts.length}</div>
                         <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Posts</div>
                       </div>
@@ -902,7 +902,7 @@ export function EngineerProfilePage({
                       <div className="space-y-4">
                         {(engineer as any).customFields.map((field: any) => (
                           field.title && field.content && (
-                            <div key={field.id} className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm hover:border-green-200 transition-all group">
+                            <div key={field.id} className="bg-white border border-neutral-200 rounded-xl p-4 sm:p-6 shadow-sm hover:border-green-200 transition-all group">
                               <h4 className="font-bold text-neutral-900 mb-3 flex items-center justify-between">
                                 <span>{field.title}</span>
                                 <div className="w-8 h-1 bg-green-100 group-hover:bg-green-600 transition-colors rounded-full" />

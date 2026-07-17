@@ -49,27 +49,27 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
   };
 
   return (
-    <section id="discover" className="py-16 bg-white">
+    <section id="discover" className="py-8 sm:py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-neutral-900 mb-4">
             Discover Agricultural Services
           </h2>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
             Browse through verified nurseries, agricultural shops, and service providers
           </p>
         </div>
 
         {/* Category Filters */}
-        <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
+        <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8 flex-wrap">
           {categories.map((category) => {
             const Icon = category.icon;
             return (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all ${
                   selectedCategory === category.id
                     ? 'bg-green-600 text-white shadow-lg'
                     : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
@@ -82,7 +82,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
           })}
           <button
             onClick={() => setShowMoreFilters(!showMoreFilters)}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors"
           >
             <Filter className="w-5 h-5" />
             <span>More Filters</span>
@@ -91,7 +91,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
 
         {/* Advanced Filters Panel */}
         {showMoreFilters && (
-          <div className="mb-8 bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+          <div className="mb-6 sm:mb-8 bg-neutral-50 rounded-xl p-4 sm:p-6 border border-neutral-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg text-neutral-900">Advanced Filters</h3>
               <button onClick={() => setShowMoreFilters(false)} className="p-2 hover:bg-neutral-200 rounded-lg">
@@ -99,7 +99,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
               </button>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
               {/* Rating Filter */}
               <div>
                 <label className="block text-sm text-neutral-700 mb-2">Minimum Rating</label>
@@ -173,7 +173,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
         </div>
 
         {/* Business Cards Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredBusinesses.map((business) => (
             <div
               key={business.id}
@@ -221,7 +221,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
         </div>
 
         {filteredBusinesses.length === 0 && (
-          <div className="text-center py-16">
+          <div className="text-center py-8 sm:py-16">
             <Leaf className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
             <h3 className="text-xl text-neutral-900 mb-2">No businesses found</h3>
             <p className="text-neutral-600 mb-4">Try adjusting your filters</p>
@@ -236,7 +236,7 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
 
         {/* Load More */}
         {filteredBusinesses.length > 0 && (
-          <div className="text-center mt-12">
+          <div className="text-center mt-8 sm:mt-12">
             <button 
               onClick={() => {
                 // Navigate to the full businesses listing

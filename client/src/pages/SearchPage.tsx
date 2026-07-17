@@ -241,10 +241,10 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl text-neutral-900 mb-6">Search</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-6">Search</h1>
           
           {/* Search Bar */}
           <div className="bg-white rounded-xl shadow-lg p-3 flex items-center gap-3 mb-6">
@@ -287,7 +287,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
 
           {/* Advanced Filters Panel */}
           {showFilters && (
-            <div className="mt-4 bg-white rounded-xl p-6 shadow-lg">
+            <div className="mt-4 bg-white rounded-xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg text-neutral-900">Advanced Filters</h3>
                 <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
@@ -295,7 +295,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                 </button>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
                 {/* Rating Filter */}
                 <div>
                   <label className="block text-sm text-neutral-700 mb-2">Minimum Rating</label>
@@ -472,7 +472,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
 
         {/* No Results */}
         {filteredResults.length === 0 && (
-          <div className="text-center py-16">
+          <div className="text-center py-8 sm:py-16">
             <Search className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
             <h3 className="text-xl text-neutral-900 mb-2">No results found</h3>
             <p className="text-neutral-600 mb-4">Try adjusting your search or filters</p>
