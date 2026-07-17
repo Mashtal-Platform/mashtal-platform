@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { sendVerificationEmail } = require('../services/emailService');
 const {
@@ -28,6 +29,15 @@ function signToken(user) {
 function toUserResponse(userDoc) {
   const u = userDoc.toJSON ? userDoc.toJSON() : userDoc;
   return u;
+}
+
+let googleClient;
+
+function getGoogleClient() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) throw new Error('GOOGLE_CLIENT_ID is not set');
+  if (!googleClient) googleClient = new OAuth2Client(clientId);
+  return { client: googleClient, clientId };
 }
 
 async function register(req, res) {
@@ -130,6 +140,11 @@ async function login(req, res) {
     const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash +emailVerificationToken');
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
+    if (!user.passwordHash) {
+      return res.status(401).json({
+        message: 'This account uses Google sign-in. Continue with Google instead.',
+      });
+    }
     const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
 
@@ -150,6 +165,85 @@ async function login(req, res) {
   } catch (err) {
     console.error('[Auth] login error:', err);
     res.status(500).json({ message: 'Failed to login' });
+  }
+}
+
+async function googleLogin(req, res) {
+  try {
+    const credential = req.body?.credential;
+    if (!credential || typeof credential !== 'string') {
+      return res.status(400).json({ message: 'Google credential is required' });
+    }
+
+    const { client, clientId } = getGoogleClient();
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: clientId,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload?.sub || !payload.email || !payload.email_verified) {
+      return res.status(401).json({ message: 'Google did not provide a verified email address' });
+    }
+
+    const normalizedEmail = String(payload.email).trim().toLowerCase();
+    let user = await User.findOne({
+      $or: [{ googleId: payload.sub }, { email: normalizedEmail }],
+    }).select('+googleId +emailVerificationToken +emailVerificationExpires');
+
+    if (user) {
+      if (user.googleId && user.googleId !== payload.sub) {
+        return res.status(409).json({ message: 'This email is linked to another Google account' });
+      }
+      user.googleId = payload.sub;
+      user.verified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      if (!user.avatar && payload.picture) user.avatar = payload.picture;
+      await user.save({ validateBeforeSave: false });
+    } else {
+      const requestedRole = req.body?.role === 'business' ? 'business' : 'visitor';
+      let normalizedBusinessProfile;
+      if (requestedRole === 'business') {
+        const profile = req.body?.businessProfile || {};
+        const errMsg = validateBusinessProfile(profile, { requireAll: true });
+        if (errMsg) return res.status(400).json({ message: errMsg });
+        for (const phone of [profile.phone, profile.wishPhone].filter(Boolean)) {
+          if (!isValidPhone(phone)) {
+            return res.status(400).json({
+              message: 'Phone must be a valid number with country code (e.g. +961 70 123 456).',
+            });
+          }
+        }
+        normalizedBusinessProfile = {
+          ...normalizeBusinessProfile(profile),
+          rating: 3.5,
+          reviewsCount: 0,
+        };
+        delete normalizedBusinessProfile.hours;
+        if (!normalizedBusinessProfile.about) delete normalizedBusinessProfile.about;
+      }
+
+      user = await User.create({
+        fullName: payload.name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        googleId: payload.sub,
+        avatar: payload.picture,
+        role: requestedRole,
+        verified: true,
+        subscriptionStatus: requestedRole === 'business' ? 'inactive' : undefined,
+        businessProfile: normalizedBusinessProfile,
+      });
+    }
+
+    res.json({ token: signToken(user), user: toUserResponse(user) });
+  } catch (err) {
+    if (err?.message === 'GOOGLE_CLIENT_ID is not set') {
+      console.error('[Auth] Google sign-in is not configured');
+      return res.status(503).json({ message: 'Google sign-in is not configured yet' });
+    }
+    console.error('[Auth] googleLogin error:', err?.message || err);
+    res.status(401).json({ message: 'Invalid or expired Google sign-in' });
   }
 }
 
@@ -200,6 +294,7 @@ async function verifyEmail(req, res) {
 module.exports = {
   register,
   login,
+  googleLogin,
   me,
   verifyEmail,
 };

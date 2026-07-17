@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Loader2, Chrome } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -39,15 +40,16 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (credential?: string) => {
     setError('');
     setLoading(true);
 
     try {
-      await signInWithGoogle();
+      if (!credential) throw new Error('Google did not return a credential');
+      await signInWithGoogle(credential);
       onNavigate('home');
-    } catch (err) {
-      setError('Failed to sign in with Google');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
@@ -74,16 +76,16 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
           )}
 
           {/* Google Sign In */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-6"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <Chrome className="w-5 h-5 mr-2" />
-            Continue with Google
-          </Button>
+          <div className={`mb-6 flex justify-center ${loading ? 'pointer-events-none opacity-60' : ''}`}>
+            <GoogleLogin
+              onSuccess={(response) => handleGoogleSignIn(response.credential)}
+              onError={() => setError('Google sign-in was cancelled or failed')}
+              text="continue_with"
+              shape="rectangular"
+              size="large"
+              width="352"
+            />
+          </div>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
