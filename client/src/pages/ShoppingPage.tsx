@@ -387,13 +387,13 @@ export function ShoppingPage({
       <div className={`bg-white border-b sticky top-0 z-30 transition-transform duration-300 ${
         showHeader ? 'translate-y-0' : '-translate-y-full'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-green-50 rounded-lg">
               <ShoppingBag className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-neutral-900">Shop Products</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">Shop Products</h1>
               <p className="text-sm text-neutral-600 mt-0.5">
                 Browse agricultural products from verified businesses
               </p>
@@ -606,7 +606,7 @@ export function ShoppingPage({
       </div>
 
       {/* Products Grid/List */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {productsError && (
           <Card className="mb-4">
             <CardContent className="p-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200">
@@ -617,7 +617,7 @@ export function ShoppingPage({
 
         {isLoadingProducts ? (
           <Card>
-            <CardContent className="p-12 text-center">
+            <CardContent className="p-6 sm:p-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-10 w-10 border-2 border-green-600 border-t-transparent" />
                 <p className="text-sm text-neutral-600">Loading products…</p>
@@ -626,7 +626,7 @@ export function ShoppingPage({
           </Card>
         ) : filteredProducts.length === 0 ? (
           <Card>
-            <CardContent className="p-12 text-center">
+            <CardContent className="p-6 sm:p-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="p-4 bg-neutral-100 rounded-full">
                   <ShoppingBag className="w-8 h-8 text-neutral-400" />
@@ -656,7 +656,7 @@ export function ShoppingPage({
             </CardContent>
           </Card>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <Card
                 key={product.id}

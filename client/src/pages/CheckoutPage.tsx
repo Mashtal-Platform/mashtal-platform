@@ -149,13 +149,13 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
 
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-neutral-50 py-16 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 py-8 sm:py-16 flex items-center justify-center">
         <div className="max-w-md w-full mx-4">
-          <div className="bg-white rounded-2xl p-8 text-center">
+          <div className="bg-white rounded-2xl p-4 sm:p-8 text-center">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-2xl text-neutral-900 mb-3">Order Placed Successfully!</h2>
+            <h2 className="text-xl sm:text-2xl text-neutral-900 mb-3">Order Placed Successfully!</h2>
             <p className="text-neutral-600 mb-6">
               Your card was charged once. Sellers and tax are recorded separately in the ledger.
             </p>
@@ -171,20 +171,20 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl text-neutral-900 mb-2">Checkout</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Checkout</h1>
           <p className="text-sm text-neutral-600">
             Card details stay with Stripe. We never store your card number. One charge covers the
             full order; sellers and tax are split in the ledger.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
           <div className="lg:col-span-2 space-y-6">
             {ledgerLegs.length > 0 && (
-              <div className="bg-white rounded-xl p-6">
+              <div className="bg-white rounded-xl p-4 sm:p-6">
                 <h2 className="text-lg font-semibold text-neutral-900 mb-4">Payment ledger</h2>
                 <ul className="space-y-3">
                   {ledgerLegs.map((leg) => (
@@ -211,7 +211,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
               </div>
             )}
 
-            <div className="bg-white rounded-xl p-6 space-y-6">
+            <div className="bg-white rounded-xl p-4 sm:p-6 space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-neutral-200">
                 <CreditCard className="w-6 h-6 text-green-600" />
                 <h2 className="text-xl text-neutral-900">Card payment</h2>
@@ -333,7 +333,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl p-6 sticky top-24">
+            <div className="bg-white rounded-xl p-4 sm:p-6 sticky top-24">
               <h3 className="text-xl text-neutral-900 mb-6">Order Summary</h3>
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (

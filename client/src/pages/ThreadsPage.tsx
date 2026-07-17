@@ -348,14 +348,14 @@ export function ThreadsPage({
       )}
 
       <div 
-        className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8"
         style={{
           transform: isPulling || isRefreshing ? `translateY(${pullDistance * 0.3}px)` : 'none',
           transition: isRefreshing || !isPulling ? 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
         }}
       >
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <h1 className="text-neutral-900 mb-2">Threads</h1>
           <p className="text-neutral-600">Share your thoughts and connect with the agricultural community</p>
         </div>

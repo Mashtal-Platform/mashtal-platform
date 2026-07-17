@@ -95,11 +95,11 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-neutral-900 mb-2">Email Verified!</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">Email Verified!</h1>
             <p className="text-neutral-600">Your account is now verified. You can use all features.</p>
             <p className="text-sm text-neutral-500 mt-4">Redirecting to home...</p>
           </div>
@@ -111,12 +111,12 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-neutral-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
+        <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
+          <div className="text-center mb-6 sm:mb-8">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Verify Your Email</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Verify Your Email</h1>
             <p className="text-neutral-600">
               We sent a verification link to your email. Click the link in the message to verify your account and sign in.
             </p>

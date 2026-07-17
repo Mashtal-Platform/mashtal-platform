@@ -964,8 +964,8 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
               }`}
             >
               {/* Thread Header */}
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
                   {/* Profile picture with role icon at bottom-right */}
                   <div className="relative flex-shrink-0">
                     <button
@@ -975,7 +975,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       <img
                         src={getAvatarUrl(thread.author.avatar, thread.author.name)}
                         alt={thread.author.name}
-                        className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
+                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all"
                       />
                     </button>
                     <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
@@ -1033,13 +1033,13 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
 
                 {/* Thread Title */}
                 {thread.title && (
-                  <h2 className="text-xl font-semibold text-neutral-900 mb-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-2 sm:mb-3">
                     {thread.title}
                   </h2>
                 )}
 
                 {/* Thread Content */}
-                <p className="text-neutral-800 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
+                <p className="text-sm sm:text-base text-neutral-800 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
 
                 {/* Hashtags */}
                 {thread.tags && thread.tags.length > 0 && (
@@ -1056,7 +1056,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-6 pt-4 border-t border-neutral-100">
+                <div className="flex items-center gap-4 sm:gap-6 pt-3 sm:pt-4 border-t border-neutral-100">
                   <button
                     onClick={() => handleLike(thread.id)}
                     disabled={!isAuthenticated || likingThreadId === thread.id}

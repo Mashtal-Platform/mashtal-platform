@@ -123,9 +123,9 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
   if (success) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-sm border border-neutral-100">
+        <div className="bg-white rounded-2xl p-4 sm:p-8 max-w-md w-full text-center shadow-sm border border-neutral-100">
           <CheckCircle className="w-14 h-14 text-green-600 mx-auto mb-4" />
-          <h1 className="text-2xl font-semibold text-neutral-900 mb-2">Business account activated</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-2">Business account activated</h1>
           <p className="text-neutral-600 mb-6">
             Your subscription payment succeeded. You can now sell products on Mashtal.
           </p>
@@ -138,15 +138,15 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-10 px-4">
+    <div className="min-h-screen bg-neutral-50 py-5 sm:py-10 px-4">
       <div className="max-w-lg mx-auto bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-green-700 to-green-600 text-white p-6">
-          <h1 className="text-2xl font-semibold mb-1">Business subscription</h1>
+        <div className="bg-gradient-to-r from-green-700 to-green-600 text-white p-4 sm:p-6">
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1">Business subscription</h1>
           <p className="text-green-50 text-sm">
             Pay with card (Whish Visa works). Card data goes to Stripe only — never stored on Mashtal.
           </p>
         </div>
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           <div className="flex justify-between items-center p-4 rounded-xl bg-neutral-50 border border-neutral-100">
             <div>
               <div className="text-sm text-neutral-500">Plan</div>

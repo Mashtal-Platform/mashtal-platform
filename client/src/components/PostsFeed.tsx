@@ -1038,8 +1038,8 @@ export function PostsFeed({
                 }`}
               >
                 {/* Post Header */}
-                <div className="p-6 pb-4">
-                  <div className="flex items-center gap-4 mb-4">
+                <div className="p-4 pb-3 sm:p-6 sm:pb-4">
+                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
                     {/* Profile picture with role icon at bottom-right */}
                     <div className="relative flex-shrink-0">
                       <img
@@ -1047,7 +1047,7 @@ export function PostsFeed({
                         alt={post.author.name}
                         onClick={() => handlePostAuthorClick(post)}
                         draggable="false"
-                        className="w-14 h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
+                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
                       />
                       <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
                         {getRoleIcon(post.author.type)}
@@ -1097,8 +1097,8 @@ export function PostsFeed({
                   </div>
 
                   {/* Post Content */}
-                  <h3 className="text-xl text-neutral-900 mb-3">{post.title}</h3>
-                  <p className="text-neutral-600 mb-4">
+                  <h3 className="text-lg sm:text-xl text-neutral-900 mb-2 sm:mb-3">{post.title}</h3>
+                  <p className="text-sm sm:text-base text-neutral-600 mb-3 sm:mb-4">
                     {showFullText ? renderTextWithMentions(post.content) : renderTextWithMentions(displayText)}
                     {isTruncated && !showFullText && '... '}
                     {isTruncated && (
@@ -1128,7 +1128,7 @@ export function PostsFeed({
 
                 {/* Post Image */}
                 {post.image && (
-                  <div className="relative h-80 overflow-hidden">
+                  <div className="relative h-52 sm:h-80 overflow-hidden">
                     <img
                       src={getImageUrl(post.image)}
                       alt={post.title}
@@ -1147,8 +1147,8 @@ export function PostsFeed({
                 )}
 
                 {/* Post Actions */}
-                <div className="p-6 pt-4 border-t border-neutral-100">
-                  <div className="flex items-center gap-6">
+                <div className="p-4 pt-3 sm:p-6 sm:pt-4 border-t border-neutral-100">
+                  <div className="flex items-center gap-4 sm:gap-6">
                     <button
                       onClick={() => handleLike(post.id)}
                       disabled={!isAuthenticated}

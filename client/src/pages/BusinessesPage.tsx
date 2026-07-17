@@ -21,18 +21,18 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-2">All Businesses</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">All Businesses</h1>
           <p className="text-neutral-600">
             Discover {businesses.length} verified agricultural businesses on Mashtal
           </p>
         </div>
 
         {/* Businesses Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {businesses.map((business) => (
             <Card key={business.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               {/* Cover Image */}
@@ -56,7 +56,7 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-1">
                   {business.companyName || business.fullName}
                 </h3>

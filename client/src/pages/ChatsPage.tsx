@@ -480,7 +480,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
     : [];
 
   return (
-    <div className="bg-neutral-50 h-screen flex flex-col">
+    <div className="bg-neutral-50 h-[calc(100vh-4rem)] flex flex-col">
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden flex-1 flex flex-col">
           <div className="grid md:grid-cols-3 h-full overflow-hidden">
             {/* Chat List */}

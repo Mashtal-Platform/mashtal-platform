@@ -94,10 +94,10 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
               <button 
                 onClick={() => onNavigate('search')}
-                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
+                className="hidden sm:block p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
                 aria-label="Search"
               >
                 <Search className="w-5 h-5 text-neutral-700" />
@@ -106,7 +106,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
               {isAuthenticated && (
                 <button 
                   onClick={() => onNavigate('chats')}
-                  className="p-2 hover:bg-neutral-100 rounded-lg transition-colors relative" 
+                  className="hidden sm:block p-2 hover:bg-neutral-100 rounded-lg transition-colors relative" 
                   aria-label="Messages"
                 >
                   <MessageCircle className="w-5 h-5 text-neutral-700" />
@@ -146,7 +146,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
               {isAuthenticated && (
                 <button 
                   onClick={() => onNavigate('profile')}
-                  className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
+                  className="hidden sm:block p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
                   aria-label="Profile"
                 >
                   <User className="w-5 h-5 text-neutral-700" />
@@ -158,7 +158,7 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button 
-                      className="p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
+                      className="hidden sm:block p-2 hover:bg-neutral-100 rounded-lg transition-colors" 
                       aria-label="More options"
                     >
                       <MoreVertical className="w-5 h-5 text-neutral-700" />
@@ -262,6 +262,39 @@ export function Navigation({ currentPage, onNavigate, cartItemCount, notificatio
                     }`}
                   >
                     Admin
+                  </button>
+                )}
+
+                {/* Mobile - actions whose icons are hidden on small screens */}
+                <button 
+                  onClick={() => { onNavigate('search'); setMobileMenuOpen(false); }}
+                  className={`text-left px-4 py-2 rounded-lg transition-colors flex items-center gap-2 sm:hidden ${
+                    currentPage === 'search' ? 'bg-green-50 text-green-600' : 'text-neutral-700 hover:bg-neutral-50'
+                  }`}
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Search</span>
+                </button>
+                {isAuthenticated && (
+                  <button 
+                    onClick={() => { onNavigate('chats'); setMobileMenuOpen(false); }}
+                    className={`text-left px-4 py-2 rounded-lg transition-colors flex items-center gap-2 sm:hidden ${
+                      currentPage === 'chats' ? 'bg-green-50 text-green-600' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Messages</span>
+                  </button>
+                )}
+                {isAuthenticated && (
+                  <button 
+                    onClick={() => { onNavigate('profile'); setMobileMenuOpen(false); }}
+                    className={`text-left px-4 py-2 rounded-lg transition-colors flex items-center gap-2 sm:hidden ${
+                      currentPage === 'profile' ? 'bg-green-50 text-green-600' : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Profile</span>
                   </button>
                 )}
                 

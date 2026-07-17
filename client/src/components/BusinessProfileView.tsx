@@ -670,8 +670,8 @@ export function BusinessProfileView({
       {/* Profile Header Card */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative -mt-20">
-          <div className="bg-white rounded-xl shadow-xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row gap-6">
+          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
               {/* Profile Image */}
               <div className="relative">
                 <div
@@ -724,7 +724,7 @@ export function BusinessProfileView({
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <h1 className="text-3xl font-bold text-neutral-900">
+                      <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">
                         {userProfile.companyName ||
                           userProfile.fullName}
                       </h1>
@@ -790,7 +790,7 @@ export function BusinessProfileView({
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-8 mt-8 pt-6 border-t border-neutral-100">
+                <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">
                       {followersCount.toLocaleString()}
@@ -823,7 +823,7 @@ export function BusinessProfileView({
 
         {/* NEW SECTION: Following, Followers, Saved, Products & Purchases Management Cards - Only for own profile */}
         {isOwnProfile && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
             {/* Following Card */}
             <div
               className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
@@ -831,7 +831,7 @@ export function BusinessProfileView({
                 onNavigate && onNavigate("following")
               }
             >
-              <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+              <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
                     <Users className="w-6 h-6 text-white" />
@@ -856,7 +856,7 @@ export function BusinessProfileView({
               className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => onNavigate && onNavigate('followers')}
             >
-              <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+              <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
                     <Users className="w-6 h-6 text-white" />
@@ -886,7 +886,7 @@ export function BusinessProfileView({
                   ?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+              <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg">
                     <Bookmark className="w-6 h-6 text-white" />
@@ -913,7 +913,7 @@ export function BusinessProfileView({
                 onNavigateToDashboard && onNavigateToDashboard('products')
               }
             >
-              <div className="w-full p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
+              <div className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-neutral-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
                     <Package className="w-6 h-6 text-white" />
@@ -1048,7 +1048,7 @@ export function BusinessProfileView({
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {/* Products Tab */}
               {activeTab === "products" && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1235,7 +1235,7 @@ export function BusinessProfileView({
                       {userThreads.map((thread) => (
                         <div
                           key={thread.id}
-                          className="group bg-white border border-neutral-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer relative"
+                          className="group bg-white border border-neutral-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer relative"
                           onClick={() =>
                             onThreadClick &&
                             onThreadClick(thread)
@@ -1342,7 +1342,7 @@ export function BusinessProfileView({
               {activeTab === "dashboard" && isOwnProfile && (
                 <div className="space-y-6">
                   {/* Redirect to full dashboard with preview */}
-                  <div className="p-8 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl border-2 border-green-200">
+                  <div className="p-4 sm:p-8 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl border-2 border-green-200">
                     <div className="text-center max-w-2xl mx-auto">
                       <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                         <BarChart3 className="w-10 h-10 text-white" />
@@ -1422,7 +1422,7 @@ export function BusinessProfileView({
                       {userProfile.companyName ||
                         userProfile.fullName}
                     </h3>
-                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-6 rounded-xl border border-neutral-100 text-sm">
+                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-4 sm:p-6 rounded-xl border border-neutral-100 text-sm">
                       {userProfile.bio ||
                         "No description available"}
                     </p>
@@ -1433,7 +1433,7 @@ export function BusinessProfileView({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Contact Information
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {userProfile.phone && (
                         <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
                           <div className="p-2.5 bg-white rounded-lg shadow-sm">
@@ -1506,7 +1506,7 @@ export function BusinessProfileView({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Business Hours
                     </h3>
-                    <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-6">
+                    <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4 sm:p-6">
                       <div className="space-y-3">
                         {(
                           userProfile.hours && userProfile.hours.length > 0
@@ -1581,7 +1581,7 @@ export function BusinessProfileView({
                   : validItems.filter(item => item.type === savedItemsFilter);
 
                 return (
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     {/* Saved Items Filter */}
                     <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                       {(['all', 'product', 'post', 'thread', 'business'] as const).map((filter) => (
@@ -1603,7 +1603,7 @@ export function BusinessProfileView({
                     </div>
 
                     {filteredItems.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {filteredItems.map((item) => (
                           <div key={item.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
                             <div className="relative h-48 bg-gradient-to-br from-neutral-50 to-neutral-100">

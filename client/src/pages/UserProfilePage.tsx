@@ -525,8 +525,8 @@ export function UserProfilePage({
       {/* Profile Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative -mt-20">
-          <div className="bg-white rounded-xl shadow-xl p-6 md:p-8">
-            <div className="flex flex-col md:flex-row gap-6">
+          <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
               {/* Profile Image */}
               <div className="relative">
                 <img
@@ -540,7 +540,7 @@ export function UserProfilePage({
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
-                    <h1 className="text-3xl font-bold text-neutral-900 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">
                       {user?.fullName || user?.name || 'User'}
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 text-neutral-600 mb-3">
@@ -592,7 +592,7 @@ export function UserProfilePage({
                 </div>
 
                 {/* Stats - user profile: only Posts and Threads (no followers/following) */}
-                <div className="grid grid-cols-2 gap-6 mt-8 pt-6 border-t border-neutral-100">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">
                       {userPosts.length}
@@ -680,7 +680,7 @@ export function UserProfilePage({
             </div>
 
             {/* Tab Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               {/* Posts Tab */}
               {activeTab === "posts" && (
                 <div>
@@ -761,7 +761,7 @@ export function UserProfilePage({
                     filteredUserThreads.map((thread) => (
                       <div
                         key={thread.id}
-                        className="group border border-neutral-200 rounded-xl p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
+                        className="group border border-neutral-200 rounded-xl p-4 sm:p-6 hover:border-green-200 hover:shadow-md transition-all bg-white relative cursor-pointer"
                         id={`thread-${thread.id}`}
                         onClick={() => setSelectedThread(thread)}
                       >
@@ -862,7 +862,7 @@ export function UserProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       About
                     </h3>
-                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-6 rounded-xl border border-neutral-100 text-sm">
+                    <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-4 sm:p-6 rounded-xl border border-neutral-100 text-sm">
                       {user?.bio ?? '—'}
                     </p>
                   </section>
@@ -872,7 +872,7 @@ export function UserProfilePage({
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
                       Details
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
                         <div className="p-2.5 bg-white rounded-lg shadow-sm">
                           <MapPin className="w-5 h-5 text-green-600" />
@@ -917,7 +917,7 @@ export function UserProfilePage({
                               field.content && (
                                 <div
                                   key={field.id}
-                                  className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm hover:border-green-200 transition-all group"
+                                  className="bg-white border border-neutral-200 rounded-xl p-4 sm:p-6 shadow-sm hover:border-green-200 transition-all group"
                                 >
                                   <h4 className="font-bold text-neutral-900 mb-3 flex items-center justify-between">
                                     <span>{field.title}</span>

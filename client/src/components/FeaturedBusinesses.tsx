@@ -54,10 +54,10 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
   }, []);
 
   return (
-    <section id="businesses" className="py-16 bg-gradient-to-br from-green-50 to-neutral-50">
+    <section id="businesses" className="py-8 sm:py-16 bg-gradient-to-br from-green-50 to-neutral-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-6 h-6 text-green-600" />
@@ -80,13 +80,13 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
 
         {/* Featured Grid - verified businesses with highest rating from API */}
         {loading ? (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             {[1, 2].map((i) => (
               <div key={i} className="bg-white rounded-xl overflow-hidden border border-neutral-200 animate-pulse h-48 sm:h-40" />
             ))}
           </div>
         ) : businesses.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             {businesses.map((business) => (
               <div
                 key={business.id}
@@ -108,7 +108,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 p-6">
+                  <div className="flex-1 p-4 sm:p-6">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h3 className="text-xl text-neutral-900 mb-1">{business.name}</h3>
@@ -158,7 +158,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-neutral-500">
+          <div className="text-center py-8 sm:py-12 text-neutral-500">
             <p>No verified top-rated businesses yet.</p>
             <button
               onClick={onViewAll}
