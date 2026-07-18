@@ -9,6 +9,7 @@ import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/po
 import { fetchUser, fetchBusinesses, fetchMentionableProfiles, UserDto } from '../shared/api/users';
 import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
 import { getImageUrl, getAvatarUrl } from '../shared/api/client';
+import { notifyError } from '../shared/utils/notify';
 
 interface PostsFeedProps {
   onSavePost?: (post: any) => void;
@@ -870,6 +871,7 @@ export function PostsFeed({
       );
     } catch (err) {
       console.error('[PostsFeed] Failed to add comment:', err);
+      notifyError(err, 'Failed to add comment');
     }
     setNewComment('');
     setReplyingTo(null);

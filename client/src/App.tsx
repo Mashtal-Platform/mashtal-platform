@@ -33,6 +33,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PostInteractionsProvider } from './contexts/PostInteractionsContext';
 import { AppStateProvider, useAppState } from './shared/store/AppStateContext';
 import { shouldShowLayout, shouldShowFooter } from './shared/utils/navigation';
+import { Toaster } from './components/ui/sonner';
 
 // Re-export types for backward compatibility
 export type { Page } from './shared/types';
@@ -491,6 +492,7 @@ function App() {
       <PostInteractionsProvider>
         <AppStateProvider>
           <AppContent />
+          <Toaster />
         </AppStateProvider>
       </PostInteractionsProvider>
     </AuthProvider>

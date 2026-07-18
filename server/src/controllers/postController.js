@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const SavedItem = require('../models/SavedItem');
 const { Types } = require('mongoose');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 function getAuthorDisplayName(author) {
   if (!author) return 'Unknown User';
@@ -164,6 +165,13 @@ async function createPost(req, res) {
       return res.status(400).json({ message: 'title and content are required' });
     }
 
+    const allowed = await respondIfUnsafe(res, {
+      text: [title, content, ...(tags || [])],
+      file: req.file,
+      imagePath: image,
+    });
+    if (!allowed) return;
+
     const authorId = req.user?.id || body.authorId || (body.author && body.author.id);
 
     const user = await User.findById(authorId);
@@ -289,6 +297,16 @@ async function updatePost(req, res) {
       const { getRelativePath } = require('../middleware/upload');
       image = getRelativePath('posts', req.file.filename);
     }
+    const nextTitle = title !== undefined ? title : post.title;
+    const nextContent = content !== undefined ? content : post.content;
+    const nextImage = image !== undefined ? image : post.image;
+    const allowed = await respondIfUnsafe(res, {
+      text: [nextTitle, nextContent, ...tags],
+      file: req.file,
+      imagePath: nextImage,
+    });
+    if (!allowed) return;
+
     if (title !== undefined) post.title = title;
     if (content !== undefined) post.content = content;
     if (image !== undefined) post.image = image;

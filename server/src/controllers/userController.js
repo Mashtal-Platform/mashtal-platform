@@ -7,6 +7,7 @@ const {
   normalizeBusinessProfile,
   validateBusinessProfile,
 } = require('../utils/businessProfile');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
@@ -70,6 +71,19 @@ async function updateMe(req, res) {
       }
     }
 
+    const profileText = [
+      updates.bio,
+      updates.fullName,
+      updates.businessProfile?.about,
+      updates.businessProfile?.companyName,
+      updates.professionalProfile?.bio,
+      updates.professionalProfile?.about,
+    ].filter(Boolean);
+    if (profileText.length) {
+      const allowed = await respondIfUnsafe(res, { text: profileText });
+      if (!allowed) return;
+    }
+
     const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true }).lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
@@ -86,6 +100,9 @@ async function uploadAvatar(req, res) {
     }
     const { getRelativePath } = require('../middleware/upload');
     const avatarPath = getRelativePath('avatars', req.file.filename);
+    const allowed = await respondIfUnsafe(res, { file: req.file, imagePath: avatarPath });
+    if (!allowed) return;
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: { avatar: avatarPath } },
@@ -106,6 +123,9 @@ async function uploadCover(req, res) {
     }
     const { getRelativePath } = require('../middleware/upload');
     const coverPath = getRelativePath('covers', req.file.filename);
+    const allowed = await respondIfUnsafe(res, { file: req.file, imagePath: coverPath });
+    if (!allowed) return;
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: { coverImage: coverPath } },
@@ -252,6 +272,12 @@ async function rateBusiness(req, res) {
       return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
 
+    const commentValue = comment != null ? String(comment).trim() : '';
+    if (commentValue) {
+      const allowed = await respondIfUnsafe(res, { text: commentValue });
+      if (!allowed) return;
+    }
+
     const business = await User.findOne({
       $or: [{ _id: businessId }, { businessId: businessId }],
       role: 'business',
@@ -264,7 +290,7 @@ async function rateBusiness(req, res) {
 
     const review = await BusinessReview.findOneAndUpdate(
       { business: businessObjId, user: userId },
-      { $set: { rating: Number(rating), comment: comment != null ? String(comment) : '' } },
+      { $set: { rating: Number(rating), comment: commentValue } },
       { new: true, upsert: true, runValidators: true }
     );
 
@@ -365,6 +391,10 @@ async function updateBusinessReview(req, res) {
     const update = {};
     if (typeof rating === 'number' && rating >= 1 && rating <= 5) update.rating = rating;
     if (comment !== undefined) update.comment = comment != null ? String(comment) : '';
+    if (update.comment) {
+      const allowed = await respondIfUnsafe(res, { text: update.comment });
+      if (!allowed) return;
+    }
     const updated = await BusinessReview.findByIdAndUpdate(
       reviewId,
       { $set: update },

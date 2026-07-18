@@ -54,6 +54,8 @@ const stripePaymentRoutes = require('./routes/stripePaymentRoutes');
 const stripeSubscriptionRoutes = require('./routes/stripeSubscriptionRoutes');
 const wishSubscriptionRoutes = require('./routes/wishSubscriptionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const { warmupModeration } = require('./services/moderationService');
+const { assertContentSafe, ContentNotAllowedError } = require('./utils/assertContentSafe');
 
 const app = express();
 
@@ -195,6 +197,22 @@ connectDB().then(() => {
         return callback && callback({ error: 'conversationId and text required' });
       }
       try {
+        try {
+          await assertContentSafe({ text: text.trim() });
+        } catch (modErr) {
+          if (
+            modErr instanceof ContentNotAllowedError ||
+            modErr?.code === 'CONTENT_NOT_ALLOWED' ||
+            modErr?.code === 'MODERATION_UNAVAILABLE'
+          ) {
+            return callback && callback({
+              error: modErr.message,
+              code: modErr.code || 'CONTENT_NOT_ALLOWED',
+            });
+          }
+          throw modErr;
+        }
+
         // Single lean query: conversation membership check only (no populate).
         const conv = await Conversation.findById(conversationId).lean();
         if (!conv || !conv.participants.some((p) => p.toString() === socket.userId)) {
@@ -257,6 +275,11 @@ connectDB().then(() => {
 
   httpServer.listen(PORT, () => {
     console.log(`[Server] Running on port ${PORT} (HTTP + WebSocket)`);
+    try {
+      warmupModeration();
+    } catch (err) {
+      console.error('[Server] Moderation warmup failed:', err?.message || err);
+    }
     try {
       const { isSmtpConfigured } = require('./services/emailService');
       console.log(

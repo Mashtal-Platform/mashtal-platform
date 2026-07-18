@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const SavedItem = require('../models/SavedItem');
 const { Types } = require('mongoose');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 function getAuthorDisplayName(author) {
   if (!author) return 'Unknown User';
@@ -146,6 +147,11 @@ async function createThread(req, res) {
       return res.status(400).json({ message: 'content is required' });
     }
 
+    const allowed = await respondIfUnsafe(res, {
+      text: [title, content, ...(Array.isArray(tags) ? tags : [])],
+    });
+    if (!allowed) return;
+
     const authorId = req.user?.id || author?.id;
 
     const user = await User.findById(authorId);
@@ -261,6 +267,14 @@ async function updateThread(req, res) {
       return res.status(403).json({ message: 'You can only edit your own threads' });
     }
     const { title, content, tags } = req.body || {};
+    const nextTitle = title !== undefined ? title : thread.title;
+    const nextContent = content !== undefined ? content : thread.content;
+    const nextTags = Array.isArray(tags) ? tags : thread.tags || [];
+    const allowed = await respondIfUnsafe(res, {
+      text: [nextTitle, nextContent, ...nextTags],
+    });
+    if (!allowed) return;
+
     if (title !== undefined) thread.title = title;
     if (content !== undefined) thread.content = content;
     if (Array.isArray(tags)) thread.tags = tags;

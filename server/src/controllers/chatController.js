@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const { Types } = require('mongoose');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 /** Create or increment a single grouped chat_message notification per (recipient, sender). */
 async function upsertMessageNotification(recipientId, senderId, conversationId) {
@@ -232,6 +233,13 @@ async function sendMessage(req, res) {
       return res.status(400).json({ message: 'Message text is required' });
     }
 
+    const sharedTitle =
+      body.sharedPost && typeof body.sharedPost === 'object'
+        ? String(body.sharedPost.postTitle ?? body.sharedPost.title ?? '').trim()
+        : '';
+    const allowed = await respondIfUnsafe(res, { text: [text, sharedTitle].filter(Boolean) });
+    if (!allowed) return;
+
     const conv = await Conversation.findById(conversationId).lean();
     if (!conv || !conv.participants.some((p) => p.toString() === userId)) {
       return res.status(404).json({ message: 'Conversation not found' });
@@ -312,6 +320,9 @@ async function editMessage(req, res) {
     if (!text) {
       return res.status(400).json({ message: 'Message text is required' });
     }
+
+    const allowed = await respondIfUnsafe(res, { text });
+    if (!allowed) return;
 
     const conv = await Conversation.findById(conversationId).lean();
     if (!conv || !conv.participants.some((p) => p.toString() === userId)) {
