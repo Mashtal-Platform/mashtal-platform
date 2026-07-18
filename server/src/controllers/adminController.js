@@ -5,6 +5,7 @@ const MoneyTransaction = require('../models/MoneyTransaction');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
+const { BusinessReport } = require('../models/BusinessReport');
 
 function shapeUser(u) {
   if (!u) return null;
@@ -373,14 +374,44 @@ async function listBusinesses(req, res) {
       if (!pendingByUser.has(uid)) pendingByUser.set(uid, p);
     }
 
+    const reportCounts = ids.length
+      ? await BusinessReport.aggregate([
+          { $match: { business: { $in: ids } } },
+          {
+            $group: {
+              _id: '$business',
+              reportsCount: { $sum: 1 },
+              pendingReportsCount: {
+                $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
+              },
+            },
+          },
+        ])
+      : [];
+    const reportsByBusiness = new Map(
+      reportCounts.map((row) => [
+        String(row._id),
+        {
+          reportsCount: row.reportsCount || 0,
+          pendingReportsCount: row.pendingReportsCount || 0,
+        },
+      ])
+    );
+
     res.json({
       businesses: businesses.map((b) => {
         const shaped = shapeUser(b);
         const pending = pendingByUser.get(String(b._id));
+        const counts = reportsByBusiness.get(String(b._id)) || {
+          reportsCount: 0,
+          pendingReportsCount: 0,
+        };
         return {
           ...shaped,
           pendingSubscriptionPaymentId: pending?._id?.toString() || null,
           pendingSubscriptionStatus: pending?.status || null,
+          reportsCount: counts.reportsCount,
+          pendingReportsCount: counts.pendingReportsCount,
         };
       }),
     });

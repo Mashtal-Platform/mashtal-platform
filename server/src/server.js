@@ -122,6 +122,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/saved', savedItemRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/locations', locationRoutes);

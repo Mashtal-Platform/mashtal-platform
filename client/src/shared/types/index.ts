@@ -194,7 +194,7 @@ export interface FollowedEntity {
 // ============= Notification Types =============
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'message' | 'order' | 'review' | 'alert' | 'mention' | 'transaction';
+  type: 'like' | 'comment' | 'follow' | 'message' | 'order' | 'review' | 'alert' | 'mention' | 'transaction' | 'report';
   title?: string;
   message: string;
   timestamp?: string;
@@ -208,6 +208,7 @@ export interface Notification {
   threadId?: string;
   orderId?: string;
   paymentId?: string;
+  reportId?: string;
   authorId?: string;
   messageCount?: number;
 }

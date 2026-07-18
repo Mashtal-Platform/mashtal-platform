@@ -444,13 +444,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       if (page === 'admin') {
         const focusingPayment = !!(params.highlightPaymentId || params.paymentId);
+        const section = params.section as
+          | 'overview'
+          | 'users'
+          | 'businesses'
+          | 'subscriptions'
+          | 'transactions'
+          | 'reports'
+          | undefined;
         setState((prev) => ({
           ...prev,
           currentPage: 'admin',
           highlightPaymentId: params.highlightPaymentId ?? params.paymentId ?? null,
-          adminTargetTab:
-            params.section ||
-            (focusingPayment ? 'transactions' : null),
+          adminTargetTab: section || (focusingPayment ? 'transactions' : null),
         }));
         // No scroll jump when focusing a transaction or clearing highlight
         return;

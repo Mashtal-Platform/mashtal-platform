@@ -26,4 +26,12 @@ router.get('/transactions', listTransactions);
 router.get('/subscriptions', listSubscriptions);
 router.post('/subscriptions/notify-expiring', notifyExpiringSubscriptions);
 
+const {
+  listReports,
+  resolveReport,
+} = require('../controllers/reportController');
+
+router.get('/reports', listReports);
+router.post('/reports/:id/resolve', resolveReport);
+
 module.exports = router;
