@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Bot, X, Send, Sparkles, Loader } from 'lucide-react';
 import { api } from '../shared/api/client';
 import { useAppState } from '../shared/store/AppStateContext';
@@ -11,15 +11,47 @@ interface AIAssistantProps {
 interface Message {
   text: string;
   isUser: boolean;
+  imageUrl?: string;
   suggestions?: string[];
   productRecommendations?: string[];
+}
+
+const WELCOME_TEXT =
+  "Hello! I'm your agricultural assistant 🌱. Ask me anything about farming, plants, soil, irrigation, pests, fertilizers, or crops.";
+
+const suggestedQuestions = [
+  'How to grow date palms?',
+  'Best irrigation for Lebanese climate',
+  'Organic pest control tips',
+];
+
+function buildHistoryPayload(messages: Message[]) {
+  // This chat only — skip the welcome bubble; last ~16 turns for the API.
+  return messages
+    .filter((m) => m.text !== WELCOME_TEXT)
+    .map((m) => {
+      const parts: string[] = [];
+      if (m.imageUrl) parts.push('[User uploaded a plant leaf/photo in this chat]');
+      if (m.text && m.text !== 'Uploaded image') parts.push(m.text);
+      else if (m.imageUrl && (!m.text || m.text === 'Uploaded image')) {
+        parts.push('Please analyze this plant image.');
+      }
+      const content = parts.join('\n').trim();
+      if (!content) return null;
+      return {
+        role: m.isUser ? ('user' as const) : ('assistant' as const),
+        content,
+      };
+    })
+    .filter(Boolean)
+    .slice(-16);
 }
 
 export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
   const { navigate } = useAppState();
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Hello! I'm your agricultural assistant 🌱. Ask me anything about farming, plants, soil, irrigation, pests, fertilizers, or crops.",
+      text: WELCOME_TEXT,
       isUser: false,
       suggestions: suggestedQuestions,
     },
@@ -27,6 +59,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const [photo, setPhoto] = useState<{
     file: File;
@@ -63,6 +96,12 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, isLoading, isOpen]);
+
   const suggestedFollowUps = (lastQuestion: string) => {
     const q = lastQuestion.toLowerCase();
     const suggestions: string[] = [];
@@ -90,22 +129,30 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
     if (isLoading) return;
     if (!input.trim() && !photo) return;
 
-    const userText = input.trim() || (photo ? 'Uploaded image' : '');
+    const pendingPhoto = photo;
+    const userText = input.trim() || (pendingPhoto ? 'Uploaded image' : '');
     setInput('');
+    // Move image into the chat bubble immediately (do not keep it in the composer).
+    setPhoto(null);
 
-    // Add user's message to UI
-    const newMessages = [...messages, { text: userText, isUser: true }];
+    const userMessage: Message = {
+      text: userText,
+      isUser: true,
+      imageUrl: pendingPhoto?.previewUrl,
+    };
+
+    const historyForApi = buildHistoryPayload(messages);
+    const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
       const formData = new FormData();
-      formData.append('message', userText);
-      if (photo?.file) formData.append('image', photo.file);
+      formData.append('message', userText === 'Uploaded image' ? 'Please analyze this plant image for disease.' : userText);
+      formData.append('history', JSON.stringify(historyForApi));
+      if (pendingPhoto?.file) formData.append('image', pendingPhoto.file);
 
-      const data = await api.post('/ai/assistant', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const data = await api.post('/ai/assistant', formData);
 
       let aiText = '';
       if (data?.kind === 'disease_detection') {
@@ -130,14 +177,18 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
       console.error(err);
       setMessages([
         ...newMessages,
-        { text: 'I had trouble connecting. Can you try again?', isUser: false },
+        {
+          text:
+            err instanceof Error && err.message
+              ? `I had trouble connecting: ${err.message}`
+              : 'I had trouble connecting. Can you try again?',
+          isUser: false,
+        },
       ]);
     } finally {
       setIsLoading(false);
-      setPhoto(null);
     }
-};
-
+  };
 
   return (
     <>
@@ -153,19 +204,21 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
       )}
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-[520px] max-w-[calc(100vw-2rem)] h-[430px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col border border-neutral-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-2xl flex items-center justify-between flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6">
+          <div className="w-full max-w-[calc(100vw-1.5rem)] sm:max-w-xl md:max-w-3xl lg:max-w-4xl h-[78vh] md:h-[82vh] max-h-[900px] bg-white rounded-2xl shadow-2xl flex flex-col border border-neutral-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 md:p-5 rounded-t-2xl flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Bot className="w-6 h-6" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-base md:text-lg font-medium">
                     <span>Agricultural AI</span>
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <div className="text-xs text-green-100">Powered by HuggingFace + local rules</div>
+                  <div className="text-xs md:text-sm text-green-100">
+                    Local leaf photos · HF answers this chat
+                  </div>
                 </div>
               </div>
               <button onClick={onToggle} className="p-2 hover:bg-white/20 rounded-lg">
@@ -173,17 +226,27 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[80%] p-3 rounded-2xl whitespace-pre-wrap ${
+                    className={`max-w-[85%] md:max-w-[75%] p-3 md:p-4 rounded-2xl whitespace-pre-wrap text-sm md:text-[15px] leading-relaxed ${
                       msg.isUser
                         ? 'bg-green-600 text-white'
                         : 'bg-neutral-100 text-neutral-900'
                     }`}
                   >
-                    {msg.text}
+                    {msg.imageUrl && (
+                      <img
+                        src={msg.imageUrl}
+                        alt="Uploaded plant"
+                        className={`mb-2 max-h-56 w-auto max-w-full rounded-xl object-cover border ${
+                          msg.isUser ? 'border-white/30' : 'border-neutral-200'
+                        }`}
+                      />
+                    )}
+                    {msg.text && msg.text !== 'Uploaded image' ? msg.text : null}
+                    {msg.text === 'Uploaded image' && !msg.imageUrl ? msg.text : null}
                     {msg.suggestions && (
                       <div className="flex gap-2 mt-2 flex-wrap">
                         {msg.suggestions.map((s, idx) => (
@@ -223,9 +286,9 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
               )}
             </div>
 
-            <div className="p-4 border-t flex-shrink-0">
-              <div className="flex gap-2">
-                <label className="flex items-center justify-center w-10 h-10 rounded-xl bg-neutral-100 hover:bg-neutral-200 transition-colors cursor-pointer">
+            <div className="p-4 md:p-5 border-t flex-shrink-0">
+              <div className="flex gap-2 md:gap-3">
+                <label className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl bg-neutral-100 hover:bg-neutral-200 transition-colors cursor-pointer flex-shrink-0">
                   <input
                     type="file"
                     accept="image/*"
@@ -241,11 +304,15 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Ask about farming, plants, agriculture..."
-                  className="flex-1 border p-2 rounded-xl"
+                  className="flex-1 border p-2.5 md:p-3 rounded-xl text-sm md:text-base"
                 />
-                <button onClick={handleSend} disabled={isLoading || (!input.trim() && !photo)}>
+                <button
+                  onClick={handleSend}
+                  disabled={isLoading || (!input.trim() && !photo)}
+                  className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-xl text-green-700 hover:bg-green-50 disabled:opacity-40 flex-shrink-0"
+                >
                   <Send className="w-5 h-5" />
                 </button>
               </div>
@@ -262,7 +329,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
                       {photo.filename}
                     </div>
                     <div className="text-[11px] text-neutral-500 truncate">
-                      This image will be sent with your next message
+                      Ready to send — it will appear in the chat
                     </div>
                   </div>
                   <button
@@ -282,9 +349,3 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
     </>
   );
 }
-
-const suggestedQuestions = [
-  'How to grow date palms?',
-  'Best irrigation for Lebanese climate',
-  'Organic pest control tips',
-];

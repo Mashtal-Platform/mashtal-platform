@@ -66,6 +66,16 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use((config) => {
   Object.assign(config.headers, getAuthHeader());
+  // Let the browser set multipart boundary for FormData (do not force application/json).
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    const headers = config.headers as any;
+    if (headers && typeof headers.delete === 'function') {
+      headers.delete('Content-Type');
+    } else if (headers) {
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+    }
+  }
   return config;
 });
 
