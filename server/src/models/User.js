@@ -117,6 +117,8 @@ const UserSchema = new mongoose.Schema(
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     businessProfile: BusinessProfileSchema,
+    /** Filled on convert/signup-as-business; applied to businessProfile only after fee payment */
+    pendingBusinessProfile: BusinessProfileSchema,
     professionalProfile: ProfessionalProfileSchema,
   },
   { timestamps: true }

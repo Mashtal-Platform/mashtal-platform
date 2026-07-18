@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { Store, CheckCircle, Upload, MapPin, Phone, Mail, Globe } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Store, CheckCircle, Upload, MapPin, Phone, Mail, Globe, X } from 'lucide-react';
 import { Page } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import { PhoneInput } from '../components/PhoneInput';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
 import { BUSINESS_TYPES } from '../shared/constants/business';
+import { uploadAvatar } from '../shared/api/users';
+import { getImageUrl } from '../shared/api/client';
 
 interface RegisterBusinessPageProps {
   onNavigate: (page: Page) => void;
 }
 
 export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) {
-  const { convertToBusiness, user, isAuthenticated } = useAuth();
+  const { convertToBusiness, user, isAuthenticated, refreshUser } = useAuth();
   const [step, setStep] = useState<'choice' | 'form' | 'success'>('choice');
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,10 +30,37 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
     wishAccountNumber: '',
   });
   const [error, setError] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file (PNG or JPG).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Logo must be 5MB or smaller.');
+      return;
+    }
+    setError('');
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(String(reader.result || ''));
+    reader.readAsDataURL(file);
+  };
+
+  const clearLogo = () => {
+    setLogoFile(null);
+    setLogoPreview('');
+    if (logoInputRef.current) logoInputRef.current.value = '';
   };
 
   const handleSubmit = async () => {
@@ -96,6 +125,12 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
         wishPhone: formData.wishPhone.trim(),
         wishAccountNumber: formData.wishAccountNumber.trim() || undefined,
       } as any);
+
+      if (logoFile) {
+        await uploadAvatar(logoFile);
+        if (typeof refreshUser === 'function') await refreshUser();
+      }
+
       setStep('success');
       setTimeout(() => {
         onNavigate('payment');
@@ -206,13 +241,13 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-xl sm:text-2xl text-neutral-900 mb-3">Welcome to Mashtal Business!</h2>
+            <h2 className="text-xl sm:text-2xl text-neutral-900 mb-3">Almost there!</h2>
             <p className="text-neutral-600 mb-6">
-              Your business has been successfully registered. You now have access to your business dashboard where you can manage products, track sales, and view analytics.
+              Your business details are saved. Complete payment to activate your business account — until then you remain a visitor and won’t appear as a business in the directory.
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-neutral-700 mb-2">
-                Next step: complete business payment to activate selling.
+                Next step: pay the business fee to unlock selling and the dashboard.
               </p>
               <p className="text-xs text-neutral-600">
                 {formData.email
@@ -220,7 +255,7 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
                   : 'You can manage products after payment activates your subscription.'}
               </p>
             </div>
-            <p className="text-sm text-neutral-500">Redirecting to your dashboard...</p>
+            <p className="text-sm text-neutral-500">Redirecting to payment…</p>
           </div>
         </div>
       </div>
@@ -251,11 +286,51 @@ export function RegisterBusinessPage({ onNavigate }: RegisterBusinessPageProps) 
             {/* Business Logo Upload — optional */}
             <div>
               <label className="block text-sm text-neutral-700 mb-2">Business Logo (optional)</label>
-              <div className="border-2 border-dashed border-neutral-200 rounded-lg p-4 sm:p-8 text-center hover:border-green-600 transition-colors cursor-pointer">
-                <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                <p className="text-sm text-neutral-600">Click to upload or drag and drop</p>
-                <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB — you can also set this later in Edit Profile</p>
-              </div>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+              {logoPreview || user?.avatar ? (
+                <div className="relative inline-block">
+                  <img
+                    src={logoPreview || getImageUrl(user?.avatar)}
+                    alt="Business logo preview"
+                    className="w-28 h-28 rounded-full object-cover border-2 border-neutral-200"
+                  />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:border-green-600 text-neutral-700"
+                    >
+                      Change photo
+                    </button>
+                    {logoPreview && (
+                      <button
+                        type="button"
+                        onClick={clearLogo}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 hover:border-red-400 text-neutral-600 inline-flex items-center gap-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 sm:p-8 text-center hover:border-green-600 transition-colors"
+                >
+                  <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                  <p className="text-sm text-neutral-600">Click to upload your business logo</p>
+                  <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB — used as your profile photo</p>
+                </button>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">

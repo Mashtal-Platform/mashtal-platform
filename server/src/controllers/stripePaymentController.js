@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { getStripe, getWebhookSecret } = require('../services/stripeClient');
-const { getSubscriptionPeriodMs } = require('../utils/subscription');
+const { activatePaidBusinessAccount } = require('../utils/subscription');
 
 const Payment = require('../models/Payment');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
@@ -722,19 +722,7 @@ async function handleStripeWebhook(req, res) {
           if (!latestPayment || latestPayment.status === 'succeeded') return;
           latestPayment.status = 'succeeded';
           await latestPayment.save({ session });
-          const bizUser = await User.findById(latestPayment.user).session(session);
-          await User.findByIdAndUpdate(
-            latestPayment.user,
-            {
-              $set: {
-                subscriptionStatus: 'active',
-                subscriptionStartedAt: bizUser?.subscriptionStartedAt || new Date(),
-                subscriptionExpiresAt: new Date(Date.now() + getSubscriptionPeriodMs()),
-                subscriptionExpiryReminderSentAt: null,
-              },
-            },
-            { session }
-          );
+          await activatePaidBusinessAccount(latestPayment.user, session);
           await MoneyTransaction.findOneAndUpdate(
             { stripePaymentIntentId: pi.id },
             {

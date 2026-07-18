@@ -122,6 +122,47 @@ async function assertBusinessSubscriptionActive(userDoc) {
   return { ok: true };
 }
 
+/**
+ * After successful business-fee payment: activate subscription and promote to
+ * role=business only then (pendingBusinessProfile → businessProfile).
+ */
+async function activatePaidBusinessAccount(userId, session = null) {
+  const query = User.findById(userId);
+  const doc = session ? await query.session(session) : await query;
+  if (!doc) return null;
+
+  const now = new Date();
+  const $set = {
+    subscriptionStatus: 'active',
+    subscriptionStartedAt: doc.subscriptionStartedAt || now,
+    subscriptionExpiresAt: new Date(now.getTime() + getSubscriptionPeriodMs()),
+    subscriptionExpiryReminderSentAt: null,
+  };
+  const $unset = {};
+
+  const pending = doc.pendingBusinessProfile
+    ? (doc.pendingBusinessProfile.toObject?.() || doc.pendingBusinessProfile)
+    : null;
+
+  if (doc.role !== 'business' || pending) {
+    $set.role = 'business';
+    if (pending && typeof pending === 'object') {
+      $set.businessProfile = {
+        ...pending,
+        rating: pending.rating ?? 3.5,
+        reviewsCount: pending.reviewsCount ?? 0,
+      };
+      $unset.pendingBusinessProfile = 1;
+    }
+  }
+
+  const update = { $set };
+  if (Object.keys($unset).length) update.$unset = $unset;
+
+  const opts = session ? { session, new: true } : { new: true };
+  return User.findByIdAndUpdate(userId, update, opts);
+}
+
 module.exports = {
   getSubscriptionPeriodDays,
   getSubscriptionPeriodMs,
@@ -129,4 +170,5 @@ module.exports = {
   notifyExpiringTomorrow,
   startSubscriptionMaintenance,
   assertBusinessSubscriptionActive,
+  activatePaidBusinessAccount,
 };

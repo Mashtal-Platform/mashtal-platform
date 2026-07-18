@@ -98,16 +98,16 @@ async function register(req, res) {
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // New accounts (including business) are never verified by default; verification is separate.
+    // Keep role as visitor until the business fee is paid.
+    // Draft profile lives in pendingBusinessProfile until activation.
     const user = await User.create({
       fullName,
       email: normalizedEmail,
       passwordHash,
-      role,
+      role: 'visitor',
       avatar,
-      businessProfile: role === 'business' ? normalizedBusinessProfile : undefined,
+      pendingBusinessProfile: role === 'business' ? normalizedBusinessProfile : undefined,
       verified: false,
-      subscriptionStatus: role === 'business' ? 'inactive' : undefined,
       emailVerificationToken,
       emailVerificationExpires,
     });
@@ -122,6 +122,8 @@ async function register(req, res) {
       requiresVerification: true,
       message: 'Account created. Please check your email and click the verification link to sign in.',
       user: toUserResponse(user),
+      needsPayment: role === 'business',
+      pendingBusinessUpgrade: role === 'business',
     });
   } catch (err) {
     console.error('[Auth] register error:', err);
@@ -229,14 +231,22 @@ async function googleLogin(req, res) {
         email: normalizedEmail,
         googleId: payload.sub,
         avatar: payload.picture,
-        role: requestedRole,
+        role: 'visitor',
         verified: true,
-        subscriptionStatus: requestedRole === 'business' ? 'inactive' : undefined,
-        businessProfile: normalizedBusinessProfile,
+        pendingBusinessProfile: normalizedBusinessProfile,
       });
     }
 
-    res.json({ token: signToken(user), user: toUserResponse(user) });
+    const json = toUserResponse(user);
+    const pendingUpgrade = !!(user.pendingBusinessProfile && user.role !== 'business');
+    res.json({
+      token: signToken(user),
+      user: {
+        ...json,
+        needsPayment: pendingUpgrade || (user.role === 'business' && user.subscriptionStatus !== 'active'),
+        pendingBusinessUpgrade: pendingUpgrade,
+      },
+    });
   } catch (err) {
     if (err?.message === 'GOOGLE_CLIENT_ID is not set') {
       console.error('[Auth] Google sign-in is not configured');
