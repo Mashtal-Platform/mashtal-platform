@@ -1,6 +1,5 @@
 import React from 'react';
 import { HeroSection } from '../components/HeroSection';
-import { SearchDiscovery } from '../components/SearchDiscovery';
 import { FeaturedBusinesses } from '../components/FeaturedBusinesses';
 import { HowItWorks } from '../components/HowItWorks';
 import { CombinedFeed } from '../components/CombinedFeed';
@@ -37,11 +36,10 @@ export function HomePage({
   return (
     <>
       <HeroSection onNavigate={onNavigate} />
-      <SearchDiscovery onViewBusiness={onViewBusiness} onNavigate={onNavigate} />
       <FeaturedBusinesses onViewBusiness={onViewBusiness} onViewAll={onBusinessesClick} />
       
       {/* Latest Updates Section - Combined Posts & Threads */}
-      <section className="py-8 sm:py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white scroll-mt-20" id="latest-updates">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
             <div>
@@ -82,8 +80,8 @@ export function HomePage({
             onNavigateToThreads={() => onNavigate('threads')}
             followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
-            maxPosts={8}
-            maxThreads={8}
+            maxPosts={4}
+            maxThreads={4}
             feedVersion={feedVersion}
           />
           

@@ -29,6 +29,7 @@ import { UserProfilePage } from './pages/UserProfilePage';
 import { PurchaseHistoryPage } from './pages/PurchaseHistoryPage';
 import { ShoppingPage } from './pages/ShoppingPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { InfoPage } from './pages/InfoPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PostInteractionsProvider } from './contexts/PostInteractionsContext';
 import { AppStateProvider, useAppState } from './shared/store/AppStateContext';
@@ -441,6 +442,12 @@ function AppContent() {
             onAddToCart={actions.addToCart}
           />
         );
+
+      case 'about':
+      case 'privacy':
+      case 'terms':
+      case 'cookies':
+        return <InfoPage kind={state.currentPage} onNavigate={actions.navigate} />;
 
       default:
         return (

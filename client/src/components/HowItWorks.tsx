@@ -11,11 +11,11 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
   const { user } = useAuth();
   
   return (
-    <section className="py-10 sm:py-20 bg-white">
+      <section id="how-it-works" className="py-10 sm:py-20 bg-white scroll-mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-10 sm:mb-16">
-          <h2 className="text-neutral-900 mb-4">
+              <h2 className="text-neutral-900 mb-4">
             How Mashtal Works
           </h2>
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
