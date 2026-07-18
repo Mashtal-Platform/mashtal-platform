@@ -28,12 +28,21 @@ const NotificationSchema = new mongoose.Schema(
         'subscription_expiring',
         'subscription_expired',
         'payment_received',
+        'business_report',
+        'admin_warning',
       ],
       required: true,
     },
 
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
+    },
+
+    /** Optional custom text (e.g. admin warning to a business). */
+    message: {
+      type: String,
+      default: '',
+      maxlength: 1000,
     },
 
     read: {

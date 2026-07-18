@@ -41,6 +41,8 @@ export interface AdminUserDto {
   daysRemaining?: number | null;
   monthsActive?: number | null;
   expiresSoon?: boolean;
+  reportsCount?: number;
+  pendingReportsCount?: number;
 }
 
 export interface AdminTransactionDto {

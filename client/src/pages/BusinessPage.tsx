@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, Star, Users, MessageCircle, Phone, Mail, Globe, CheckCircle, CheckCircle2, Heart, 
   ShoppingCart, Bookmark, X, Send, ThumbsUp, Reply as ReplyIcon, Edit, 
-  FileText, Package, MoreHorizontal, Edit2, Trash2, User, Briefcase, Award
+  FileText, Package, MoreHorizontal, Edit2, Trash2, User, Briefcase, Award, Flag
 } from 'lucide-react';
 import { CartItem } from '../App';
 import { PostModal } from '../components/PostModal';
 import { PostsFeed } from '../components/PostsFeed';
 import { ShareModal } from '../components/ShareModal';
+import { ReportBusinessModal } from '../components/ReportBusinessModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
@@ -21,6 +22,7 @@ import { fetchComments, createComment, toggleLikeComment, deleteComment, type Co
 import { InteractiveRating } from '../components/InteractiveRating';
 import { ProductDetailModal } from '../components/ProductDetailModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { fetchMyBusinessReport } from '../shared/api/reports';
 
 const DAY_LABELS: Record<string, string> = {
   monday: 'Monday',
@@ -83,6 +85,8 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [businessReviews, setBusinessReviews] = useState<Array<{ id: string; author: string; avatar: string; rating: number; comment: string; date: string; helpful?: number }>>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [alreadyReported, setAlreadyReported] = useState(false);
 
   const getSavedProductId = (productId: string) =>
     savedItems?.find((s) => s.type === 'product' && (s.itemId === productId || s.refId === productId))?.id;
@@ -131,6 +135,8 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
   useEffect(() => {
     if (!businessId) return;
     let cancelled = false;
+    setAlreadyReported(false);
+    setShowReportModal(false);
 
     const load = async () => {
       try {
@@ -229,6 +235,24 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
   
   const isOwnProfile =
     user?.id === business?.id || user?.businessId === business?.id;
+
+  useEffect(() => {
+    if (!businessId || !isAuthenticated || isOwnProfile) {
+      setAlreadyReported(false);
+      return;
+    }
+    let cancelled = false;
+    fetchMyBusinessReport(businessId)
+      .then((res) => {
+        if (!cancelled) setAlreadyReported(!!res.reported);
+      })
+      .catch(() => {
+        if (!cancelled) setAlreadyReported(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId, isAuthenticated, isOwnProfile]);
   
   // Check if business is followed
   const isFollowing = (followedBusinesses || []).some(b => b?.id === business?.id);
@@ -607,6 +631,20 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                         >
                           <MessageCircle className="w-5 h-5" />
                           <span>Message</span>
+                        </Button>
+                        <Button
+                          onClick={() => !alreadyReported && setShowReportModal(true)}
+                          variant="outline"
+                          disabled={alreadyReported}
+                          className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg transition-all ${
+                            alreadyReported
+                              ? 'border-neutral-200 text-neutral-400 cursor-not-allowed'
+                              : 'border-red-200 text-red-600 hover:bg-red-50'
+                          }`}
+                          title={alreadyReported ? 'You already reported this business' : 'Report this business'}
+                        >
+                          <Flag className="w-5 h-5" />
+                          <span>{alreadyReported ? 'Reported' : 'Report'}</span>
                         </Button>
                       </>
                     )}
@@ -1155,6 +1193,14 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
           onRated={handleProductRated}
         />
       )}
+
+      <ReportBusinessModal
+        open={showReportModal}
+        businessId={business.id}
+        businessName={displayName}
+        onClose={() => setShowReportModal(false)}
+        onReported={() => setAlreadyReported(true)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   Search,
   CalendarClock,
   Bell,
+  Flag,
 } from 'lucide-react';
 import {
   BarChart,
@@ -42,8 +43,14 @@ import {
   type AdminUserDto,
   type AdminTransactionGroupDto,
 } from '../shared/api/admin';
+import {
+  fetchAdminReports,
+  resolveAdminReport,
+  type BusinessReportDto,
+} from '../shared/api/reports';
+import { toast } from 'sonner';
 
-type Tab = 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions';
+type Tab = 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'reports';
 
 const PIE_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#64748b'];
 
@@ -73,6 +80,11 @@ export function AdminDashboardPage({
   const [subscriptions, setSubscriptions] = useState<AdminUserDto[]>([]);
   const [periodDays, setPeriodDays] = useState(60);
   const [txGroups, setTxGroups] = useState<AdminTransactionGroupDto[]>([]);
+  const [reports, setReports] = useState<BusinessReportDto[]>([]);
+  const [reportStatusFilter, setReportStatusFilter] = useState('pending');
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const [reportActionBusy, setReportActionBusy] = useState<string | null>(null);
+  const [notifyMessageDraft, setNotifyMessageDraft] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notifyMsg, setNotifyMsg] = useState('');
@@ -134,6 +146,14 @@ export function AdminDashboardPage({
     setTxGroups(data.groups || []);
   }, [txType]);
 
+  const loadReports = useCallback(async () => {
+    const data = await fetchAdminReports({
+      status: reportStatusFilter || undefined,
+    });
+    setReports(data.reports || []);
+    setPendingReportsCount(data.pendingCount || 0);
+  }, [reportStatusFilter]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -142,6 +162,7 @@ export function AdminDashboardPage({
       else if (tab === 'users') await loadUsers();
       else if (tab === 'businesses') await loadBusinesses();
       else if (tab === 'subscriptions') await loadSubscriptions();
+      else if (tab === 'reports') await loadReports();
       else await loadTransactions();
     } catch (err: any) {
       setError(err?.message || 'Failed to load admin data');
@@ -155,11 +176,51 @@ export function AdminDashboardPage({
     loadBusinesses,
     loadSubscriptions,
     loadTransactions,
+    loadReports,
   ]);
+
+  const handleResolveReport = async (
+    reportId: string,
+    action: 'dismiss' | 'notify' | 'delete'
+  ) => {
+    if (action === 'delete') {
+      const ok = window.confirm(
+        'Delete this business account permanently? This cannot be undone.'
+      );
+      if (!ok) return;
+    }
+    setReportActionBusy(`${reportId}:${action}`);
+    setNotifyMsg('');
+    try {
+      await resolveAdminReport(reportId, {
+        action,
+        message: notifyMessageDraft[reportId]?.trim() || undefined,
+      });
+      toast.success(
+        action === 'delete'
+          ? 'Business account deleted'
+          : action === 'notify'
+            ? 'Warning notification sent'
+            : 'Report dismissed'
+      );
+      await loadReports();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to resolve report');
+    } finally {
+      setReportActionBusy(null);
+    }
+  };
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Keep pending report badge fresh even on other tabs
+  useEffect(() => {
+    fetchAdminReports({ status: 'pending' })
+      .then((data) => setPendingReportsCount(data.pendingCount || 0))
+      .catch(() => {});
+  }, [tab]);
 
   useEffect(() => {
     if (!highlightPaymentId || !highlightedPaymentId) return;
@@ -211,6 +272,7 @@ export function AdminDashboardPage({
               ['businesses', Building2, 'Businesses'],
               ['subscriptions', CalendarClock, 'Subscriptions'],
               ['transactions', ArrowLeftRight, 'Transactions'],
+              ['reports', Flag, 'Reports'],
             ] as const
           ).map(([id, Icon, label]) => (
             <button
@@ -225,6 +287,15 @@ export function AdminDashboardPage({
             >
               <Icon className="w-4 h-4" />
               {label}
+              {id === 'reports' && pendingReportsCount > 0 ? (
+                <span
+                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    tab === id ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {pendingReportsCount}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -493,6 +564,7 @@ export function AdminDashboardPage({
                 <tr>
                   <th className="p-2 sm:p-3">Business</th>
                   <th className="p-2 sm:p-3">Email</th>
+                  <th className="p-2 sm:p-3">Reports</th>
                   <th className="p-2 sm:p-3">Whish phone</th>
                   <th className="p-2 sm:p-3">Subscription</th>
                   <th className="p-2 sm:p-3">Expires</th>
@@ -504,6 +576,27 @@ export function AdminDashboardPage({
                   <tr key={b.id} className="border-t border-neutral-100">
                     <td className="p-2 sm:p-3 font-medium">{b.companyName || b.fullName}</td>
                     <td className="p-2 sm:p-3">{b.email}</td>
+                    <td className="p-2 sm:p-3">
+                      {(b.reportsCount ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReportStatusFilter('');
+                            setTab('reports');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100"
+                          title="View reports for this business"
+                        >
+                          <Flag className="w-3.5 h-3.5" />
+                          {b.reportsCount}
+                          {(b.pendingReportsCount ?? 0) > 0 ? (
+                            <span className="text-amber-700">({b.pendingReportsCount} pending)</span>
+                          ) : null}
+                        </button>
+                      ) : (
+                        <span className="text-neutral-400 text-xs">0</span>
+                      )}
+                    </td>
                     <td className="p-2 sm:p-3">{b.wishPhone || '—'}</td>
                     <td className="p-2 sm:p-3">
                       <span
@@ -778,6 +871,132 @@ export function AdminDashboardPage({
                           })}                        </tbody>
                       </table>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'reports' && (
+          <div className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-900">Business reports</h2>
+                <p className="text-sm text-neutral-600">
+                  {pendingReportsCount} pending · review, warn, or delete accounts
+                </p>
+              </div>
+              <select
+                value={reportStatusFilter}
+                onChange={(e) => setReportStatusFilter(e.target.value)}
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="pending">Pending</option>
+                <option value="reviewed">Reviewed (warned)</option>
+                <option value="dismissed">Dismissed</option>
+                <option value="action_taken">Action taken</option>
+                <option value="">All</option>
+              </select>
+            </div>
+
+            {reports.length === 0 ? (
+              <p className="text-neutral-500 text-sm py-8 text-center">No reports in this filter.</p>
+            ) : (
+              <div className="space-y-4">
+                {reports.map((r) => (
+                  <div
+                    key={r.id}
+                    data-report-id={r.id}
+                    className="border border-neutral-200 rounded-xl p-4 space-y-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-neutral-900">
+                          {r.business?.companyName || r.business?.fullName || 'Business'}
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          {r.business?.email || '—'} · ID {r.business?.id || '—'}
+                        </div>
+                        <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 px-2 py-1 rounded-full">
+                          <Flag className="w-3.5 h-3.5" />
+                          {r.business?.reportsCount ?? 0} total report
+                          {(r.business?.reportsCount ?? 0) === 1 ? '' : 's'}
+                          {(r.business?.pendingReportsCount ?? 0) > 0
+                            ? ` · ${r.business?.pendingReportsCount} pending`
+                            : ''}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          r.status === 'pending'
+                            ? 'bg-amber-100 text-amber-800'
+                            : r.status === 'action_taken'
+                              ? 'bg-red-100 text-red-800'
+                              : r.status === 'reviewed'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-neutral-100 text-neutral-700'
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </div>
+
+                    <div className="text-sm text-neutral-700">
+                      <span className="font-medium">Reason:</span> {r.reasonLabel || r.reason}
+                    </div>
+                    {r.details ? (
+                      <div className="text-sm text-neutral-600 bg-neutral-50 rounded-lg p-3">
+                        {r.details}
+                      </div>
+                    ) : null}
+                    <div className="text-xs text-neutral-500">
+                      Reported by {r.reporter?.fullName || 'User'} ({r.reporter?.email || '—'}) ·{' '}
+                      {r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}
+                    </div>
+
+                    {r.status === 'pending' && (
+                      <div className="space-y-2 pt-1 border-t border-neutral-100">
+                        <Input
+                          placeholder="Optional warning message to the business…"
+                          value={notifyMessageDraft[r.id] || ''}
+                          onChange={(e) =>
+                            setNotifyMessageDraft((prev) => ({
+                              ...prev,
+                              [r.id]: e.target.value,
+                            }))
+                          }
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!!reportActionBusy}
+                            onClick={() => void handleResolveReport(r.id, 'dismiss')}
+                          >
+                            Dismiss
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                            disabled={!!reportActionBusy}
+                            onClick={() => void handleResolveReport(r.id, 'notify')}
+                          >
+                            <Bell className="w-4 h-4 mr-1" />
+                            {reportActionBusy === `${r.id}:notify` ? 'Sending…' : 'Send warning'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={!!reportActionBusy}
+                            onClick={() => void handleResolveReport(r.id, 'delete')}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            {reportActionBusy === `${r.id}:delete` ? 'Deleting…' : 'Delete account'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

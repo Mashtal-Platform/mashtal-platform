@@ -30,12 +30,16 @@ async function getMyNotifications(req, res) {
         uiType = 'comment';
       else if (n.type === 'order_created') uiType = 'order';
       else if (n.type === 'payment_received') uiType = 'transaction';
+      else if (n.type === 'business_report') uiType = 'report';
+      else if (n.type === 'admin_warning') uiType = 'alert';
       else if (n.type === 'chat_message') uiType = 'message';
 
       const senderName = getSenderDisplayName(n.sender);
 
       let message = 'You have a new notification.';
-      if (n.type === 'follow' && senderName) {
+      if (n.message && String(n.message).trim()) {
+        message = String(n.message).trim();
+      } else if (n.type === 'follow' && senderName) {
         message = `${senderName} started following you.`;
       } else if (n.type === 'like_post' && senderName) {
         message = `${senderName} liked your post.`;
@@ -49,6 +53,13 @@ async function getMyNotifications(req, res) {
         message = senderName
           ? `New payment from ${senderName}. Open the transaction in Admin.`
           : 'A new payment was received. Open the transaction in Admin.';
+      } else if (n.type === 'business_report') {
+        message = senderName
+          ? `${senderName} reported a business. Review it in Admin → Reports.`
+          : 'A business was reported. Review it in Admin → Reports.';
+      } else if (n.type === 'admin_warning') {
+        message =
+          'An administrator sent you a warning about your business account. Please review your profile and content.';
       } else if (n.type === 'subscription_expiring') {
         message =
           'Your Mashtal business subscription ends tomorrow. Renew payment to keep selling.';
@@ -81,6 +92,10 @@ async function getMyNotifications(req, res) {
             : undefined,
         paymentId:
           n.type === 'payment_received' && n.entityId
+            ? n.entityId.toString()
+            : undefined,
+        reportId:
+          (n.type === 'business_report' || n.type === 'admin_warning') && n.entityId
             ? n.entityId.toString()
             : undefined,
         postId:

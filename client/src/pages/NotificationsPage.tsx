@@ -1,9 +1,9 @@
 import React from 'react';
-import { Bell, Package, MessageCircle, Heart, AlertCircle, Trash2, CheckCheck, UserPlus, AtSign } from 'lucide-react';
+import { Bell, Package, MessageCircle, Heart, AlertCircle, Trash2, CheckCheck, UserPlus, AtSign, Flag } from 'lucide-react';
 
 interface Notification {
   id: string;
-  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction';
+  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report';
   message: string;
   read: boolean;
   time: string;
@@ -13,6 +13,7 @@ interface Notification {
   threadId?: string;
   orderId?: string;
   paymentId?: string;
+  reportId?: string;
   authorId?: string;
   messageCount?: number;
 }
@@ -56,6 +57,8 @@ export function NotificationsPage({
         return <MessageCircle className="w-5 h-5 text-green-600" />;
       case 'alert':
         return <AlertCircle className="w-5 h-5 text-amber-600" />;
+      case 'report':
+        return <Flag className="w-5 h-5 text-red-600" />;
       default:
         return <Bell className="w-5 h-5 text-neutral-600" />;
     }
@@ -139,6 +142,10 @@ export function NotificationsPage({
         onNavigate('admin', {
           section: 'transactions',
           highlightPaymentId: notification.paymentId,
+        });
+      } else if (notification.type === 'report') {
+        onNavigate('admin', {
+          section: 'reports',
         });
       }
     }
