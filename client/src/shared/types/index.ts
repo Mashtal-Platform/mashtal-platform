@@ -81,7 +81,11 @@ export type Page =
   | 'create-post'
   | 'create-thread'
   | 'user-profile'
-  | 'purchase-history';
+  | 'purchase-history'
+  | 'about'
+  | 'privacy'
+  | 'terms'
+  | 'cookies';
 
 // ============= Shopping Types =============
 export interface CartItem {

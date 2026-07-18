@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Star, MapPin } from 'lucide-react';
+import { TrendingUp, Star, MapPin, Sparkles } from 'lucide-react';
 import { fetchBusinesses } from '../shared/api/users';
 import { getImageUrl } from '../shared/api/client';
+import { rankHomeBusinessSpotlights } from '../shared/utils/businessRanking';
 
 interface FeaturedBusinessesProps {
   onViewBusiness: (businessId: string) => void;
@@ -12,175 +13,306 @@ interface BusinessCard {
   id: string;
   name: string;
   location: string;
-  description: string;
   image: string;
   rating: number;
   reviews: number;
   followers: number;
-  products: number | string;
   verified: boolean;
-  specialties: string[];
+}
+
+const FEATURED_LIMIT = 8;
+const TRUSTED_LIMIT = 2;
+
+function toCard(b: any): BusinessCard {
+  return {
+    id: String(b.id),
+    name: b.fullName || b.companyName || b.name || 'Business',
+    location: b.location || '—',
+    image:
+      getImageUrl(b.avatar) ||
+      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800',
+    rating: typeof b.rating === 'number' ? b.rating : Number(b.rating) || 0,
+    reviews: b.reviewsCount ?? 0,
+    followers: b.followersCount ?? 0,
+    verified: !!b.verified,
+  };
+}
+
+function BusinessCardButton({
+  business,
+  onViewBusiness,
+}: {
+  business: BusinessCard;
+  onViewBusiness: (id: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onViewBusiness(business.id)}
+      className="text-left bg-white rounded-xl overflow-hidden border border-neutral-200 hover:border-green-300 hover:shadow-md transition-all w-full"
+    >
+      <div className="relative aspect-[4/3] bg-neutral-100">
+        <img
+          src={business.image}
+          alt={business.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-md text-sm font-medium flex items-center gap-1">
+          <Star className="w-4 h-4 fill-current" />
+          <span>{business.rating.toFixed(1)}</span>
+        </div>
+        {business.verified && (
+          <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium">
+            Verified
+          </div>
+        )}
+      </div>
+      <div className="p-3 sm:p-4">
+        <h3 className="text-base sm:text-lg font-semibold text-neutral-900 truncate">
+          {business.name}
+        </h3>
+        <div className="mt-1.5 flex items-center gap-1.5 text-sm text-neutral-500">
+          <MapPin className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{business.location}</span>
+        </div>
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-600">
+          <span>{business.reviews} reviews</span>
+          <span className="text-green-600 font-medium truncate">
+            {business.followers.toLocaleString()} followers
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function FeaturedGrid({
+  businesses,
+  loading,
+  onViewBusiness,
+  emptyMessage,
+  onViewAll,
+}: {
+  businesses: BusinessCard[];
+  loading: boolean;
+  onViewBusiness: (id: string) => void;
+  emptyMessage: string;
+  onViewAll: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Array.from({ length: FEATURED_LIMIT }, (_, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-xl overflow-hidden border border-neutral-200 animate-pulse"
+          >
+            <div className="aspect-[4/3] bg-neutral-100" />
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-neutral-100 rounded w-3/4" />
+              <div className="h-3 bg-neutral-100 rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (businesses.length === 0) {
+    return (
+      <div className="text-center py-10 text-neutral-500">
+        <p className="text-base">{emptyMessage}</p>
+        <button
+          onClick={onViewAll}
+          className="mt-4 text-green-600 hover:text-green-700 font-medium text-base"
+        >
+          View all businesses →
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {businesses.map((business) => (
+        <BusinessCardButton
+          key={business.id}
+          business={business}
+          onViewBusiness={onViewBusiness}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Trusted: exactly up to 2 compact cards, not stretched full width. */
+function TrustedGrid({
+  businesses,
+  loading,
+  onViewBusiness,
+  emptyMessage,
+  onViewAll,
+}: {
+  businesses: BusinessCard[];
+  loading: boolean;
+  onViewBusiness: (id: string) => void;
+  emptyMessage: string;
+  onViewAll: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="bg-white rounded-xl overflow-hidden border border-neutral-200 animate-pulse"
+          >
+            <div className="aspect-[4/3] bg-neutral-100" />
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-neutral-100 rounded w-3/4" />
+              <div className="h-3 bg-neutral-100 rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (businesses.length === 0) {
+    return (
+      <div className="text-center py-10 text-neutral-500">
+        <p className="text-base">{emptyMessage}</p>
+        <button
+          onClick={onViewAll}
+          className="mt-4 text-green-600 hover:text-green-700 font-medium text-base"
+        >
+          View all businesses →
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+      {businesses.map((business) => (
+        <BusinessCardButton
+          key={business.id}
+          business={business}
+          onViewBusiness={onViewBusiness}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusinessesProps) {
-  const [businesses, setBusinesses] = useState<BusinessCard[]>([]);
+  const [featured, setFeatured] = useState<BusinessCard[]>([]);
+  const [trusted, setTrusted] = useState<BusinessCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBusinesses()
       .then((list) => {
-        // Verified only, then sort by rating descending (biggest first), take top 2
-        const verified = (list as any[]).filter((b) => b.verified);
-        const rating = (b: any) => Number(b.rating) || 0;
-        const topTwoByRating = [...verified].sort((a, b) => rating(b) - rating(a)).slice(0, 2);
-        setBusinesses(
-          topTwoByRating.map((b) => ({
-            id: b.id,
-            name: b.fullName || b.companyName || 'Business',
-            location: b.location || '—',
-            description: b.bio || 'No description',
-            image: getImageUrl(b.avatar) || 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800',
-            rating: typeof b.rating === 'number' ? b.rating : 0,
-            reviews: b.reviewsCount ?? 0,
-            followers: b.followersCount ?? 0,
-            products: '—',
-            verified: !!b.verified,
-            specialties: Array.isArray(b.specialties) ? b.specialties : [],
-          }))
+        const { featured: featuredRanked, trusted: trustedRanked } = rankHomeBusinessSpotlights(
+          list as any[],
+          FEATURED_LIMIT,
+          TRUSTED_LIMIT
         );
+        setFeatured(featuredRanked.map(toCard));
+        setTrusted(trustedRanked.map(toCard));
       })
-      .catch(() => setBusinesses([]))
+      .catch(() => {
+        setTrusted([]);
+        setFeatured([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <section id="businesses" className="py-8 sm:py-16 bg-gradient-to-br from-green-50 to-neutral-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-8 sm:mb-12">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-6 h-6 text-green-600" />
-              <span className="text-green-600">Top Rated</span>
-            </div>
-            <h2 className="text-neutral-900">
-              Most Trusted Providers
-            </h2>
-            <p className="text-neutral-600 mt-2">
-              Verified businesses with excellent customer ratings
-            </p>
-          </div>
-          <button
-            onClick={onViewAll}
-            className="hidden md:block text-green-600 hover:text-green-700 transition-colors font-medium"
-          >
-            View All →
-          </button>
-        </div>
-
-        {/* Featured Grid - verified businesses with highest rating from API */}
-        {loading ? (
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-            {[1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden border border-neutral-200 animate-pulse h-48 sm:h-40" />
-            ))}
-          </div>
-        ) : businesses.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-            {businesses.map((business) => (
-              <div
-                key={business.id}
-                className="bg-white rounded-xl overflow-hidden border border-neutral-200 hover:shadow-xl transition-shadow cursor-pointer"
-                onClick={() => onViewBusiness(business.id)}
-              >
-                <div className="flex flex-col sm:flex-row">
-                  {/* Image */}
-                  <div className="sm:w-1/3 h-48 sm:h-auto relative min-h-[12rem]">
-                    <img
-                      src={business.image}
-                      alt={business.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 left-3 bg-amber-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span>{business.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 p-4 sm:p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-xl text-neutral-900 mb-1">{business.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-neutral-600">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
-                          <span>{business.location}</span>
-                        </div>
-                      </div>
-                      {business.verified && (
-                        <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                          Verified
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-neutral-600 mb-4 line-clamp-2">{business.description}</p>
-
-                    <div className="flex items-center gap-6 text-sm">
-                      {business.products !== '—' && (
-                        <div className="text-neutral-600">
-                          <span className="text-neutral-900">{business.products}</span> Products
-                        </div>
-                      )}
-                      <div className="text-neutral-600">
-                        <span className="text-neutral-900">{business.reviews}</span> Reviews
-                      </div>
-                      <div className="text-green-600">
-                        {business.followers.toLocaleString()} followers
-                      </div>
-                    </div>
-
-                    {business.specialties.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {business.specialties.slice(0, 5).map((specialty, index) => (
-                          <span
-                            key={index}
-                            className="bg-neutral-100 text-neutral-700 px-3 py-1 rounded-full text-sm"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+    <>
+      <section id="featured-businesses" className="py-10 sm:py-14 bg-white scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-green-600" />
+                <span className="text-base text-green-600 font-medium">Spotlight</span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 sm:py-12 text-neutral-500">
-            <p>No verified top-rated businesses yet.</p>
+              <h2 className="text-2xl sm:text-3xl text-neutral-900">Featured Businesses</h2>
+              <p className="text-base text-neutral-600 mt-2">
+                Popular providers with strong community followings
+              </p>
+            </div>
             <button
               onClick={onViewAll}
-              className="mt-4 text-green-600 hover:text-green-700 font-medium"
+              className="hidden md:block text-base text-green-600 hover:text-green-700 transition-colors font-medium"
             >
-              View all businesses →
+              View All →
             </button>
           </div>
-        )}
 
-        {/* Mobile View All Button */}
-        {businesses.length > 0 && (
-          <div className="mt-8 md:hidden text-center">
+          <FeaturedGrid
+            businesses={featured}
+            loading={loading}
+            onViewBusiness={onViewBusiness}
+            emptyMessage="No featured businesses yet."
+            onViewAll={onViewAll}
+          />
+
+          {featured.length > 0 && (
+            <div className="mt-6 md:hidden text-center">
+              <button
+                onClick={onViewAll}
+                className="text-base text-green-600 hover:text-green-700 font-medium"
+              >
+                View All Businesses →
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section id="businesses" className="py-10 sm:py-14 bg-gradient-to-br from-green-50 to-neutral-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+                <span className="text-base text-green-600 font-medium">Top Rated</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl text-neutral-900">Most Trusted Providers</h2>
+              <p className="text-base text-neutral-600 mt-2">
+                Proven ratings across many reviews
+              </p>
+            </div>
             <button
               onClick={onViewAll}
-              className="text-green-600 hover:text-green-700 transition-colors font-medium"
+              className="hidden md:block text-base text-green-600 hover:text-green-700 transition-colors font-medium"
             >
-              View All Businesses →
+              View All →
             </button>
           </div>
-        )}
-      </div>
-    </section>
+
+          <TrustedGrid
+            businesses={trusted}
+            loading={loading}
+            onViewBusiness={onViewBusiness}
+            emptyMessage="No trusted businesses yet."
+            onViewAll={onViewAll}
+          />
+
+          {trusted.length > 0 && (
+            <div className="mt-6 md:hidden text-center">
+              <button
+                onClick={onViewAll}
+                className="text-base text-green-600 hover:text-green-700 font-medium"
+              >
+                View All Businesses →
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
   );
 }

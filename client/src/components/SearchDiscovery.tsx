@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Leaf, Sprout, Shovel, TreePine, Filter, MapPin, X, Building2 } from 'lucide-react';
-import { fetchBusinesses } from '../shared/api/users';
-import { getImageUrl } from '../shared/api/client';
+import React, { useState } from 'react';
+import { Leaf, Sprout, Shovel, TreePine, Filter, X } from 'lucide-react';
 import type { Page } from '../App';
 
 interface SearchDiscoveryProps {
@@ -16,30 +14,12 @@ const categories = [
   { id: 'plants', name: 'Trees & Plants', icon: TreePine },
 ];
 
-export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryProps) {
+export function SearchDiscovery({ onNavigate }: SearchDiscoveryProps) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [location, setLocation] = useState('all');
-  const [businesses, setBusinesses] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetchBusinesses()
-      .then(setBusinesses)
-      .catch(() => setBusinesses([]));
-  }, []);
-
-  const filteredBusinesses = businesses.filter((business: any) => {
-    const bio = (business.bio || '').toLowerCase();
-    const matchesCategory =
-      selectedCategory === 'all' || bio.includes(selectedCategory.toLowerCase());
-    const matchesRating = (business.rating ?? 0) >= minRating;
-    const matchesVerified = !verifiedOnly || business.verified;
-    const loc = business.location || '';
-    const matchesLocation = location === 'all' || (typeof loc === 'string' && loc.includes(location));
-    return matchesCategory && matchesRating && matchesVerified && matchesLocation;
-  });
 
   const resetFilters = () => {
     setMinRating(0);
@@ -48,27 +28,30 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
     setSelectedCategory('all');
   };
 
+  const goToBusinesses = () => {
+    onNavigate?.('businesses');
+  };
+
   return (
     <section id="discover" className="py-8 sm:py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-neutral-900 mb-4">
-            Discover Agricultural Services
-          </h2>
+          <h2 className="text-neutral-900 mb-4">Discover Agricultural Services</h2>
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
             Browse through verified nurseries, agricultural shops, and service providers
           </p>
         </div>
 
-        {/* Category Filters */}
         <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8 flex-wrap">
           {categories.map((category) => {
             const Icon = category.icon;
             return (
               <button
                 key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => {
+                  setSelectedCategory(category.id);
+                  goToBusinesses();
+                }}
                 className={`flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all ${
                   selectedCategory === category.id
                     ? 'bg-green-600 text-white shadow-lg'
@@ -89,7 +72,6 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
           </button>
         </div>
 
-        {/* Advanced Filters Panel */}
         {showMoreFilters && (
           <div className="mb-6 sm:mb-8 bg-neutral-50 rounded-xl p-4 sm:p-6 border border-neutral-200">
             <div className="flex items-center justify-between mb-4">
@@ -100,7 +82,6 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
             </div>
 
             <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-              {/* Rating Filter */}
               <div>
                 <label className="block text-sm text-neutral-700 mb-2">Minimum Rating</label>
                 <select
@@ -115,7 +96,6 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
                 </select>
               </div>
 
-              {/* Location Filter */}
               <div>
                 <label className="block text-sm text-neutral-700 mb-2">Location</label>
                 <select
@@ -131,7 +111,6 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
                 </select>
               </div>
 
-              {/* Verified Filter */}
               <div>
                 <label className="block text-sm text-neutral-700 mb-2">Verification</label>
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -154,100 +133,26 @@ export function SearchDiscovery({ onViewBusiness, onNavigate }: SearchDiscoveryP
                 Reset Filters
               </button>
               <button
-                onClick={() => setShowMoreFilters(false)}
+                onClick={() => {
+                  setShowMoreFilters(false);
+                  goToBusinesses();
+                }}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                Apply Filters
+                Browse Businesses
               </button>
             </div>
           </div>
         )}
 
-        {/* Featured Tag */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-green-600 rounded-full"></div>
-            <span className="text-neutral-700">Featured Businesses</span>
-          </div>
-          <div className="text-sm text-neutral-600">Showing {filteredBusinesses.length} results</div>
+        <div className="text-center">
+          <button
+            onClick={goToBusinesses}
+            className="px-8 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors"
+          >
+            View All Businesses
+          </button>
         </div>
-
-        {/* Business Cards Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filteredBusinesses.map((business) => (
-            <div
-              key={business.id}
-              className="bg-white border border-neutral-200 rounded-xl overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
-              onClick={() => onViewBusiness(business.businessId || business.id)}
-            >
-              <div className="relative h-48 bg-neutral-100">
-                {getImageUrl(business.avatar) ? (
-                  <img
-                    src={getImageUrl(business.avatar)}
-                    alt={business.fullName || 'Business'}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                    <Building2 className="w-16 h-16" />
-                  </div>
-                )}
-                {business.verified && (
-                  <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
-                    Verified
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-5">
-                <h3 className="text-xl text-neutral-900 mb-2">{business.fullName || business.companyName || 'Business'}</h3>
-                <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
-                  <MapPin className="w-4 h-4 flex-shrink-0" />
-                  <span>{business.location || '—'}</span>
-                </div>
-                <p className="text-neutral-600 mb-4 line-clamp-2">{business.bio || 'No description'}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="text-amber-500">★</span>
-                    <span className="text-neutral-900">{typeof business.rating === 'number' ? business.rating.toFixed(1) : '—'}</span>
-                    <span className="text-neutral-500 text-sm">({business.reviewsCount ?? 0} reviews)</span>
-                  </div>
-                  <div className="text-sm text-green-600">{(business.followersCount ?? 0).toLocaleString()} followers</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredBusinesses.length === 0 && (
-          <div className="text-center py-8 sm:py-16">
-            <Leaf className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl text-neutral-900 mb-2">No businesses found</h3>
-            <p className="text-neutral-600 mb-4">Try adjusting your filters</p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
-
-        {/* Load More */}
-        {filteredBusinesses.length > 0 && (
-          <div className="text-center mt-8 sm:mt-12">
-            <button 
-              onClick={() => {
-                // Navigate to the full businesses listing
-                onNavigate?.('businesses');
-              }}
-              className="px-8 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors"
-            >
-              Load More Businesses
-            </button>
-          </div>
-        )}
       </div>
     </section>
   );
