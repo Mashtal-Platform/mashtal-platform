@@ -10,6 +10,7 @@ import { UserProfile, Page, SavedItem } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import { uploadAvatar, uploadCover } from '../shared/api/users';
 import { getImageUrl, getAvatarUrl } from '../shared/api/client';
+import { notifyError } from '../shared/utils/notify';
 import { filterOutOrphanSavedItems } from '../shared/utils/saved';
 import { UserEditProfile } from '../components/UserEditProfile';
 import { BusinessEditProfile } from '../components/BusinessEditProfile';
@@ -286,6 +287,7 @@ export function ProfilePage({
       onUpdateProfile({ ...displayProfile, avatar: avatarPath });
     } catch (err) {
       console.error('[ProfilePage] Avatar upload failed:', err);
+      notifyError(err, 'Failed to update avatar. Please try again.');
     }
   };
 
@@ -300,7 +302,7 @@ export function ProfilePage({
       onUpdateProfile({ ...displayProfile, coverImage: coverPath } as any);
     } catch (err) {
       console.error('[ProfilePage] Cover upload failed:', err);
-      alert('Failed to update cover image. Please try again.');
+      notifyError(err, 'Failed to update cover image. Please try again.');
     } finally {
       e.target.value = '';
     }

@@ -9,6 +9,7 @@ import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../share
 import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
 import { getAvatarUrl } from '../shared/api/client';
 import { fetchMentionableProfiles } from '../shared/api/users';
+import { notifyError } from '../shared/utils/notify';
 
 interface ThreadsFeedProps {
   onSaveThread?: (thread: any) => void;
@@ -731,6 +732,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
       }
     } catch (err) {
       console.error('[ThreadsFeed] Failed to add comment:', err);
+      notifyError(err, 'Failed to add comment');
     }
     setNewComment('');
     setReplyingTo(null);

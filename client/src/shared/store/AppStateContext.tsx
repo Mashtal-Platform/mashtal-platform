@@ -26,6 +26,7 @@ import {
 } from '../utils/navigation';
 import { createPost as apiCreatePost, fetchPosts, updatePost as apiUpdatePost, deletePost as apiDeletePost } from '../api/posts';
 import { createThread as apiCreateThread, fetchThreads, updateThread as apiUpdateThread, deleteThread as apiDeleteThread } from '../api/threads';
+import { notifyError } from '../utils/notify';
 import {
   fetchNotifications,
   markNotificationRead as apiMarkNotificationRead,
@@ -591,6 +592,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }));
     } catch (err) {
       console.error('[AppState] Failed to create post in backend:', err);
+      notifyError(err);
     } finally {
       setTimeout(
         () =>
@@ -643,6 +645,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }));
       } catch (err) {
         console.error('[AppState] Failed to create thread in backend:', err);
+        notifyError(err);
       } finally {
         setTimeout(
           () =>
@@ -683,6 +686,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => {
         console.error('[AppState] Failed to update post in backend:', err);
+        notifyError(err, 'Failed to update post');
       });
   }, []);
 
@@ -715,6 +719,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => {
         console.error('[AppState] Failed to update thread in backend:', err);
+        notifyError(err, 'Failed to update thread');
       });
   }, []);
 

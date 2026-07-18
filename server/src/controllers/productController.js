@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { assertBusinessSubscriptionActive } = require('../utils/subscription');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 let Product;
 let User;
 try {
@@ -232,6 +233,13 @@ async function createProduct(req, res) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const allowed = await respondIfUnsafe(res, {
+      text: [name, description],
+      file: req.file,
+      imagePath: imagePath,
+    });
+    if (!allowed) return;
+
     const business = await User.findOne({
       $or: [{ _id: businessId }, { businessId }],
       role: 'business',
@@ -302,6 +310,15 @@ async function updateProduct(req, res) {
       // JSON body can send new path or empty to clear
       imagePath = body.image || '';
     }
+
+    const nextName = name !== undefined ? name : product.name;
+    const nextDescription = description !== undefined ? description : product.description;
+    const allowed = await respondIfUnsafe(res, {
+      text: [nextName, nextDescription],
+      file: req.file,
+      imagePath,
+    });
+    if (!allowed) return;
 
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;

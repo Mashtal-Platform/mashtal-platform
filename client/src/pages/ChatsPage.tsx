@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 import { getConversations, createOrGetConversation, getMessages, editMessage as apiEditMessage, deleteMessage as apiDeleteMessage, type ChatConversation, type ChatMessageDto } from '../shared/api/chat';
 import { getImageUrl, SOCKET_URL } from '../shared/api/client';
+import { notifyError, notifyContentBlocked, isContentBlockedError } from '../shared/utils/notify';
 
 interface ChatsPageProps {
   onNavigateToProfile: (profileId: string) => void;
@@ -402,8 +403,15 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
     if (!text || !selectedChat) return;
     const socket = socketRef.current;
     if (socket && wsConnected) {
-      socket.emit('send_message', { conversationId: selectedChat.id, text }, (res: { error?: string }) => {
-        if (res?.error) console.error('[ChatsPage] send_message error:', res.error);
+      socket.emit('send_message', { conversationId: selectedChat.id, text }, (res: { error?: string; code?: string }) => {
+        if (res?.error) {
+          console.error('[ChatsPage] send_message error:', res.error);
+          if (res.code === 'CONTENT_NOT_ALLOWED' || isContentBlockedError(res.error)) {
+            notifyContentBlocked();
+          } else {
+            notifyError(new Error(res.error));
+          }
+        }
       });
       setInputMessage('');
     } else {

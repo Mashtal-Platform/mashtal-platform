@@ -6,6 +6,7 @@ import { getImageUrl } from '../shared/api/client';
 import { fetchProductReviews, createReview, deleteReview, ReviewDto } from '../shared/api/reviews';
 import type { ShoppingProductDto } from '../shared/api/products';
 import { useAuth } from '../contexts/AuthContext';
+import { notifyError, isContentBlockedError, CONTENT_BLOCKED_DESCRIPTION } from '../shared/utils/notify';
 
 interface ProductDetailModalProps {
   product: ShoppingProductDto | null;
@@ -109,7 +110,9 @@ export function ProductDetailModal({
       const count = res.reviewsCount ?? 1;
       onRated?.(product.id, avg, count);
     } catch (err: any) {
-      setSubmitError(err?.message || err?.response?.data?.message || 'Failed to submit rating. Please try again.');
+      const msg = err?.message || err?.response?.data?.message || 'Failed to submit rating. Please try again.';
+      setSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
+      notifyError(err, 'Failed to submit rating. Please try again.');
     } finally {
       setSubmitting(false);
     }

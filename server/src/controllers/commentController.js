@@ -2,6 +2,7 @@ const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const Thread = require('../models/Thread');
 const { Types } = require('mongoose');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 async function getComments(req, res) {
   try {
@@ -101,6 +102,9 @@ async function createComment(req, res) {
     if (!['post', 'thread'].includes(targetType)) {
       return res.status(400).json({ message: 'Invalid targetType' });
     }
+
+    const allowed = await respondIfUnsafe(res, { text: content });
+    if (!allowed) return;
 
     const comment = await Comment.create({
       targetType,
@@ -243,6 +247,9 @@ async function updateComment(req, res) {
     if (!content || typeof content !== 'string' || !content.trim()) {
       return res.status(400).json({ message: 'content is required' });
     }
+
+    const allowed = await respondIfUnsafe(res, { text: content });
+    if (!allowed) return;
 
     const comment = await Comment.findById(id);
     if (!comment) return res.status(404).json({ message: 'Comment not found' });

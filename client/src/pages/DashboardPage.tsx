@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { fetchProducts, createProduct, updateProduct } from '../shared/api/products';
+import { notifyError, isContentBlockedError, CONTENT_BLOCKED_DESCRIPTION } from '../shared/utils/notify';
 import {
   fetchBusinessDashboardAnalytics,
   fetchBusinessOrders,
@@ -393,7 +394,9 @@ export function DashboardPage({
       resetProductForm();
       setShowAddProductModal(false);
     } catch (err: any) {
-      setProductSubmitError(err?.message || 'Failed to add product. Please try again.');
+      const msg = err?.message || 'Failed to add product. Please try again.';
+      setProductSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
+      notifyError(err, 'Failed to add product. Please try again.');
     } finally {
       setProductsLoading(false);
     }
@@ -457,7 +460,9 @@ export function DashboardPage({
       resetProductForm();
       setShowAddProductModal(false);
     } catch (err: any) {
-      setProductSubmitError(err?.message || 'Failed to update product. Please try again.');
+      const msg = err?.message || 'Failed to update product. Please try again.';
+      setProductSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
+      notifyError(err, 'Failed to update product. Please try again.');
     } finally {
       setProductsLoading(false);
     }

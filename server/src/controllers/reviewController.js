@@ -1,6 +1,7 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
 const { Types } = require('mongoose');
+const { respondIfUnsafe } = require('../utils/assertContentSafe');
 
 async function createReview(req, res) {
   try {
@@ -21,6 +22,11 @@ async function createReview(req, res) {
 
     // Comment is optional — empty string clears any previous message
     const commentValue = comment != null ? String(comment).trim() : '';
+
+    if (commentValue) {
+      const allowed = await respondIfUnsafe(res, { text: commentValue });
+      if (!allowed) return;
+    }
 
     const review = await Review.findOneAndUpdate(
       {
