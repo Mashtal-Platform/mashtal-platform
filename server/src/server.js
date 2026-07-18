@@ -296,6 +296,20 @@ connectDB().then(() => {
     } catch (err) {
       console.error('[Server] Failed to start subscription maintenance:', err?.message || err);
     }
+    try {
+      const { startLocalDiseaseSidecar } = require('./ai/localDiseaseProcess');
+      startLocalDiseaseSidecar();
+    } catch (err) {
+      console.error('[Server] Local disease sidecar start failed:', err?.message || err);
+    }
   });
+});
+
+process.on('exit', () => {
+  try {
+    require('./ai/localDiseaseProcess').stopLocalDiseaseSidecar();
+  } catch {
+    /* ignore */
+  }
 });
 

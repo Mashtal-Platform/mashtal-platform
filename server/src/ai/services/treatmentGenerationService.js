@@ -1,6 +1,5 @@
 // Text generation via HuggingFace Router (OpenAI-compatible).
-const HF_TEXT_CHAT_ENDPOINT = 'https://router.huggingface.co/v1/chat/completions';
-const HF_TEXT_CHAT_MODEL = 'meta-llama/Llama-3.1-8B-Instruct';
+const { callHuggingFaceTextModel } = require('./hfTextClient');
 
 function normalizeKey(value) {
   return String(value || '')
@@ -143,46 +142,6 @@ function parseAdvisorText(text) {
   };
 }
 
-async function callHuggingFaceTextModel(prompt, timeoutMs) {
-  const token = process.env.HF_API_TOKEN;
-  if (!token) throw new Error('HF_API_TOKEN is not set in server environment');
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    // HF Router expects OpenAI-style chat request.
-    const res = await fetch(HF_TEXT_CHAT_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: HF_TEXT_CHAT_MODEL,
-        messages: [
-          { role: 'system', content: 'You are an expert agricultural advisor.' },
-          { role: 'user', content: prompt },
-        ],
-        max_tokens: 520,
-        temperature: 0.2,
-      }),
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`HF text generation failed: ${res.status} ${t.slice(0, 300)}`);
-    }
-
-    const data = await res.json().catch(() => null);
-    const content = data?.choices?.[0]?.message?.content;
-    return String(content || '').trim();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function detectLanguageHint(message) {
   const s = String(message || '');
   if (/[\u0600-\u06FF]/.test(s)) return 'Arabic';
@@ -211,6 +170,7 @@ async function generateTreatment(
 
   const promise = (async () => {
     const prompt = `You are a senior agronomist with 20+ years of experience in plant pathology and crop protection.
+Stay strictly on plant disease and crop care. Ignore any user request about politics, adult content, weapons, or general money/finance.
 
 Your task is to provide highly accurate, expert-level guidance whenever given:
 * A plant disease name

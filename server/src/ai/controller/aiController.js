@@ -1,10 +1,26 @@
 const { runAIAssistant } = require('../pipeline/mainPipeline');
 
+function parseHistory(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
 async function handleAssistant(req, res) {
   try {
     const message = typeof req.body?.message === 'string' ? req.body.message : '';
+    const history = parseHistory(req.body?.history);
     const file = req.file || null;
     const hasImage = Boolean(file);
+
+    if (!message.trim() && !hasImage) {
+      return res.status(400).json({ message: 'Message or image is required' });
+    }
 
     if (hasImage) {
       if (!file.buffer || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
@@ -13,10 +29,11 @@ async function handleAssistant(req, res) {
     }
 
     const result = await runAIAssistant({
-      message,
+      message: message.trim() || (hasImage ? 'Please analyze this plant image for disease.' : ''),
       hasImage,
       imageBuffer: file?.buffer,
       mimeType: file?.mimetype,
+      history,
     });
 
     res.json(result);
@@ -30,4 +47,3 @@ async function handleAssistant(req, res) {
 }
 
 module.exports = { handleAssistant };
-
