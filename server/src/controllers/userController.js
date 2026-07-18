@@ -676,18 +676,17 @@ async function convertToBusiness(req, res) {
     if (errMsg) return res.status(400).json({ message: errMsg });
     const n = normalizeBusinessProfile(bp);
 
-    user.role = 'business';
-    user.businessProfile = {
+    // Do NOT set role=business until the fee is paid. Store draft profile only.
+    user.pendingBusinessProfile = {
       ...n,
       rating: 3.5,
       reviewsCount: 0,
     };
-    // Card payment on PaymentPage activates subscription
-    user.subscriptionStatus = 'inactive';
-
+    user.markModified('pendingBusinessProfile');
     await user.save();
+
     const json = user.toJSON ? user.toJSON() : user;
-    res.json({ ...json, needsPayment: true });
+    res.json({ ...json, needsPayment: true, pendingBusinessUpgrade: true });
   } catch (err) {
     console.error('[Users] convertToBusiness error:', err);
     res.status(500).json({ message: 'Failed to convert to business account' });

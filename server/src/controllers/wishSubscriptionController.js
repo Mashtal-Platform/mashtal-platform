@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 
 const SubscriptionPayment = require('../models/SubscriptionPayment');
 const User = require('../models/User');
+const { activatePaidBusinessAccount } = require('../utils/subscription');
 
 function getPlanAmountSars(planRole) {
   if (planRole === 'business') return 499;
@@ -189,7 +190,7 @@ async function wishSubscriptionCallback(req, res) {
       await latest.save({ session });
 
       if (status === 'approved') {
-        await User.findByIdAndUpdate(latest.user, { $set: { subscriptionStatus: 'active' } }, { session });
+        await activatePaidBusinessAccount(latest.user, session);
       }
     });
 
@@ -230,7 +231,7 @@ async function verifyWishSubscriptionPayment(req, res) {
       await latest.save({ session });
 
       if (decision === 'approve') {
-        await User.findByIdAndUpdate(latest.user, { $set: { subscriptionStatus: 'active' } }, { session });
+        await activatePaidBusinessAccount(latest.user, session);
       }
     });
 

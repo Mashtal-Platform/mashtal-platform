@@ -180,7 +180,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
     setPendingVerification(null);
     setUser(nextUser);
-    return nextUser;
+    return {
+      ...nextUser,
+      needsPayment: !!(data.user as any)?.needsPayment,
+      pendingBusinessUpgrade: !!(data.user as any)?.pendingBusinessUpgrade,
+    };
   };
 
   const signUp = async (input: {

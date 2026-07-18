@@ -198,7 +198,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
         businessProfile,
       });
 
-      if (googleUser.role === 'business') {
+      if (selectedRole === 'business' || (googleUser as any)?.needsPayment || (googleUser as any)?.pendingBusinessUpgrade) {
         onPaymentNeeded('business');
       } else {
         onNavigate('home');

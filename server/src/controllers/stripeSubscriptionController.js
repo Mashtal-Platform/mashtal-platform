@@ -37,6 +37,16 @@ async function createSubscriptionPaymentIntent(req, res) {
       return res.status(400).json({ message: 'planRole must be business' });
     }
 
+    const me = await User.findById(userId).lean();
+    if (!me) return res.status(404).json({ message: 'User not found' });
+    const hasPending = !!me.pendingBusinessProfile;
+    const isBusiness = me.role === 'business';
+    if (!hasPending && !isBusiness) {
+      return res.status(400).json({
+        message: 'Complete the business registration form before paying the fee.',
+      });
+    }
+
     const amountTotal = getPlanAmountUsd(planRole);
     if (!amountTotal) return res.status(400).json({ message: 'Invalid plan' });
 

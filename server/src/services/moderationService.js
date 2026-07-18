@@ -3,6 +3,14 @@ const fs = require('fs');
 const { checkBlocklist } = require('../moderation/blocklist');
 
 const CACHE_DIR = path.join(__dirname, '..', '..', '.cache', 'transformers');
+const CLIP_ONNX_PATH = path.join(
+  CACHE_DIR,
+  'Xenova',
+  'clip-vit-base-patch32',
+  'onnx',
+  'model_quantized.onnx'
+);
+const CLIP_MIN_BYTES = 140 * 1024 * 1024;
 
 const TOXICITY_THRESHOLD = Number(process.env.MODERATION_TOXICITY_THRESHOLD) || 0.85;
 const NSFW_THRESHOLD = Number(process.env.MODERATION_NSFW_THRESHOLD) || 0.25;
@@ -87,6 +95,13 @@ async function getTextClassifier() {
 async function getImageClassifier() {
   if (!imageClassifierPromise) {
     imageClassifierPromise = (async () => {
+      if (!fs.existsSync(CLIP_ONNX_PATH) || fs.statSync(CLIP_ONNX_PATH).size < CLIP_MIN_BYTES) {
+        const size = fs.existsSync(CLIP_ONNX_PATH) ? fs.statSync(CLIP_ONNX_PATH).size : 0;
+        throw new Error(
+          `CLIP model not ready (${(size / 1e6).toFixed(1)}MB / ~147MB). ` +
+            'Run: node scripts/download-clip-model.js'
+        );
+      }
       const transformers = await loadTransformers();
       configureEnv(transformers);
       const { pipeline } = transformers;
@@ -106,17 +121,43 @@ async function getImageClassifier() {
   return imageClassifierPromise;
 }
 
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms (model may still be downloading)`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Warm models in background (non-blocking).
+ * Load sequentially so downloads don't compete / deadlock on first run.
  */
 function warmupModeration() {
   if (!isEnabled()) {
     console.log('[Moderation] Disabled (MODERATION_ENABLED=false)');
     return;
   }
-  Promise.all([getTextClassifier(), getImageClassifier()]).catch((err) => {
-    console.error('[Moderation] Warmup failed:', err?.message || err);
-  });
+  console.log('[Moderation] Warming up local models…');
+  (async () => {
+    try {
+      await getTextClassifier();
+      if (!fs.existsSync(CLIP_ONNX_PATH) || fs.statSync(CLIP_ONNX_PATH).size < CLIP_MIN_BYTES) {
+        console.warn(
+          '[Moderation] CLIP image model missing/incomplete. Text moderation is active. ' +
+            'Run: node scripts/download-clip-model.js  then restart the server.'
+        );
+        return;
+      }
+      await getImageClassifier();
+      console.log('[Moderation] All models ready');
+    } catch (err) {
+      console.error('[Moderation] Warmup failed (server keeps running):', err?.message || err);
+    }
+  })();
 }
 
 function joinTextParts(parts) {
@@ -171,13 +212,18 @@ async function moderateText(text) {
 }
 
 async function moderateImage(imageInput) {
-  const classifier = await getImageClassifier();
+  const loadMs = Number(process.env.MODERATION_IMAGE_LOAD_TIMEOUT_MS) || 120000;
+  const classifier = await withTimeout(getImageClassifier(), loadMs, 'Image model load');
   const candidate_labels = [
     ...WEAPON_IMAGE_LABELS,
     ...NSFW_IMAGE_LABELS,
     ...SAFE_IMAGE_LABELS,
   ];
-  const results = await classifier(imageInput, candidate_labels);
+  const results = await withTimeout(
+    classifier(imageInput, candidate_labels),
+    Number(process.env.MODERATION_IMAGE_INFER_TIMEOUT_MS) || 60000,
+    'Image classification'
+  );
   const list = Array.isArray(results) ? results : [];
 
   const nsfwSet = new Set(NSFW_IMAGE_LABELS.map((l) => l.toLowerCase()));
