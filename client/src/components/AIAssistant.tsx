@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bot, X, Send, Sparkles, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../shared/api/client';
 import { useAppState } from '../shared/store/AppStateContext';
 
@@ -48,6 +49,7 @@ function buildHistoryPayload(messages: Message[]) {
 }
 
 export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
+  const { t } = useTranslation();
   const { navigate } = useAppState();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -196,7 +198,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
         <button
           onClick={onToggle}
           className="fixed bottom-6 right-6 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:bg-green-700 transition-all hover:scale-110 z-50"
-          aria-label="Open AI Assistant"
+          aria-label={t('ai.open')}
         >
           <Bot className="w-6 h-6" />
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse"></span>
@@ -213,7 +215,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 text-base md:text-lg font-medium">
-                    <span>Agricultural AI</span>
+                    <span>{t('ai.title')}</span>
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div className="text-xs md:text-sm text-green-100">
@@ -280,7 +282,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
                 <div className="flex justify-start">
                   <div className="bg-neutral-100 p-3 rounded-2xl flex items-center gap-2">
                     <Loader className="w-4 h-4 animate-spin" />
-                    <span>Thinking...</span>
+                    <span>{t('ai.thinking')}</span>
                   </div>
                 </div>
               )}
@@ -305,7 +307,7 @@ export function AIAssistant({ isOpen, onToggle }: AIAssistantProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Ask about farming, plants, agriculture..."
+                  placeholder={t('ai.placeholder')}
                   className="flex-1 border p-2.5 md:p-3 rounded-xl text-sm md:text-base"
                 />
                 <button

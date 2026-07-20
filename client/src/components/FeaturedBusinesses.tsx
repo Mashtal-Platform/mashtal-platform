@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Star, MapPin, Sparkles } from 'lucide-react';
 import { fetchBusinesses } from '../shared/api/users';
 import { getImageUrl } from '../shared/api/client';
@@ -45,6 +46,8 @@ function BusinessCardButton({
   business: BusinessCard;
   onViewBusiness: (id: string) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
@@ -63,7 +66,7 @@ function BusinessCardButton({
         </div>
         {business.verified && (
           <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium">
-            Verified
+            {t('common.verified')}
           </div>
         )}
       </div>
@@ -76,9 +79,9 @@ function BusinessCardButton({
           <span className="truncate">{business.location}</span>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-600">
-          <span>{business.reviews} reviews</span>
+          <span>{t('shopping.reviews', { count: business.reviews })}</span>
           <span className="text-green-600 font-medium truncate">
-            {business.followers.toLocaleString()} followers
+            {t('common.followersCount', { count: business.followers.toLocaleString() })}
           </span>
         </div>
       </div>
@@ -99,6 +102,8 @@ function FeaturedGrid({
   emptyMessage: string;
   onViewAll: () => void;
 }) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -126,7 +131,7 @@ function FeaturedGrid({
           onClick={onViewAll}
           className="mt-4 text-green-600 hover:text-green-700 font-medium text-base"
         >
-          View all businesses →
+          {t('home.viewAllBusinessesArrow')}
         </button>
       </div>
     );
@@ -159,6 +164,8 @@ function TrustedGrid({
   emptyMessage: string;
   onViewAll: () => void;
 }) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
@@ -186,7 +193,7 @@ function TrustedGrid({
           onClick={onViewAll}
           className="mt-4 text-green-600 hover:text-green-700 font-medium text-base"
         >
-          View all businesses →
+          {t('home.viewAllBusinessesArrow')}
         </button>
       </div>
     );
@@ -206,6 +213,7 @@ function TrustedGrid({
 }
 
 export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusinessesProps) {
+  const { t } = useTranslation();
   const [featured, setFeatured] = useState<BusinessCard[]>([]);
   const [trusted, setTrusted] = useState<BusinessCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,18 +244,18 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="w-5 h-5 text-green-600" />
-                <span className="text-base text-green-600 font-medium">Spotlight</span>
+                <span className="text-base text-green-600 font-medium">{t('home.spotlight')}</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl text-neutral-900">Featured Businesses</h2>
+              <h2 className="text-2xl sm:text-3xl text-neutral-900">{t('home.featuredBusinesses')}</h2>
               <p className="text-base text-neutral-600 mt-2">
-                Popular providers with strong community followings
+                {t('home.featuredSubtitle')}
               </p>
             </div>
             <button
               onClick={onViewAll}
               className="hidden md:block text-base text-green-600 hover:text-green-700 transition-colors font-medium"
             >
-              View All →
+              {t('home.viewAll')}
             </button>
           </div>
 
@@ -255,7 +263,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
             businesses={featured}
             loading={loading}
             onViewBusiness={onViewBusiness}
-            emptyMessage="No featured businesses yet."
+            emptyMessage={t('home.noFeaturedYet')}
             onViewAll={onViewAll}
           />
 
@@ -265,7 +273,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
                 onClick={onViewAll}
                 className="text-base text-green-600 hover:text-green-700 font-medium"
               >
-                View All Businesses →
+                {t('home.viewAllBusinessesArrow')}
               </button>
             </div>
           )}
@@ -278,18 +286,18 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
-                <span className="text-base text-green-600 font-medium">Top Rated</span>
+                <span className="text-base text-green-600 font-medium">{t('home.topRated')}</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl text-neutral-900">Most Trusted Providers</h2>
+              <h2 className="text-2xl sm:text-3xl text-neutral-900">{t('home.mostTrusted')}</h2>
               <p className="text-base text-neutral-600 mt-2">
-                Proven ratings across many reviews
+                {t('home.trustedSubtitle')}
               </p>
             </div>
             <button
               onClick={onViewAll}
               className="hidden md:block text-base text-green-600 hover:text-green-700 transition-colors font-medium"
             >
-              View All →
+              {t('home.viewAll')}
             </button>
           </div>
 
@@ -297,7 +305,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
             businesses={trusted}
             loading={loading}
             onViewBusiness={onViewBusiness}
-            emptyMessage="No trusted businesses yet."
+            emptyMessage={t('home.noTrustedYet')}
             onViewAll={onViewAll}
           />
 
@@ -307,7 +315,7 @@ export function FeaturedBusinesses({ onViewBusiness, onViewAll }: FeaturedBusine
                 onClick={onViewAll}
                 className="text-base text-green-600 hover:text-green-700 font-medium"
               >
-                View All Businesses →
+                {t('home.viewAllBusinessesArrow')}
               </button>
             </div>
           )}

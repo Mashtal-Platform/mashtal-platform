@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, Camera, Save, X, Plus, Trash2 } from 'lucide-react';
 import { UserProfile } from '../App';
 import { LebanonLocationPicker } from './LebanonLocationPicker';
@@ -26,6 +27,7 @@ interface CustomField {
 }
 
 export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditProfileProps) {
+  const { t } = useTranslation();
   const [editedProfile, setEditedProfile] = useState(profile);
   const [customFields, setCustomFields] = useState<CustomField[]>(profile.customFields || []);
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl p-6 md:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl text-neutral-900">Edit Engineer Profile</h2>
+            <h2 className="text-2xl text-neutral-900">{t('profile.editProfile')}</h2>
             <button
               onClick={onCancel}
               className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
@@ -106,9 +108,9 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
           </div>
 
           <div className="space-y-6">
-            {/* Profile Picture */}
+            {/* {t('profile.changePhoto')} */}
             <div>
-              <label className="block text-sm font-medium text-neutral-900 mb-3">Profile Picture</label>
+              <label className="block text-sm font-medium text-neutral-900 mb-3">{t('profile.changePhoto')}</label>
               <div className="flex items-center gap-4">
                 <div 
                   className="relative w-20 h-20 bg-green-100 rounded-full flex items-center justify-center group cursor-pointer"
@@ -188,14 +190,14 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
                   label="Location"
                   value={editedProfile.location ?? ''}
                   required
-                  placeholder="Search city or village in Lebanon…"
+                  placeholder={t('common.searchLebanonLocation')}
                   onChange={(v) => setEditedProfile({ ...editedProfile, location: v })}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-neutral-700 mb-2">Bio *</label>
+              <label className="block text-sm text-neutral-700 mb-2">{t('profile.bio')} *</label>
               <textarea
                 name="bio"
                 value={editedProfile.bio}
@@ -388,16 +390,14 @@ export function EngineerEditProfile({ profile, onSave, onCancel }: EngineerEditP
               <button
                 onClick={onCancel}
                 className="flex-1 border border-neutral-300 text-neutral-700 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors"
-              >
-                Cancel
-              </button>
+              >{t('common.cancel')}</button>
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
-                <span>Save Changes</span>
+                <span>{t('profile.saveChanges')}</span>
               </button>
             </div>
           </div>

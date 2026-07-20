@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,6 +14,7 @@ interface SignInPageProps {
 }
 
 export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
+  const { t } = useTranslation();
   const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +35,7 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
       setError(
         code === 'EMAIL_NOT_VERIFIED' && msg
           ? msg
-          : msg || 'Invalid email or password'
+          : msg || t('auth.invalidCredentials')
       );
     } finally {
       setLoading(false);
@@ -49,7 +51,7 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
       await signInWithGoogle(credential);
       onNavigate('home');
     } catch (err: any) {
-      setError(err?.message || 'Failed to sign in with Google');
+      setError(err?.message || t('auth.googleFailed'));
     } finally {
       setLoading(false);
     }
@@ -64,8 +66,8 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
             <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl font-bold text-white">M</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Welcome Back</h1>
-            <p className="text-neutral-600">Sign in to your Mashtal account</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{t('auth.welcomeBack')}</h1>
+            <p className="text-neutral-600">{t('auth.signInSubtitle')}</p>
           </div>
 
           {/* Error Message */}
@@ -79,7 +81,7 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
           <div className={`mb-6 flex justify-center ${loading ? 'pointer-events-none opacity-60' : ''}`}>
             <GoogleLogin
               onSuccess={(response) => handleGoogleSignIn(response.credential)}
-              onError={() => setError('Google sign-in was cancelled or failed')}
+              onError={() => setError(t('auth.googleCancelled'))}
               text="continue_with"
               shape="rectangular"
               size="large"
@@ -91,14 +93,14 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
               <div className="w-full border-t border-neutral-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-neutral-500">Or continue with email</span>
+              <span className="px-4 bg-white text-neutral-500">{t('auth.orEmail')}</span>
             </div>
           </div>
 
           {/* Sign In Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <div className="relative mt-1">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -114,7 +116,7 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <div className="relative mt-1">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -132,10 +134,10 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="rounded border-neutral-300" />
-                <span className="text-neutral-600">Remember me</span>
+                <span className="text-neutral-600">{t('auth.rememberMe')}</span>
               </label>
               <button type="button" className="text-green-600 hover:text-green-700">
-                Forgot password?
+                {t('auth.forgotPassword')}
               </button>
             </div>
 
@@ -143,10 +145,10 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  {t('auth.signingIn')}
                 </>
               ) : (
-                'Sign In'
+                t('auth.signIn')
               )}
             </Button>
           </form>
@@ -154,13 +156,13 @@ export function SignInPage({ onNavigate, onSignUpClick }: SignInPageProps) {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600">
-              Don't have an account?{' '}
+              {t('auth.noAccount')}{' '}
               <button
                 type="button"
                 onClick={onSignUpClick}
                 className="text-green-600 hover:text-green-700 font-medium"
               >
-                Sign up
+                {t('auth.signUp')}
               </button>
             </p>
           </div>

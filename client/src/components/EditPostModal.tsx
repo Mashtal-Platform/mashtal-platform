@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Eye, AlertCircle, Hash } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -36,6 +37,7 @@ const mentionableUsers: MentionUser[] = [
 ];
 
 export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(post.title || '');
   const [content, setContent] = useState(post.content || '');
   const [showPreview, setShowPreview] = useState(false);
@@ -168,7 +170,7 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-neutral-900">Edit Post</h2>
+          <h2 className="text-xl font-bold text-neutral-900">{t('posts.editPost')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
@@ -343,15 +345,13 @@ export function EditPostModal({ post, isOpen, onClose, onSave }: EditPostModalPr
               disabled={!content.trim()}
               className="flex-1 bg-green-600 text-white hover:bg-green-700 disabled:bg-neutral-300 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {t('profile.saveChanges')}
             </Button>
             <Button
               onClick={onClose}
               variant="outline"
               className="flex-1"
-            >
-              Cancel
-            </Button>
+            >{t('common.cancel')}</Button>
           </div>
         </div>
       </div>

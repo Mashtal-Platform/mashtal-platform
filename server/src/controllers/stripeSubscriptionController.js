@@ -39,6 +39,11 @@ async function createSubscriptionPaymentIntent(req, res) {
 
     const me = await User.findById(userId).lean();
     if (!me) return res.status(404).json({ message: 'User not found' });
+    if (!me.verified) {
+      return res.status(403).json({
+        message: 'Please verify your email before paying the business fee.',
+      });
+    }
     const hasPending = !!me.pendingBusinessProfile;
     const isBusiness = me.role === 'business';
     if (!hasPending && !isBusiness) {

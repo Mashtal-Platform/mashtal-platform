@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, CheckCircle, Loader2, Link2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,6 +8,7 @@ import { Page } from '../App';
 
 interface EmailVerificationPageProps {
   onNavigate: (page: Page) => void;
+  onPaymentNeeded?: (role: 'business') => void;
 }
 
 function getTokenFromHash(): string | null {
@@ -33,13 +35,52 @@ function parseTokenFromInput(value: string): string {
   return isValidVerificationToken(trimmed) ? trimmed : '';
 }
 
-export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps) {
-  const { verifyEmail } = useAuth();
+function shouldGoToPayment(needsPayment?: boolean): boolean {
+  if (needsPayment) return true;
+  try {
+    return sessionStorage.getItem('mashtal_after_verify') === 'payment';
+  } catch {
+    return false;
+  }
+}
+
+function clearAfterVerifyFlag() {
+  try {
+    sessionStorage.removeItem('mashtal_after_verify');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function EmailVerificationPage({
+  onNavigate,
+  onPaymentNeeded,
+}: EmailVerificationPageProps) {
+  const { t } = useTranslation();
+  const { verifyEmail, pendingVerificationEmail } = useAuth();
   const [linkOrToken, setLinkOrToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [goToPayment, setGoToPayment] = useState(false);
   const [checkedHash, setCheckedHash] = useState(false);
+
+  const finishAfterVerify = (needsPayment?: boolean) => {
+    const paymentNext = shouldGoToPayment(needsPayment);
+    clearAfterVerifyFlag();
+    setGoToPayment(paymentNext);
+    setSuccess(true);
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setTimeout(() => {
+      if (paymentNext && onPaymentNeeded) {
+        onPaymentNeeded('business');
+      } else if (paymentNext) {
+        onNavigate('payment');
+      } else {
+        onNavigate('home');
+      }
+    }, 2000);
+  };
 
   useEffect(() => {
     if (checkedHash) return;
@@ -50,45 +91,42 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
     setLoading(true);
     setError('');
     verifyEmail(tokenFromUrl)
-      .then((ok) => {
-        if (ok) {
-          setSuccess(true);
-          window.history.replaceState(null, '', window.location.pathname + window.location.search);
-          setTimeout(() => onNavigate('home'), 2000);
+      .then((result) => {
+        if (result.ok) {
+          finishAfterVerify(result.needsPayment);
         } else {
-          setError('Invalid or expired verification link. Please request a new one.');
+          setError(t('auth.invalidLink'));
         }
       })
-      .catch(() => setError('Verification failed. Please try again.'))
+      .catch(() => setError(t('auth.verificationFailed')))
       .finally(() => setLoading(false));
-  }, [checkedHash, verifyEmail, onNavigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkedHash, verifyEmail, onNavigate, onPaymentNeeded, t]);
 
   const handleVerifyByPaste = async () => {
     const token = parseTokenFromInput(linkOrToken);
     if (!token) {
-      setError('Please paste the full verification link from your email (or the server console), not an error message.');
+      setError(t('auth.pasteFullLink'));
       return;
     }
     setError('');
     setLoading(true);
     try {
-      const verified = await verifyEmail(token);
-      if (verified) {
-        setSuccess(true);
-        setTimeout(() => onNavigate('home'), 2000);
+      const result = await verifyEmail(token);
+      if (result.ok) {
+        finishAfterVerify(result.needsPayment);
       } else {
-        setError('Invalid or expired link. Please use the latest link from your email.');
+        setError(t('auth.invalidOrExpiredLink'));
       }
     } catch {
-      setError('Verification failed. Please try again.');
+      setError(t('auth.verificationFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = () => {
-    // TODO: Implement resend verification email API
-    alert('If you did not receive the email, check your spam folder. You can sign up again with the same email to receive a new link.');
+    alert(t('auth.resendHelp'));
   };
 
   if (success) {
@@ -99,9 +137,13 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">Email Verified!</h1>
-            <p className="text-neutral-600">Your account is now verified. You can use all features.</p>
-            <p className="text-sm text-neutral-500 mt-4">Redirecting to home...</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2">{t('auth.emailVerified')}</h1>
+            <p className="text-neutral-600">
+              {goToPayment ? t('auth.emailVerifiedPaymentBody') : t('auth.emailVerifiedBody')}
+            </p>
+            <p className="text-sm text-neutral-500 mt-4">
+              {goToPayment ? t('auth.redirectingPayment') : t('auth.redirectingHome')}
+            </p>
           </div>
         </div>
       </div>
@@ -116,10 +158,13 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Verify Your Email</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{t('auth.verifyEmailTitle')}</h1>
             <p className="text-neutral-600">
-              We sent a verification link to your email. Click the link in the message to verify your account and sign in.
+              {pendingVerificationEmail
+                ? t('auth.verifyEmailSentTo', { email: pendingVerificationEmail })
+                : t('auth.verifyEmailBodyLong')}
             </p>
+            <p className="text-sm text-neutral-500 mt-3">{t('auth.verifyEmailPleaseCheck')}</p>
           </div>
 
           {error && (
@@ -131,13 +176,13 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
           <div className="mb-6">
             <label className="block text-sm font-medium text-neutral-700 mb-2">
               <Link2 className="w-4 h-4 inline-block mr-1 align-middle" />
-              Or paste the verification link here
+              {t('auth.pasteLink')}
             </label>
             <Input
               type="text"
               value={linkOrToken}
               onChange={(e) => setLinkOrToken(e.target.value)}
-              placeholder="Paste link from email"
+              placeholder={t('auth.pasteLinkPlaceholder')}
               className="w-full"
               disabled={loading}
             />
@@ -151,22 +196,22 @@ export function EmailVerificationPage({ onNavigate }: EmailVerificationPageProps
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Verifying...
+                {t('auth.verifying')}
               </>
             ) : (
-              'Verify email'
+              t('auth.verifyEmailButton')
             )}
           </Button>
 
           <div className="text-center">
             <p className="text-sm text-neutral-600">
-              Didn&apos;t receive the email?{' '}
+              {t('auth.didntReceive')}{' '}
               <button
                 type="button"
                 onClick={handleResend}
                 className="text-green-600 hover:text-green-700 font-medium"
               >
-                Get help
+                {t('auth.getHelp')}
               </button>
             </p>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   TrendingUp, Users, ShoppingBag, Package, 
   BarChart3, Calendar, DollarSign, Plus, Trash2, Edit, X, Upload, Save,
@@ -47,6 +48,7 @@ export function DashboardPage({
   highlightOrderId,
   onClearHighlight,
 }: DashboardPageProps = {}) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('month');
   const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders'>('analytics');
@@ -356,11 +358,11 @@ export function DashboardPage({
     const businessId = user?.businessId || user?.id;
 
     if (!newProduct.name || !newProduct.price || !finalCategory) {
-      setProductSubmitError('Please fill in name, price, and category.');
+      setProductSubmitError(t('dashboard.nameRequired'));
       return;
     }
     if (!businessId) {
-      setProductSubmitError('You must be logged in as a business to add products.');
+      setProductSubmitError(t('dashboard.mustBeBusiness'));
       return;
     }
 
@@ -394,9 +396,9 @@ export function DashboardPage({
       resetProductForm();
       setShowAddProductModal(false);
     } catch (err: any) {
-      const msg = err?.message || 'Failed to add product. Please try again.';
+      const msg = err?.message || t('dashboard.failedAdd');
       setProductSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
-      notifyError(err, 'Failed to add product. Please try again.');
+      notifyError(err, t('dashboard.failedAdd'));
     } finally {
       setProductsLoading(false);
     }
@@ -425,11 +427,11 @@ export function DashboardPage({
     const businessId = user?.businessId || user?.id;
 
     if (!editingProduct || !newProduct.name || newProduct.price == null || !finalCategory) {
-      setProductSubmitError('Please fill in name, price, and category.');
+      setProductSubmitError(t('dashboard.nameRequired'));
       return;
     }
     if (!businessId) {
-      setProductSubmitError('You must be logged in as a business to update products.');
+      setProductSubmitError(t('dashboard.mustBeBusinessUpdate'));
       return;
     }
 
@@ -460,9 +462,9 @@ export function DashboardPage({
       resetProductForm();
       setShowAddProductModal(false);
     } catch (err: any) {
-      const msg = err?.message || 'Failed to update product. Please try again.';
+      const msg = err?.message || t('dashboard.failedUpdate');
       setProductSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
-      notifyError(err, 'Failed to update product. Please try again.');
+      notifyError(err, t('dashboard.failedUpdate'));
     } finally {
       setProductsLoading(false);
     }
@@ -526,7 +528,7 @@ export function DashboardPage({
           {trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5 rotate-180" />}
           <span>{Math.abs(trend)}%</span>
         </div>
-        <span className="text-xs text-neutral-400">vs last {selectedPeriod}</span>
+        <span className="text-xs text-neutral-400">{t('dashboard.vsLastPeriod', { period: selectedPeriod })}</span>
       </div>
     </div>
   );
@@ -537,16 +539,16 @@ export function DashboardPage({
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-2">Business Analytics</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-2">{t('dashboard.title')}</h1>
             <p className="text-lg text-neutral-600">
-              Welcome back, <span className="text-green-600 font-semibold">{user?.fullName || 'John Doe'}</span>
+              {t('dashboard.welcomeBack')} <span className="text-green-600 font-semibold">{user?.fullName || 'John Doe'}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm text-neutral-600">Last updated</p>
+              <p className="text-sm text-neutral-600">{t('dashboard.lastUpdated')}</p>
               <p className="text-sm font-semibold text-neutral-900">
-                Today, {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                {t('dashboard.today')} {new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg">
@@ -568,7 +570,7 @@ export function DashboardPage({
               }`}
             >
               <Calendar className="w-4 h-4" />
-              This {period.charAt(0).toUpperCase() + period.slice(1)}
+              {period === 'week' ? t('dashboard.thisWeek') : period === 'month' ? t('dashboard.thisMonth') : t('dashboard.thisYear')}
             </button>
           ))}
         </div>
@@ -576,7 +578,7 @@ export function DashboardPage({
         {/* Stats Cards - Redesigned */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatsCard 
-            title="Total Revenue" 
+            title={t('dashboard.totalRevenue')} 
             value={`$${currentData.totalRevenue.toLocaleString()}`} 
             growth={currentData.revenueGrowth}
             trend={currentData.revenueGrowth}
@@ -585,7 +587,7 @@ export function DashboardPage({
             bgClass="bg-green-50"
           />
           <StatsCard 
-            title="Products Sold" 
+            title={t('dashboard.productsSold')} 
             value={currentData.totalSold.toLocaleString()} 
             growth={currentData.soldGrowth}
             trend={currentData.soldGrowth}
@@ -594,7 +596,7 @@ export function DashboardPage({
             bgClass="bg-orange-50"
           />
           <StatsCard 
-            title="Avg Units / Order" 
+            title={t('dashboard.avgUnitsPerOrder')} 
             value={currentData.averageUnitsPerOrder.toFixed(2)} 
             growth={currentData.conversionGrowth}
             trend={currentData.conversionGrowth}
@@ -610,17 +612,17 @@ export function DashboardPage({
             <TabsList className="bg-white shadow-sm border border-neutral-200">
               <TabsTrigger value="analytics">
                 <BarChart3 className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Analytics & Insights</span>
-                <span className="sm:hidden">Analytics</span>
+                <span className="hidden sm:inline">{t('dashboard.analytics')}</span>
+                <span className="sm:hidden">{t('dashboard.analyticsShort')}</span>
               </TabsTrigger>
               <TabsTrigger value="orders">
                 <ClipboardList className="w-4 h-4 mr-2" />
-                Orders
+                {t('dashboard.orders')}
               </TabsTrigger>
               <TabsTrigger value="products">
                 <Package className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Product Management</span>
-                <span className="sm:hidden">Products</span>
+                <span className="hidden sm:inline">{t('dashboard.productManagement')}</span>
+                <span className="sm:hidden">{t('dashboard.products')}</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -628,13 +630,13 @@ export function DashboardPage({
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6 mt-6">
             
-            {/* Sales & Revenue Distribution Charts */}
+            {/* Sales & {t('dashboard.revenueDistribution')} Charts */}
             <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-              {/* Sales Distribution Pie Chart */}
+              {/* {t('dashboard.salesDistribution')} Pie Chart */}
               <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-neutral-900">Sales Distribution</h3>
-                  <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">By Units Sold</div>
+                  <h3 className="text-lg font-bold text-neutral-900">{t('dashboard.salesDistribution')}</h3>
+                  <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">{t('dashboard.byUnitsSold')}</div>
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
@@ -665,7 +667,7 @@ export function DashboardPage({
                         <span className="text-sm font-medium text-neutral-700">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-bold text-neutral-900">{item.value} units</span>
+                        <span className="text-sm font-bold text-neutral-900">{t('dashboard.unitsCount', { count: item.value })}</span>
                         <p className="text-xs text-neutral-500">{item.percentage}%</p>
                       </div>
                     </div>
@@ -673,11 +675,11 @@ export function DashboardPage({
                 </div>
               </Card>
 
-              {/* Revenue Distribution Pie Chart */}
+              {/* {t('dashboard.revenueDistribution')} Pie Chart */}
               <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-neutral-900">Revenue Distribution</h3>
-                  <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">By Product Revenue</div>
+                  <h3 className="text-lg font-bold text-neutral-900">{t('dashboard.revenueDistribution')}</h3>
+                  <div className="text-xs text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">{t('dashboard.byProductRevenue')}</div>
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
@@ -717,21 +719,21 @@ export function DashboardPage({
               </Card>
             </div>
 
-            {/* Performance Overview Chart */}
+            {/* {t('dashboard.performanceOverview')} Chart */}
             <Card className="p-4 sm:p-6 bg-white shadow-lg border border-neutral-100">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-900">Performance Overview</h3>
-                  <p className="text-sm text-neutral-600">6-month sales and revenue trends</p>
+                  <h3 className="text-lg font-bold text-neutral-900">{t('dashboard.performanceOverview')}</h3>
+                  <p className="text-sm text-neutral-600">{t('dashboard.sixMonthTrends')}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                    <span className="text-xs text-neutral-600">Revenue</span>
+                    <span className="text-xs text-neutral-600">{t('dashboard.revenue')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-xs text-neutral-600">Orders</span>
+                    <span className="text-xs text-neutral-600">{t('dashboard.orders')}</span>
                   </div>
                 </div>
               </div>
@@ -753,7 +755,7 @@ export function DashboardPage({
                     dataKey="revenue" 
                     stroke="#16a34a" 
                     strokeWidth={3} 
-                    name="Revenue ($)"
+                    name={t('dashboard.revenue')}
                     dot={{ fill: '#16a34a', r: 5 }}
                     activeDot={{ r: 7 }}
                   />
@@ -762,7 +764,7 @@ export function DashboardPage({
                     dataKey="orders" 
                     stroke="#3b82f6" 
                     strokeWidth={3} 
-                    name="Orders"
+                    name={t('dashboard.orders')}
                     dot={{ fill: '#3b82f6', r: 5 }}
                     activeDot={{ r: 7 }}
                   />
@@ -770,17 +772,17 @@ export function DashboardPage({
               </ResponsiveContainer>
             </Card>
 
-            {/* Top Performing Products Table */}
+            {/* {t('dashboard.topPerformingProducts')} Table */}
             <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Top Performing Products</h3>
-                  <p className="text-neutral-600 mt-1">Ranked by revenue for the selected period</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">{t('dashboard.topPerformingProducts')}</h3>
+                  <p className="text-neutral-600 mt-1">{t('dashboard.rankedByRevenue')}</p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
                   <TrendingUp className="w-5 h-5 text-green-600" />
                   <span className="text-sm font-semibold text-green-700">
-                    {selectedPeriod === 'week' ? 'This Week' : selectedPeriod === 'month' ? 'This Month' : 'This Year'}
+                    {selectedPeriod === 'week' ? t('dashboard.thisWeek') : selectedPeriod === 'month' ? t('dashboard.thisMonth') : t('dashboard.thisYear')}
                   </span>
                 </div>
               </div>
@@ -789,24 +791,24 @@ export function DashboardPage({
                 {productsLoading || dashboardLoading ? (
                   <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
                     <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
-                    <p>Loading products...</p>
+                    <p>{t('dashboard.loadingProducts')}</p>
                   </div>
                 ) : sortedProducts.length === 0 ? (
                   <div className="text-center py-16 text-neutral-500">
                     <Package className="w-14 h-14 mx-auto mb-4 text-neutral-300" />
-                    <p className="font-medium text-neutral-600">No products yet</p>
-                    <p className="text-sm mt-1">Add products in the Product Inventory tab to see performance here.</p>
+                    <p className="font-medium text-neutral-600">{t('dashboard.noProducts')}</p>
+                    <p className="text-sm mt-1">{t('dashboard.addProductsHint')}</p>
                   </div>
                 ) : (
                 <table className="w-full text-sm sm:text-base">
                   <thead>
                     <tr className="bg-neutral-50 border-b border-neutral-200">
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Rank</th>
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Product</th>
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Category</th>
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Units Sold</th>
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Revenue</th>
-                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">% of Total</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.rank')}</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.product')}</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.category')}</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.unitsSold')}</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.revenue')}</th>
+                      <th className="px-3 py-3 sm:px-6 sm:py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">{t('dashboard.percentOfTotal')}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-neutral-100">
@@ -849,7 +851,7 @@ export function DashboardPage({
                           </td>
                           <td className="px-3 py-3 sm:px-6 sm:py-5 text-right">
                             <p className="font-semibold text-neutral-900">{product.sold}</p>
-                            <p className="text-xs text-neutral-500">units</p>
+                            <p className="text-xs text-neutral-500">{t('dashboard.units')}</p>
                           </td>
                           <td className="px-3 py-3 sm:px-6 sm:py-5 text-right">
                             <p className="font-bold text-green-600">${product.revenue.toLocaleString()}</p>
@@ -880,9 +882,9 @@ export function DashboardPage({
             <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Customer Orders</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">{t('dashboard.customerOrders')}</h3>
                   <p className="text-neutral-600 mt-1">
-                    Paid cart items for your products appear here after checkout
+                    {t('dashboard.ordersSubtitle')}
                   </p>
                 </div>
                 <Button
@@ -892,32 +894,32 @@ export function DashboardPage({
                   className="h-11"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${ordersLoading ? 'animate-spin' : ''}`} />
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </div>
 
               {ordersLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
                   <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
-                  Loading orders…
+                  {t('dashboard.loadingOrders')}
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-16 text-neutral-500 border border-dashed border-neutral-200 rounded-2xl">
                   <ClipboardList className="w-12 h-12 mx-auto mb-3 text-neutral-300" />
-                  <p className="font-medium text-neutral-700">No orders yet</p>
-                  <p className="text-sm mt-1">Sales appear here after customers pay</p>
+                  <p className="font-medium text-neutral-700">{t('dashboard.noOrders')}</p>
+                  <p className="text-sm mt-1">{t('dashboard.salesAppearHint')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-neutral-200">
                   <table className="w-full text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200 text-left">
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Date</th>
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Buyer</th>
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Phone</th>
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Products</th>
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Revenue</th>
-                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">Status</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('common.date')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('dashboard.buyer')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('common.phone')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('dashboard.products')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('dashboard.revenue')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('common.status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -937,7 +939,7 @@ export function DashboardPage({
                               : '—'}
                           </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-3">
-                            <div className="font-medium text-neutral-900">{order.buyer?.fullName || 'Customer'}</div>
+                            <div className="font-medium text-neutral-900">{order.buyer?.fullName || t('dashboard.customer')}</div>
                             {order.buyer?.email ? (
                               <div className="text-xs text-neutral-500">{order.buyer.email}</div>
                             ) : null}
@@ -978,8 +980,8 @@ export function DashboardPage({
             <Card className="p-4 sm:p-8 bg-white shadow-lg border border-neutral-100">
               <div className="flex items-center justify-between mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Product Inventory</h3>
-                  <p className="text-neutral-600 mt-1">Manage your product catalog</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">{t('dashboard.productInventory')}</h3>
+                  <p className="text-neutral-600 mt-1">{t('dashboard.manageCatalog')}</p>
                 </div>
                 <Button 
                   onClick={() => {
@@ -989,26 +991,26 @@ export function DashboardPage({
                   className="bg-green-600 hover:bg-green-700 shadow-md px-4 sm:px-6 h-11"
                 >
                   <Plus className="w-5 h-5 mr-2" />
-                  Add Product
+                  {t('dashboard.addProduct')}
                 </Button>
               </div>
               
               {productsLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
                   <div className="w-10 h-10 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-4" />
-                  <p>Loading products...</p>
+                  <p>{t('dashboard.loadingProducts')}</p>
                 </div>
               ) : products.length === 0 ? (
                 <div className="text-center py-16 text-neutral-500 border border-dashed border-neutral-200 rounded-2xl">
                   <Package className="w-14 h-14 mx-auto mb-4 text-neutral-300" />
-                  <p className="font-medium text-neutral-600">No products yet</p>
-                  <p className="text-sm mt-1">Add your first product to get started.</p>
+                  <p className="font-medium text-neutral-600">{t('dashboard.noProducts')}</p>
+                  <p className="text-sm mt-1">{t('dashboard.addFirstProduct')}</p>
                   <Button
                     onClick={() => { resetProductForm(); setShowAddProductModal(true); }}
                     className="mt-4 bg-green-600 hover:bg-green-700"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Product
+                    {t('dashboard.addProduct')}
                   </Button>
                 </div>
               ) : (
@@ -1055,18 +1057,18 @@ export function DashboardPage({
                       
                       {/* Price */}
                       <div className="flex items-center justify-between mb-4 p-3 bg-green-50 rounded-xl">
-                        <span className="text-sm text-neutral-700 font-medium">Price</span>
+                        <span className="text-sm text-neutral-700 font-medium">{t('shopping.price')}</span>
                         <span className="text-xl font-bold text-green-600">${product.price}</span>
                       </div>
 
                       {/* Stats Grid */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="text-center p-3 bg-neutral-50 rounded-xl">
-                          <p className="text-xs text-neutral-600 mb-1">In Stock</p>
+                          <p className="text-xs text-neutral-600 mb-1">{t('dashboard.inStock')}</p>
                           <p className="font-bold text-neutral-900">{product.stock}</p>
                         </div>
                         <div className="text-center p-3 bg-neutral-50 rounded-xl">
-                          <p className="text-xs text-neutral-600 mb-1">Sold</p>
+                          <p className="text-xs text-neutral-600 mb-1">{t('dashboard.sold')}</p>
                           <p className="font-bold text-green-600">{product.sold}</p>
                         </div>
                       </div>
@@ -1088,10 +1090,10 @@ export function DashboardPage({
             <div className="flex-none bg-gradient-to-r from-green-600 to-green-700 px-4 py-4 sm:px-8 sm:py-6 flex items-center justify-between rounded-t-2xl">
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
-                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                  {editingProduct ? t('dashboard.editProduct') : t('dashboard.addNewProduct')}
                 </h3>
                 <p className="text-green-100 text-sm mt-1">
-                  {editingProduct ? 'Update product information' : 'Fill in the details to add a new product'}
+                  {editingProduct ? t('dashboard.updateProductInfo') : t('dashboard.fillProductDetails')}
                 </p>
               </div>
               <button
@@ -1109,7 +1111,7 @@ export function DashboardPage({
             <div className="flex-1 overflow-y-auto p-4 sm:p-8">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-900 mb-3">Product Image *</label>
+                  <label className="block text-sm font-semibold text-neutral-900 mb-3">{t('dashboard.productImage')}</label>
                   <div className="flex flex-col sm:flex-row gap-4">
                     {imagePreview ? (
                       <div className="relative w-48 h-48 rounded-xl overflow-hidden border-2 border-green-500 shadow-lg shrink-0">
@@ -1135,8 +1137,8 @@ export function DashboardPage({
                           <Upload className="w-8 h-8 text-green-600" />
                         </div>
                         <div className="text-center">
-                          <p className="text-sm font-medium text-neutral-900">Upload Image</p>
-                          <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB</p>
+                          <p className="text-sm font-medium text-neutral-900">{t('dashboard.uploadImage')}</p>
+                          <p className="text-xs text-neutral-500 mt-1">{t('dashboard.imageHint')}</p>
                         </div>
                       </button>
                     )}
@@ -1148,7 +1150,7 @@ export function DashboardPage({
                       className="hidden"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-neutral-700 mb-2">Or paste image URL</p>
+                      <p className="text-sm font-medium text-neutral-700 mb-2">{t('dashboard.orPasteUrl')}</p>
                       <input
                         type="text"
                         value={newProduct.image || ''}
@@ -1165,7 +1167,7 @@ export function DashboardPage({
 
                 <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Product Name *</label>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('dashboard.productName')}</label>
                     <input
                       type="text"
                       value={newProduct.name || ''}
@@ -1176,7 +1178,7 @@ export function DashboardPage({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Category *</label>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('dashboard.category')} *</label>
                     <select
                       value={categorySelectValue}
                       onChange={(e) => {
@@ -1187,11 +1189,11 @@ export function DashboardPage({
                       }}
                       className="w-full px-4 py-3 border-2 border-neutral-200 rounded-lg outline-none focus:border-green-500"
                     >
-                      <option value="">Select category</option>
+                      <option value="">{t('dashboard.selectCategory')}</option>
                       {PREDEFINED_CATEGORIES.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
-                      <option value="Other">Other</option>
+                      <option value="Other">{t('dashboard.other')}</option>
                     </select>
                     
                     {categorySelectValue === 'Other' && (
@@ -1200,7 +1202,7 @@ export function DashboardPage({
                           type="text"
                           value={customCategory}
                           onChange={(e) => setCustomCategory(e.target.value)}
-                          placeholder="Enter custom category"
+                          placeholder={t('dashboard.customCategory')}
                           className="w-full px-4 py-3 border-2 border-neutral-200 rounded-lg outline-none focus:border-green-500 bg-neutral-50"
                         />
                       </div>
@@ -1209,7 +1211,7 @@ export function DashboardPage({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-900 mb-2">Description</label>
+                  <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('common.description')}</label>
                   <textarea
                     value={newProduct.description || ''}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
@@ -1221,7 +1223,7 @@ export function DashboardPage({
 
                 <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Price ($) *</label>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('dashboard.priceLabel')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-medium">$</span>
                       <input
@@ -1235,7 +1237,7 @@ export function DashboardPage({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-900 mb-2">Stock Quantity</label>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('dashboard.stockQuantity')}</label>
                     <input
                       type="number"
                       value={newProduct.stock || ''}
@@ -1262,7 +1264,7 @@ export function DashboardPage({
                   resetProductForm();
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700 h-11"
@@ -1270,7 +1272,7 @@ export function DashboardPage({
                 onClick={editingProduct ? handleUpdateProduct : handleAddProduct}
               >
                 <Save className="w-5 h-5 mr-2" />
-                {editingProduct ? 'Update' : 'Add'} Product
+                {editingProduct ? t('dashboard.updateProduct') : t('dashboard.addProductBtn')}
               </Button>
             </div>
           </div>
@@ -1287,15 +1289,15 @@ export function DashboardPage({
                   <AlertTriangle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Confirm Deletion</h3>
-                  <p className="text-red-100 text-sm mt-0.5">This action cannot be undone</p>
+                  <h3 className="text-xl font-bold text-white">{t('dashboard.confirmDeletion')}</h3>
+                  <p className="text-red-100 text-sm mt-0.5">{t('dashboard.cannotUndo')}</p>
                 </div>
               </div>
             </div>
 
             <div className="p-4 sm:p-6">
               <p className="text-neutral-700 mb-4">
-                Are you sure you want to delete this product?
+                {t('dashboard.confirmDeleteProduct')}
               </p>
               
               <div className="bg-neutral-50 border-2 border-neutral-200 rounded-xl p-4 flex items-center gap-4 mb-6">
@@ -1319,14 +1321,14 @@ export function DashboardPage({
                     setProductToDelete(null);
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white h-11"
                   onClick={handleDeleteProduct}
                 >
                   <Trash2 className="w-5 h-5 mr-2" />
-                  Delete
+                  {t('common.delete')}
                 </Button>
               </div>
             </div>

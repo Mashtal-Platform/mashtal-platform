@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { Types } = require('mongoose');
+const { buildNotificationMessage } = require('../utils/notificationMessages');
 
 function getSenderDisplayName(sender) {
   if (!sender) return null;
@@ -14,6 +15,9 @@ function getSenderDisplayName(sender) {
 async function getMyNotifications(req, res) {
   try {
     const userId = req.user.id;
+
+    const me = await User.findById(userId).select('preferredLanguage').lean();
+    const lang = me?.preferredLanguage === 'ar' ? 'ar' : 'en';
 
     const notifications = await Notification.find({
       recipient: new Types.ObjectId(userId),
@@ -35,44 +39,7 @@ async function getMyNotifications(req, res) {
       else if (n.type === 'chat_message') uiType = 'message';
 
       const senderName = getSenderDisplayName(n.sender);
-
-      let message = 'You have a new notification.';
-      if (n.message && String(n.message).trim()) {
-        message = String(n.message).trim();
-      } else if (n.type === 'follow' && senderName) {
-        message = `${senderName} started following you.`;
-      } else if (n.type === 'like_post' && senderName) {
-        message = `${senderName} liked your post.`;
-      } else if (n.type === 'like_thread' && senderName) {
-        message = `${senderName} liked your thread.`;
-      } else if (n.type === 'order_created') {
-        message = senderName
-          ? `${senderName} placed an order with you.`
-          : 'Your order has been created successfully.';
-      } else if (n.type === 'payment_received') {
-        message = senderName
-          ? `New payment from ${senderName}. Open the transaction in Admin.`
-          : 'A new payment was received. Open the transaction in Admin.';
-      } else if (n.type === 'business_report') {
-        message = senderName
-          ? `${senderName} reported a business. Review it in Admin → Reports.`
-          : 'A business was reported. Review it in Admin → Reports.';
-      } else if (n.type === 'admin_warning') {
-        message =
-          'An administrator sent you a warning about your business account. Please review your profile and content.';
-      } else if (n.type === 'subscription_expiring') {
-        message =
-          'Your Mashtal business subscription ends tomorrow. Renew payment to keep selling.';
-      } else if (n.type === 'subscription_expired') {
-        message =
-          'Your Mashtal business subscription has ended. Renew payment to list products again.';
-      } else if (n.type === 'chat_message' && senderName) {
-        const count = n.messageCount && n.messageCount > 0 ? n.messageCount : 1;
-        message =
-          count === 1
-            ? `${senderName} sent you a message.`
-            : `${senderName} has sent you ${count} messages.`;
-      }
+      const message = buildNotificationMessage(n, senderName, lang);
 
       const messageCount = n.type === 'chat_message' ? (n.messageCount || 1) : 1;
 

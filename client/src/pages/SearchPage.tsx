@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, MapPin, Star, X, CheckCircle, Package, FileText, MessageCircle, Building2, Award } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchBusinesses, UserDto } from '../shared/api/users';
@@ -32,6 +33,7 @@ interface SearchPageProps {
 }
 
 export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate, onNavigateWithParams }: SearchPageProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -228,23 +230,31 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'business':
-        return 'Business';
+        return t('common.business');
       case 'product':
-        return 'Product';
+        return t('search.product');
       case 'post':
-        return 'Post';
+        return t('search.post');
       case 'thread':
-        return 'Thread';
+        return t('search.thread');
       default:
         return type;
     }
   };
 
+  const categoryFilters = [
+    { id: 'all', name: t('common.all') },
+    { id: 'business', name: t('search.businesses') },
+    { id: 'product', name: t('search.products') },
+    { id: 'post', name: t('search.posts') },
+    { id: 'thread', name: t('search.threads') },
+  ];
+
   return (
     <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-6">Search</h1>
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-6">{t('search.title')}</h1>
           
           {/* Search Bar */}
           <div className="bg-white rounded-xl shadow-lg p-3 flex items-center gap-3 mb-6">
@@ -253,17 +263,17 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for businesses, experts, products, posts, threads..."
+              placeholder={t('search.placeholderLong')}
               className="flex-1 outline-none text-neutral-700 placeholder:text-neutral-400"
             />
             <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-              Search
+              {t('common.search')}
             </button>
           </div>
 
           {/* Category Filters */}
           <div className="flex items-center gap-3 flex-wrap">
-            {categories.map((category) => (
+            {categoryFilters.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
@@ -281,15 +291,15 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
               className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-neutral-700 hover:bg-neutral-100 transition-colors"
             >
               <Filter className="w-4 h-4" />
-              <span>More Filters</span>
+              <span>{t('search.moreFilters')}</span>
             </button>
           </div>
 
-          {/* Advanced Filters Panel */}
+          {/* {t('search.advancedFilters')} Panel */}
           {showFilters && (
             <div className="mt-4 bg-white rounded-xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg text-neutral-900">Advanced Filters</h3>
+                <h3 className="text-lg text-neutral-900">{t('search.advancedFilters')}</h3>
                 <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -298,28 +308,28 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
               <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
                 {/* Rating Filter */}
                 <div>
-                  <label className="block text-sm text-neutral-700 mb-2">Minimum Rating</label>
+                  <label className="block text-sm text-neutral-700 mb-2">{t('search.minimumRating')}</label>
                   <select
                     value={minRating}
                     onChange={(e) => setMinRating(Number(e.target.value))}
                     className="w-full px-4 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
                   >
-                    <option value={0}>All ratings</option>
-                    <option value={3}>3+ stars</option>
-                    <option value={4}>4+ stars</option>
-                    <option value={4.5}>4.5+ stars</option>
+                    <option value={0}>{t('search.allRatings')}</option>
+                    <option value={3}>{t('search.stars3')}</option>
+                    <option value={4}>{t('search.stars4')}</option>
+                    <option value={4.5}>{t('search.stars45')}</option>
                   </select>
                 </div>
 
                 {/* Location Filter */}
                 <div>
-                  <label className="block text-sm text-neutral-700 mb-2">Location</label>
+                  <label className="block text-sm text-neutral-700 mb-2">{t('common.location')}</label>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full px-4 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
                   >
-                    <option value="all">All locations</option>
+                    <option value="all">{t('search.allLocations')}</option>
                     <option value="Riyadh">Riyadh</option>
                     <option value="Jeddah">Jeddah</option>
                     <option value="Dammam">Dammam</option>
@@ -329,7 +339,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
 
                 {/* Verified Filter */}
                 <div>
-                  <label className="block text-sm text-neutral-700 mb-2">Verification</label>
+                  <label className="block text-sm text-neutral-700 mb-2">{t('search.verification')}</label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -337,7 +347,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                       onChange={(e) => setVerifiedOnly(e.target.checked)}
                       className="w-5 h-5 text-green-600 border-neutral-300 rounded focus:ring-green-600"
                     />
-                    <span className="text-neutral-700">Verified only</span>
+                    <span className="text-neutral-700">{t('search.verifiedOnly')}</span>
                   </label>
                 </div>
               </div>
@@ -347,13 +357,13 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                   onClick={resetFilters}
                   className="px-6 py-2 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
                 >
-                  Reset Filters
+                  {t('search.resetFilters')}
                 </button>
                 <button
                   onClick={() => setShowFilters(false)}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Apply Filters
+                  {t('search.applyFilters')}
                 </button>
               </div>
             </div>
@@ -363,7 +373,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-neutral-600">
-            {filteredResults.length} results found
+            {t('search.resultsFound', { count: filteredResults.length })}
           </p>
         </div>
 
@@ -431,7 +441,7 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                             />
                           )}
                           <span className="text-sm text-neutral-500">
-                            {result.type === 'product' ? 'Sold by ' : 'Posted by '}
+                            {result.type === 'product' ? t('search.soldBy') + ' ' : t('search.postedBy') + ' '}
                             <span className="font-medium text-neutral-700">{result.authorName}</span>
                           </span>
                         </div>
@@ -474,13 +484,13 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
         {filteredResults.length === 0 && (
           <div className="text-center py-8 sm:py-16">
             <Search className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl text-neutral-900 mb-2">No results found</h3>
-            <p className="text-neutral-600 mb-4">Try adjusting your search or filters</p>
+            <h3 className="text-xl text-neutral-900 mb-2">{t('common.noResults')}</h3>
+            <p className="text-neutral-600 mb-4">{t('search.noResultsBody')}</p>
             <button
               onClick={resetFilters}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              Reset Filters
+              {t('search.resetFilters')}
             </button>
           </div>
         )}
@@ -489,10 +499,3 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
   );
 }
 
-const categories = [
-  { id: 'all', name: 'All' },
-  { id: 'business', name: 'Businesses' },
-  { id: 'product', name: 'Products' },
-  { id: 'post', name: 'Posts' },
-  { id: 'thread', name: 'Threads' },
-];

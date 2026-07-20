@@ -54,6 +54,7 @@ const stripePaymentRoutes = require('./routes/stripePaymentRoutes');
 const stripeSubscriptionRoutes = require('./routes/stripeSubscriptionRoutes');
 const wishSubscriptionRoutes = require('./routes/wishSubscriptionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const translateRoutes = require('./routes/translateRoutes');
 const { warmupModeration } = require('./services/moderationService');
 const { assertContentSafe, ContentNotAllowedError } = require('./utils/assertContentSafe');
 
@@ -127,6 +128,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/locations', locationRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/translate', translateRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/payments/stripe', stripePaymentRoutes);

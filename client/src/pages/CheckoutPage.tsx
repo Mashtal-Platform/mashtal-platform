@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CreditCard, Lock, CheckCircle, ShoppingBag } from 'lucide-react';
 import type { CartItem } from '../shared/types';
 import { getImageUrl } from '../shared/api/client';
@@ -26,6 +27,7 @@ function PayButtonWithSecret({
   onError: (message: string) => void;
   onProgress: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +39,7 @@ function PayButtonWithSecret({
 
     setSubmitting(true);
     try {
-      onProgress('Charging your card for the full order…');
+      onProgress(t('checkout.chargingCard'));
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card },
       });
@@ -53,7 +55,7 @@ function PayButtonWithSecret({
         return;
       }
 
-      onProgress('Payment succeeded. Confirming order…');
+      onProgress(t('checkout.paymentSucceededConfirming'));
       onConfirmed();
     } catch (e: any) {
       onError(e?.message || 'Payment failed');
@@ -69,12 +71,13 @@ function PayButtonWithSecret({
       disabled={!stripe || submitting}
       className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
     >
-      {submitting ? 'Processing payment…' : 'Complete Order'}
+      {submitting ? t('checkout.processingPayment') : t('checkout.completeOrder')}
     </button>
   );
 }
 
 export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<'payment' | 'success'>('payment');
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const { isAuthenticated } = useAuth();
@@ -155,15 +158,15 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-xl sm:text-2xl text-neutral-900 mb-3">Order Placed Successfully!</h2>
+            <h2 className="text-xl sm:text-2xl text-neutral-900 mb-3">{t('checkout.success')}</h2>
             <p className="text-neutral-600 mb-6">
-              Your card was charged once. Sellers and tax are recorded separately in the ledger.
+              {t('checkout.successBody')}
             </p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <div className="text-sm text-neutral-700 mb-1">Order Total</div>
+              <div className="text-sm text-neutral-700 mb-1">{t('checkout.orderTotal')}</div>
               <div className="text-2xl text-green-600">${displayTotal.toFixed(2)}</div>
             </div>
-            <p className="text-sm text-neutral-500">Redirecting you back to home...</p>
+            <p className="text-sm text-neutral-500">{t('checkout.redirectingHome')}</p>
           </div>
         </div>
       </div>
@@ -174,10 +177,9 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
     <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Checkout</h1>
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">{t('checkout.title')}</h1>
           <p className="text-sm text-neutral-600">
-            Card details stay with Stripe. We never store your card number. One charge covers the
-            full order; sellers and tax are split in the ledger.
+            {t('checkout.subtitle')}
           </p>
         </div>
 
@@ -185,7 +187,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
           <div className="lg:col-span-2 space-y-6">
             {ledgerLegs.length > 0 && (
               <div className="bg-white rounded-xl p-4 sm:p-6">
-                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Payment ledger</h2>
+                <h2 className="text-lg font-semibold text-neutral-900 mb-4">{t('checkout.paymentLedger')}</h2>
                 <ul className="space-y-3">
                   {ledgerLegs.map((leg) => (
                     <li
@@ -195,7 +197,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                       <div>
                         <div className="text-sm font-medium text-neutral-900">{leg.toLabel}</div>
                         <div className="text-xs text-neutral-500">
-                          {leg.type === 'order_tax' ? 'Platform tax' : 'Seller payment'}
+                          {leg.type === 'order_tax' ? t('checkout.platformTax') : t('checkout.sellerPayment')}
                         </div>
                       </div>
                       <div className="text-sm font-semibold text-green-700">
@@ -205,8 +207,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                   ))}
                 </ul>
                 <p className="text-xs text-neutral-500 mt-3">
-                  Your card is charged once for the total. These rows are how funds are tracked
-                  for each seller and Mashtal tax.
+                  {t('checkout.ledgerHint')}
                 </p>
               </div>
             )}
@@ -214,17 +215,17 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
             <div className="bg-white rounded-xl p-4 sm:p-6 space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-neutral-200">
                 <CreditCard className="w-6 h-6 text-green-600" />
-                <h2 className="text-xl text-neutral-900">Card payment</h2>
+                <h2 className="text-xl text-neutral-900">{t('checkout.cardPayment')}</h2>
               </div>
 
               {!isAuthenticated ? (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-                  Please sign in before completing checkout.
+                  {t('checkout.signInFirst')}
                 </div>
               ) : (
                 <div>
                   <label className="block text-sm text-neutral-700 mb-2">
-                    Card details (Whish Visa / any Visa or Mastercard)
+                    {t('checkout.cardDetails')}
                   </label>
                   <div className="p-3 border border-neutral-200 rounded-lg bg-white">
                     {stripePromise && clientSecret ? (
@@ -284,12 +285,12 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                     ) : (
                       <div className="text-sm text-neutral-500 space-y-3">
                         {paymentLoading
-                          ? 'Preparing secure payment…'
+                          ? t('checkout.preparingPayment')
                           : isStripeConfigured
                             ? paymentError
-                              ? 'Payment could not start. Fix the error below, then retry.'
-                              : 'Loading payment form…'
-                            : 'Payment gateway is not configured.'}
+                              ? t('checkout.paymentCouldNotStart')
+                              : t('checkout.loadingForm')
+                            : t('checkout.paymentNotConfigured')}
                         {paymentError && !paymentLoading && (
                           <button
                             type="button"
@@ -301,7 +302,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                               setIntentRetry((n) => n + 1);
                             }}
                           >
-                            Retry payment setup
+                            {t('checkout.retrySetup')}
                           </button>
                         )}
                       </div>
@@ -313,8 +314,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
                 <Lock className="w-5 h-5 text-green-600 mt-0.5" />
                 <div className="text-sm text-neutral-700">
-                  Your card is processed by Stripe in one charge for the order total. Mashtal never
-                  stores card numbers.
+                  {t('checkout.secureNote')}
                 </div>
               </div>
 
@@ -334,7 +334,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
 
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl p-4 sm:p-6 sticky top-24">
-              <h3 className="text-xl text-neutral-900 mb-6">Order Summary</h3>
+              <h3 className="text-xl text-neutral-900 mb-6">{t('cart.orderSummary')}</h3>
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-3">
@@ -352,7 +352,7 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
                     <div className="flex-1">
                       <div className="text-sm text-neutral-900">{item.productName}</div>
                       <div className="text-xs text-neutral-600">{item.businessName}</div>
-                      <div className="text-xs text-neutral-600">Qty: {item.quantity}</div>
+                      <div className="text-xs text-neutral-600">{t('checkout.qty', { count: item.quantity })}</div>
                       <div className="text-sm text-green-600">
                         ${(item.price * item.quantity).toFixed(2)}
                       </div>
@@ -362,16 +362,16 @@ export function CheckoutPage({ cartItems, onSuccess }: CheckoutPageProps) {
               </div>
               <div className="space-y-3 pt-4 border-t border-neutral-200">
                 <div className="flex justify-between text-neutral-700">
-                  <span>Subtotal</span>
+                  <span>{t('cart.subtotal')}</span>
                   <span>${displaySub.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-700">
-                  <span>Tax (to Mashtal)</span>
+                  <span>{t('checkout.taxToMashtal')}</span>
                   <span>${displayTax.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-neutral-200 pt-3">
                   <div className="flex justify-between text-lg">
-                    <span className="text-neutral-900">Total</span>
+                    <span className="text-neutral-900">{t('cart.total')}</span>
                     <span className="text-neutral-900">${displayTotal.toFixed(2)}</span>
                   </div>
                 </div>

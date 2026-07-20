@@ -35,6 +35,12 @@ async function updateMe(req, res) {
     delete updates.email;
     delete updates.role;
 
+    if (updates.preferredLanguage != null) {
+      if (updates.preferredLanguage !== 'en' && updates.preferredLanguage !== 'ar') {
+        return res.status(400).json({ message: 'preferredLanguage must be en or ar' });
+      }
+    }
+
     const phoneFields = [
       updates.phone,
       updates.businessProfile?.phone,

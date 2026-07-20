@@ -219,6 +219,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
   }, [user, isAuthenticated]);
 
+  // Refetch notifications when UI language changes (server templates are localized)
+  useEffect(() => {
+    const onLangChange = () => {
+      if (!isAuthenticated) return;
+      fetchNotifications()
+        .then((items) => {
+          setState((prev) => ({ ...prev, notifications: items }));
+        })
+        .catch((err) => {
+          console.error('[AppState] Failed to refresh notifications after language change:', err);
+        });
+    };
+    window.addEventListener('mashtal:language-changed', onLangChange);
+    return () => window.removeEventListener('mashtal:language-changed', onLangChange);
+  }, [isAuthenticated]);
+
   // Refetch notifications when user opens the notifications page (so new message notifications appear)
   const prevPageRef = useRef<string | null>(null);
   useEffect(() => {

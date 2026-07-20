@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import {
   MapPin,
   MessageCircle,
@@ -34,6 +35,7 @@ import { SwitchUserModal } from "../components/SwitchUserModal";
 import { ShareModal } from "../components/ShareModal";
 import { fetchUser } from "../shared/api/users";
 import { getImageUrl } from "../shared/api/client";
+import { DEFAULT_BANNER_URL } from "../shared/constants/branding";
 import { fetchComments, createComment, deleteComment, type CommentDto } from "../shared/api/comments";
 import { toggleLikePost, sharePost } from "../shared/api/posts";
 import { toggleLikeThread, shareThread } from "../shared/api/threads";
@@ -83,6 +85,7 @@ export function UserProfilePage({
   onSaveThread,
   onRemoveSavedItem,
 }: UserProfilePageProps) {
+  const { t } = useTranslation();
   const { user: currentUser, isAuthenticated, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "posts" | "threads" | "about"
@@ -313,7 +316,7 @@ export function UserProfilePage({
   if (profileLoading || (userId && userId !== currentUser?.id && !viewedUser && !user)) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <p className="text-neutral-600">{profileLoading ? 'Loading profile...' : 'User not found'}</p>
+        <p className="text-neutral-600">{profileLoading ? t('profile.loading') : t('profile.userNotFound')}</p>
       </div>
     );
   }
@@ -512,13 +515,11 @@ export function UserProfilePage({
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Banner */}
       <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700">
-        {(getImageUrl((user as any)?.coverImage) || (user as any)?.coverImage) ? (
-          <img
-            src={getImageUrl((user as any)?.coverImage) || (user as any)?.coverImage}
-            alt={`${user?.fullName || user?.name || 'Profile'} cover`}
-            className="w-full h-full object-cover"
-          />
-        ) : null}
+        <img
+          src={getImageUrl((user as any)?.coverImage) || (user as any)?.coverImage || DEFAULT_BANNER_URL}
+          alt={`${user?.fullName || user?.name || 'Profile'} cover`}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
       </div>
 
@@ -566,7 +567,7 @@ export function UserProfilePage({
                         className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                       >
                         <Edit className="w-5 h-5" />
-                        <span>Edit Profile</span>
+                        <span>{t('profile.editProfile')}</span>
                       </Button>
                     ) : !isOwnProfile && (onFollow || onUnfollow) && user?.role === 'business' ? (
                       isFollowing ? (
@@ -576,7 +577,7 @@ export function UserProfilePage({
                           className="flex items-center justify-center gap-2 border-green-600 text-green-600 hover:bg-green-50 px-6 py-2.5 rounded-lg"
                         >
                           <CheckCircle2 className="w-5 h-5" />
-                          <span>Following</span>
+                          <span>{t('common.following')}</span>
                         </Button>
                       ) : (
                         <Button
@@ -584,7 +585,7 @@ export function UserProfilePage({
                           className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg"
                         >
                           <User className="w-5 h-5" />
-                          <span>Follow</span>
+                          <span>{t('common.follow')}</span>
                         </Button>
                       )
                     ) : null}
@@ -747,7 +748,7 @@ export function UserProfilePage({
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
                       <p className="text-neutral-500 font-medium">
-                        No posts yet
+                        {t('profile.noPostsYet')}
                       </p>
                     </div>
                   )}
@@ -847,7 +848,7 @@ export function UserProfilePage({
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <MessageCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
                       <p className="text-neutral-500 font-medium">
-                        No threads yet
+                        {t('threads.noThreads')}
                       </p>
                     </div>
                   )}

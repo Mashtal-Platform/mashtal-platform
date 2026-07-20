@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, MapPin, Star, Users, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { fetchBusinesses, UserDto } from '../shared/api/users';
@@ -10,6 +11,7 @@ interface BusinessesPageProps {
 }
 
 export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
+  const { t } = useTranslation();
   const [businesses, setBusinesses] = useState<UserDto[]>([]);
 
   useEffect(() => {
@@ -25,9 +27,9 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">All Businesses</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{t('business.allBusinesses')}</h1>
           <p className="text-neutral-600">
-            Discover {businesses.length} verified agricultural businesses on Mashtal
+            {t('business.discoverCount', { count: businesses.length })}
           </p>
         </div>
 
@@ -77,14 +79,14 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       {typeof business.rating === 'number' ? business.rating.toFixed(1) : (business.rating ?? 0)}
                     </div>
-                    <p className="text-xs text-neutral-500">{business.reviewsCount ?? 0} reviews</p>
+                    <p className="text-xs text-neutral-500">{t('business.reviewsCount', { count: business.reviewsCount ?? 0 })}</p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 text-sm font-semibold text-neutral-900">
                       <Users className="w-4 h-4" />
                       {business.followersCount ?? business.followers ?? 0}
                     </div>
-                    <p className="text-xs text-neutral-500">Followers</p>
+                    <p className="text-xs text-neutral-500">{t('business.followers')}</p>
                   </div>
                 </div>
 
@@ -92,7 +94,7 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
                 <div className="flex flex-wrap gap-2 mb-4">
                   {business.verified && (
                     <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full">
-                      Verified
+                      {t('common.verified')}
                     </span>
                   )}
                   {(business.specialties || []).slice(0, 4).map((s) => (
@@ -102,7 +104,7 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
                   ))}
                   {(!business.specialties || business.specialties.length === 0) && !business.verified && (
                     <span className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-full">
-                      No tags
+                      {t('business.noTags')}
                     </span>
                   )}
                 </div>
@@ -112,7 +114,7 @@ export function BusinessesPage({ onViewBusiness }: BusinessesPageProps) {
                   onClick={() => onViewBusiness(business.businessId || business.id)}
                   className="w-full"
                 >
-                  View Business
+                  {t('business.viewBusiness')}
                 </Button>
               </div>
             </Card>

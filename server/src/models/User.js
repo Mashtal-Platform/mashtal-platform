@@ -110,6 +110,12 @@ const UserSchema = new mongoose.Schema(
     phone: String,
     location: String,
     bio: String,
+    /** UI locale: English or Arabic */
+    preferredLanguage: {
+      type: String,
+      enum: ['en', 'ar'],
+      default: 'en',
+    },
     emailVerificationToken: { type: String, select: false },
     emailVerificationExpires: { type: Date, select: false },
 

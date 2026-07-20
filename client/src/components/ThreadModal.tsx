@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Heart, MessageCircle, Bookmark, Send, Share2, Reply, ThumbsUp, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { getImageUrl } from '../shared/api/client';
 import { fetchMentionableProfiles } from '../shared/api/users';
+import { SeeTranslation } from './SeeTranslation';
 
 export interface ThreadModalComment {
   id: string;
@@ -77,6 +79,7 @@ export function ThreadModal({
   onNavigateToBusiness,
   onNavigateToUserProfile,
 }: ThreadModalProps) {
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -399,6 +402,7 @@ export function ThreadModal({
             <h3 className="font-semibold text-neutral-900 mb-2">{thread.title}</h3>
           )}
           <p className="text-neutral-700 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
+          <SeeTranslation text={thread.content} />
           {thread.tags && thread.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {thread.tags.map((tag, i) => (
@@ -432,9 +436,7 @@ export function ThreadModal({
                             className="min-h-[60px]"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveEdit}>
-                              Save
-                            </Button>
+                            <Button size="sm" onClick={handleSaveEdit}>{t('common.save')}</Button>
                             <Button
                               size="sm"
                               variant="outline"
@@ -442,13 +444,14 @@ export function ThreadModal({
                                 setEditingCommentId(null);
                                 setEditContent('');
                               }}
-                            >
-                              Cancel
-                            </Button>
+                            >{t('common.cancel')}</Button>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-neutral-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                        <>
+                          <p className="text-neutral-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                          <SeeTranslation text={comment.content} />
+                        </>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -472,7 +475,7 @@ export function ThreadModal({
                           className="text-xs text-green-600 hover:text-green-700 hover:underline flex items-center gap-1"
                         >
                           <Reply className="w-3 h-3" />
-                          Reply
+                          {t('common.reply')}
                         </button>
                       )}
                       {onDeleteComment && canDelete(comment.userId) && (
@@ -480,7 +483,7 @@ export function ThreadModal({
                           type="button"
                           onClick={() => onDeleteComment(comment.id)}
                           className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
-                          title="Delete comment"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="w-3 h-3" />
                           Delete
@@ -494,10 +497,10 @@ export function ThreadModal({
                             setEditContent(comment.content);
                           }}
                           className="text-xs text-neutral-600 hover:text-green-700 hover:underline flex items-center gap-1"
-                          title="Edit comment"
+                          title={t('common.edit')}
                         >
                           <ThumbsUp className="w-3 h-3" />
-                          Edit
+                          {t('common.edit')}
                         </button>
                       )}
                     </div>
@@ -523,9 +526,7 @@ export function ThreadModal({
                                     className="min-h-[50px]"
                                   />
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={handleSaveEdit}>
-                                      Save
-                                    </Button>
+                                    <Button size="sm" onClick={handleSaveEdit}>{t('common.save')}</Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -533,13 +534,14 @@ export function ThreadModal({
                                         setEditingCommentId(null);
                                         setEditContent('');
                                       }}
-                                    >
-                                      Cancel
-                                    </Button>
+                                    >{t('common.cancel')}</Button>
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-neutral-700 text-xs">{renderTextWithMentions(reply.content)}</p>
+                                <>
+                                  <p className="text-neutral-700 text-xs">{renderTextWithMentions(reply.content)}</p>
+                                  <SeeTranslation text={reply.content} />
+                                </>
                               )}
                               </div>
                               <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -563,7 +565,7 @@ export function ThreadModal({
                                     className="text-xs text-green-600 hover:text-green-700 hover:underline flex items-center gap-1"
                                   >
                                     <Reply className="w-3 h-3" />
-                                    Reply
+                                    {t('common.reply')}
                                   </button>
                                 )}
                                 {onDeleteComment && canDelete(reply.userId) && (
@@ -571,7 +573,7 @@ export function ThreadModal({
                                     type="button"
                                     onClick={() => onDeleteComment(reply.id)}
                                     className="text-xs text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
-                                    title="Delete comment"
+                                    title={t('common.delete')}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                     Delete
@@ -585,10 +587,10 @@ export function ThreadModal({
                                     setEditContent(reply.content);
                                   }}
                                   className="text-xs text-neutral-600 hover:text-green-700 hover:underline flex items-center gap-1"
-                                  title="Edit comment"
+                                  title={t('common.edit')}
                                 >
                                   <ThumbsUp className="w-3 h-3" />
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                               )}
                               </div>
@@ -640,7 +642,7 @@ export function ThreadModal({
             <div className="space-y-2 relative">
               {replyingTo && (
                 <div className="text-xs text-neutral-600 flex items-center justify-between bg-neutral-50 px-3 py-2 rounded-lg">
-                  <span>Replying to {replyingToComment?.userName ?? 'comment'}</span>
+                  <span>{t('posts.replyingTo', { name: replyingToComment?.userName ?? t('common.comment') })}</span>
                   <button onClick={() => setReplyingTo(null)} className="text-neutral-500 hover:text-neutral-700 p-1">
                     <X className="w-4 h-4" />
                   </button>
@@ -685,7 +687,7 @@ export function ThreadModal({
 
               <div className="flex gap-2">
                 <Textarea
-                  placeholder="Add a comment... (Type @ to mention)"
+                  placeholder={t('posts.writeComment')}
                   value={newComment}
                   onChange={handleCommentChange}
                   onKeyDown={handleMentionKeyDown}

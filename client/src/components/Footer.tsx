@@ -10,6 +10,7 @@ import {
   Linkedin,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAppState } from '../shared/store/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { Page } from '../shared/types';
@@ -45,6 +46,7 @@ function FooterLinkButton({
 }
 
 export function Footer() {
+  const { t } = useTranslation();
   const { state, navigate } = useAppState();
   const { isAuthenticated, user } = useAuth();
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -86,7 +88,7 @@ export function Footer() {
     e.preventDefault();
     const email = newsletterEmail.trim();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error('Please enter a valid email address');
+      toast.error(t('footer.invalidEmail'));
       return;
     }
     setSubscribing(true);
@@ -98,10 +100,10 @@ export function Footer() {
         list.push(email);
         localStorage.setItem(key, JSON.stringify(list));
       }
-      toast.success('You are subscribed to Mashtal updates');
+      toast.success(t('footer.subscribed'));
       setNewsletterEmail('');
     } catch {
-      toast.error('Could not save your subscription. Please try again.');
+      toast.error(t('footer.subscribeFailed'));
     } finally {
       setSubscribing(false);
     }
@@ -123,8 +125,7 @@ export function Footer() {
               <span className="text-white text-xl">MASHTAL</span>
             </button>
             <p className="text-neutral-400 mb-4">
-              Connecting agricultural communities and empowering sustainable farming across the
-              region.
+              {t('footer.tagline')}
             </p>
             <div className="flex items-center gap-3">
               <a
@@ -167,42 +168,42 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-white mb-4">Quick Links</h3>
+            <h3 className="text-white mb-4">{t('footer.quickLinks')}</h3>
             <ul className="space-y-2">
               <li>
-                <FooterLinkButton onClick={() => go('about')}>About Us</FooterLinkButton>
+                <FooterLinkButton onClick={() => go('about')}>{t('footer.aboutUs')}</FooterLinkButton>
               </li>
               <li>
                 <FooterLinkButton onClick={() => goHomeSection('how-it-works')}>
-                  How It Works
+                  {t('footer.howItWorks')}
                 </FooterLinkButton>
               </li>
               <li>
                 <FooterLinkButton onClick={() => goHomeSection('featured-businesses')}>
-                  Featured Businesses
+                  {t('home.featuredBusinesses')}
                 </FooterLinkButton>
               </li>
               <li>
                 <FooterLinkButton onClick={() => goHomeSection('latest-updates')}>
-                  Community Updates
+                  {t('home.latestUpdates')}
                 </FooterLinkButton>
               </li>
               <li>
-                <FooterLinkButton onClick={() => go('posts')}>Posts & Resources</FooterLinkButton>
+                <FooterLinkButton onClick={() => go('posts')}>{t('nav.posts')}</FooterLinkButton>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-white mb-4">For Businesses</h3>
+            <h3 className="text-white mb-4">{t('common.business')}</h3>
             <ul className="space-y-2">
               <li>
                 <FooterLinkButton onClick={handleRegisterBusiness}>
-                  Register Your Business
+                  {t('footer.registerBusiness')}
                 </FooterLinkButton>
               </li>
               <li>
-                <FooterLinkButton onClick={() => go('shopping')}>Marketplace</FooterLinkButton>
+                <FooterLinkButton onClick={() => go('shopping')}>{t('nav.shop')}</FooterLinkButton>
               </li>
               <li>
                 <FooterLinkButton
@@ -211,26 +212,26 @@ export function Footer() {
                     else handleRegisterBusiness();
                   }}
                 >
-                  Business Dashboard
+                  {t('nav.dashboard')}
                 </FooterLinkButton>
               </li>
               <li>
-                <FooterLinkButton onClick={handleSupport}>Support Center</FooterLinkButton>
+                <FooterLinkButton onClick={handleSupport}>{t('footer.support')}</FooterLinkButton>
               </li>
               <li>
                 <FooterLinkButton onClick={() => go('businesses')}>
-                  Browse Businesses
+                  {t('home.viewAllBusinesses')}
                 </FooterLinkButton>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-white mb-4">Contact Us</h3>
+            <h3 className="text-white mb-4">{t('footer.contactUs')}</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
                 <MapPin className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                <span className="text-sm">Lebanon</span>
+                <span className="text-sm">{t('footer.address')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <Phone className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -252,13 +253,13 @@ export function Footer() {
               </li>
             </ul>
             <form className="mt-4" onSubmit={handleNewsletter}>
-              <h4 className="text-white text-sm mb-2">Subscribe to Newsletter</h4>
+              <h4 className="text-white text-sm mb-2">{t('footer.newsletter')}</h4>
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Your email"
+                  placeholder={t('footer.newsletterPlaceholder')}
                   className="flex-1 px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-sm outline-none focus:border-green-600 transition-colors"
                   autoComplete="email"
                 />
@@ -267,7 +268,7 @@ export function Footer() {
                   disabled={subscribing}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-60"
                 >
-                  Subscribe
+                  {t('footer.subscribe')}
                 </button>
               </div>
             </form>
@@ -276,10 +277,10 @@ export function Footer() {
 
         <div className="pt-6 sm:pt-8 border-t border-neutral-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-neutral-400">
-            <div>© {new Date().getFullYear()} Mashtal. All rights reserved.</div>
+            <div>© {new Date().getFullYear()} MASHTAL. {t('footer.rights')}</div>
             <div className="flex items-center gap-6">
-              <FooterLinkButton onClick={() => go('privacy')}>Privacy Policy</FooterLinkButton>
-              <FooterLinkButton onClick={() => go('terms')}>Terms of Service</FooterLinkButton>
+              <FooterLinkButton onClick={() => go('privacy')}>{t('footer.privacy')}</FooterLinkButton>
+              <FooterLinkButton onClick={() => go('terms')}>{t('footer.terms')}</FooterLinkButton>
               <FooterLinkButton onClick={() => go('cookies')}>Cookie Policy</FooterLinkButton>
             </div>
           </div>

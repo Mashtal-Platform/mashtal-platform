@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   MapPin, Star, MessageCircle, Mail, CheckCircle, Heart, Bookmark, 
   Calendar, X, Send, Edit, FileText, Briefcase, Award, Phone,
@@ -13,6 +14,7 @@ import { InteractiveRating } from '../components/InteractiveRating';
 import { SwitchUserModal } from '../components/SwitchUserModal';
 import { PurchasesCard } from '../components/PurchasesCard';
 import { getImageUrl } from '../shared/api/client';
+import { DEFAULT_BANNER_URL } from '../shared/constants/branding';
 import { fetchUser } from '../shared/api/users';
 import { fetchComments, createComment, toggleLikeComment, deleteComment, type CommentDto } from '../shared/api/comments';
 import { toggleLikePost, sharePost } from '../shared/api/posts';
@@ -59,6 +61,7 @@ export function EngineerProfilePage({
   onSaveThread,
   onRemoveSavedItem,
 }: EngineerProfilePageProps) {
+  const { t } = useTranslation();
   const { user: currentUser, isAuthenticated, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'posts' | 'threads' | 'about'>('posts');
   const [selectedPost, setSelectedPost] = useState<any | null>(null);
@@ -272,7 +275,7 @@ export function EngineerProfilePage({
   if (profileLoading || (engineerId && engineerId !== currentUser?.id && !viewedEngineer && !engineer)) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <p className="text-neutral-600">{profileLoading ? 'Loading profile...' : 'Engineer not found'}</p>
+        <p className="text-neutral-600">{profileLoading ? t('profile.loading') : t('profile.engineerNotFound')}</p>
       </div>
     );
   }
@@ -468,13 +471,10 @@ export function EngineerProfilePage({
   // Dynamic role-based text
   const roleDisplayName = engineer.role === 'agronomist' ? 'Agronomist' : 'Engineer';
   const roleBadgeText = engineer.role === 'agronomist' ? 'Verified Agronomist' : 'Verified Engineer';
-  const roleBannerFallback = engineer.role === 'agronomist'
-    ? 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200' // Agronomist - crops/plants
-    : 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200'; // Engineer - technology
   const bannerImage =
     getImageUrl((engineer as any).coverImage) ||
     (engineer as any).coverImage ||
-    roleBannerFallback;
+    DEFAULT_BANNER_URL;
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -548,7 +548,7 @@ export function EngineerProfilePage({
                           className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <Edit className="w-5 h-5" />
-                          <span>Edit Profile</span>
+                          <span>{t('profile.editProfile')}</span>
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -609,7 +609,7 @@ export function EngineerProfilePage({
                             }`}
                           >
                             <Heart className={`w-5 h-5 ${isFollowing ? 'fill-current' : ''}`} />
-                            <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                            <span>{isFollowing ? t('common.following') : t('common.follow')}</span>
                           </Button>
                           <Button 
                             onClick={() => onOpenChat(engineer.id)}
@@ -629,7 +629,7 @@ export function EngineerProfilePage({
                 <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{engineer.followers || 245}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Followers</div>
+                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('profile.followers')}</div>
                   </div>
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{engineerPosts.length}</div>
@@ -754,7 +754,7 @@ export function EngineerProfilePage({
                   ) : (
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-neutral-500 font-medium">No posts yet</p>
+                      <p className="text-neutral-500 font-medium">{t('profile.noPostsYet')}</p>
                     </div>
                   )}
                 </div>
@@ -828,7 +828,7 @@ export function EngineerProfilePage({
                   ) : (
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <MessageCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-neutral-500 font-medium">No threads yet</p>
+                      <p className="text-neutral-500 font-medium">{t('threads.noThreads')}</p>
                     </div>
                   )}
                 </div>

@@ -31,10 +31,12 @@ import { ShoppingPage } from './pages/ShoppingPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { InfoPage } from './pages/InfoPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { PostInteractionsProvider } from './contexts/PostInteractionsContext';
 import { AppStateProvider, useAppState } from './shared/store/AppStateContext';
 import { shouldShowLayout, shouldShowFooter } from './shared/utils/navigation';
 import { Toaster } from './components/ui/sonner';
+import { useTranslation } from 'react-i18next';
 
 // Re-export types for backward compatibility
 export type { Page } from './shared/types';
@@ -43,6 +45,7 @@ export type { CartItem, SavedItem, UserProfile } from './shared/types';
 function AppContent() {
   const { isAuthenticated, user, loading } = useAuth();
   const { state, ...actions } = useAppState();
+  const { t } = useTranslation();
 
   // Show loading state while auth is initializing
   if (loading) {
@@ -50,7 +53,7 @@ function AppContent() {
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-          <p className="text-neutral-600">Loading Mashtal...</p>
+          <p className="text-neutral-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -308,7 +311,15 @@ function AppContent() {
         );
 
       case 'verify-email':
-        return <EmailVerificationPage onNavigate={actions.navigate} />;
+        return (
+          <EmailVerificationPage
+            onNavigate={actions.navigate}
+            onPaymentNeeded={(role) => {
+              actions.setPaymentRole(role);
+              actions.navigate('payment');
+            }}
+          />
+        );
 
       case 'payment':
         return (
@@ -496,12 +507,14 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <PostInteractionsProvider>
-        <AppStateProvider>
-          <AppContent />
-          <Toaster />
-        </AppStateProvider>
-      </PostInteractionsProvider>
+      <LanguageProvider>
+        <PostInteractionsProvider>
+          <AppStateProvider>
+            <AppContent />
+            <Toaster />
+          </AppStateProvider>
+        </PostInteractionsProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, UserPlus, MessageCircle, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Page } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,7 +9,31 @@ interface HowItWorksProps {
 }
 
 export function HowItWorks({ onNavigate }: HowItWorksProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
+
+  const steps = [
+    {
+      icon: Search,
+      title: t('howItWorks.step1Title'),
+      description: t('howItWorks.step1Body'),
+    },
+    {
+      icon: UserPlus,
+      title: t('howItWorks.step2Title'),
+      description: t('howItWorks.step2Body'),
+    },
+    {
+      icon: MessageCircle,
+      title: t('howItWorks.step3Title'),
+      description: t('howItWorks.step3Body'),
+    },
+    {
+      icon: CheckCircle,
+      title: t('howItWorks.step4Title'),
+      description: t('howItWorks.step4Body'),
+    },
+  ];
   
   return (
       <section id="how-it-works" className="py-10 sm:py-20 bg-white scroll-mt-20">
@@ -16,10 +41,10 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
         {/* Section Header */}
         <div className="text-center mb-10 sm:mb-16">
               <h2 className="text-neutral-900 mb-4">
-            How Mashtal Works
+            {t('howItWorks.title')}
           </h2>
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
-            Connect with trusted agricultural businesses in four simple steps
+            {t('howItWorks.subtitle')}
           </p>
         </div>
 
@@ -55,10 +80,10 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
         {/* CTA Section */}
         <div className="mt-10 sm:mt-16 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 sm:p-8 md:p-12 text-center text-white">
           <h3 className="text-2xl sm:text-3xl mb-4">
-            Ready to Get Started?
+            {t('howItWorks.ctaTitle')}
           </h3>
           <p className="text-green-50 mb-6 sm:mb-8 text-base sm:text-lg max-w-2xl mx-auto">
-            Join thousands of farmers and agricultural businesses already using Mashtal
+            {t('howItWorks.ctaBody')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             {/* Only show Register Business button if user is not already a business */}
@@ -67,14 +92,14 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
                 onClick={() => onNavigate('register-business')}
                 className="bg-white text-green-600 px-6 sm:px-8 py-3 rounded-lg hover:bg-green-50 transition-colors"
               >
-                Create Business Account
+                {t('howItWorks.ctaButton')}
               </button>
             )}
             <button
               onClick={() => onNavigate('search')}
               className="border-2 border-white text-white px-6 sm:px-8 py-3 rounded-lg hover:bg-white/10 transition-colors"
             >
-              Browse as Visitor
+              {t('registerBusiness.browseVisitor')}
             </button>
           </div>
         </div>
@@ -82,26 +107,3 @@ export function HowItWorks({ onNavigate }: HowItWorksProps) {
     </section>
   );
 }
-
-const steps = [
-  {
-    icon: Search,
-    title: 'Discover',
-    description: 'Search and explore verified nurseries, agricultural shops, and service providers in your area.',
-  },
-  {
-    icon: UserPlus,
-    title: 'Follow',
-    description: 'Follow businesses you trust to receive updates on new products, offers, and agricultural tips.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Connect',
-    description: 'Chat directly with businesses to ask questions, request quotes, and get expert advice.',
-  },
-  {
-    icon: CheckCircle,
-    title: 'Grow Together',
-    description: 'Build lasting relationships with trusted providers and grow your agricultural business.',
-  },
-];

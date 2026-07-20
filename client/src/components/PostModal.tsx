@@ -5,6 +5,8 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { getImageUrl } from '../shared/api/client';
 import { fetchMentionableProfiles } from '../shared/api/users';
+import { SeeTranslation } from './SeeTranslation';
+import { useTranslation } from 'react-i18next';
 
 interface Comment {
   id: string;
@@ -74,6 +76,7 @@ export function PostModal({
   onNavigateToUserProfile,
 }: PostModalProps) {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -454,10 +457,11 @@ export function PostModal({
                   onClick={() => setShowFullText(!showFullText)}
                   className="text-green-600 hover:text-green-700 font-medium"
                 >
-                  {showFullText ? 'Read less' : 'Read more'}
+                  {showFullText ? t('common.readLess') : t('common.readMore')}
                 </button>
               )}
             </p>
+            <SeeTranslation text={post.content} />
           </div>
 
           {/* Comments Section */}
@@ -482,8 +486,8 @@ export function PostModal({
                             className="min-h-[60px]"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                            <Button size="sm" onClick={handleSaveEdit}>{t('common.save')}</Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>{t('common.cancel')}</Button>
                           </div>
                         </div>
                       ) : (
@@ -491,6 +495,7 @@ export function PostModal({
                           <div className="bg-neutral-50 rounded-lg p-3">
                             <div className="font-medium text-neutral-900 text-sm mb-1">{comment.userName}</div>
                             <p className="text-neutral-700 text-sm">{renderTextWithMentions(comment.content)}</p>
+                            <SeeTranslation text={comment.content} />
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-xs text-neutral-500">
                             <span>{comment.timeAgo}</span>
@@ -517,27 +522,25 @@ export function PostModal({
                               <button 
                                 onClick={() => setReplyingTo(comment.id)}
                                 className="hover:text-green-600"
-                              >
-                                Reply
-                              </button>
+                              >{t('common.reply')}</button>
                             )}
                             {user?.id === comment.userId && (
                               <button 
                                 onClick={() => handleEditComment(comment.id, comment.content)}
                                 className="hover:text-green-600"
                               >
-                                Edit
+                                {t('common.edit')}
                               </button>
                             )}
                             {onDeleteComment && canDelete(comment.userId) && (
                               <button
                                 onClick={() => onDeleteComment(comment.id)}
                                 className="hover:text-red-600 flex items-center gap-1"
-                                title="Delete comment"
+                                title={t('common.delete')}
                                 type="button"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
-                                Delete
+                                {t('common.delete')}
                               </button>
                             )}
                           </div>
@@ -568,7 +571,7 @@ export function PostModal({
                                       />
                                       <div className="flex gap-2">
                                         <Button size="sm" onClick={handleSaveEdit}>
-                                          Save
+                                          {t('common.save')}
                                         </Button>
                                         <Button
                                           size="sm"
@@ -578,12 +581,15 @@ export function PostModal({
                                             setEditContent('');
                                           }}
                                         >
-                                          Cancel
+                                          {t('common.cancel')}
                                         </Button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <p className="text-neutral-700 text-xs">{renderTextWithMentions(reply.content)}</p>
+                                    <>
+                                      <p className="text-neutral-700 text-xs">{renderTextWithMentions(reply.content)}</p>
+                                      <SeeTranslation text={reply.content} />
+                                    </>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
@@ -612,9 +618,7 @@ export function PostModal({
                                       onClick={() => setReplyingTo(reply.id)}
                                       className="hover:text-green-600"
                                       type="button"
-                                    >
-                                      Reply
-                                    </button>
+                                    >{t('common.reply')}</button>
                                   )}
                                   {user?.id === reply.userId && (
                                     <button
@@ -623,18 +627,18 @@ export function PostModal({
                                       type="button"
                                       disabled={editingCommentId === reply.id}
                                     >
-                                      Edit
+                                      {t('common.edit')}
                                     </button>
                                   )}
                                   {onDeleteComment && canDelete(reply.userId) && (
                                     <button
                                       onClick={() => onDeleteComment(reply.id)}
                                       className="hover:text-red-600 flex items-center gap-1"
-                                      title="Delete comment"
+                                      title={t('common.delete')}
                                       type="button"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
-                                      Delete
+                                      {t('common.delete')}
                                     </button>
                                   )}
                                 </div>
@@ -696,7 +700,7 @@ export function PostModal({
               <div className="space-y-2 relative">
                 {replyingTo && (
                   <div className="text-xs text-neutral-600 flex items-center justify-between bg-neutral-50 px-3 py-2 rounded-lg">
-                    <span>Replying to {getUserNameByCommentId(replyingTo) ?? 'comment'}</span>
+                    <span>{t('posts.replyingTo', { name: getUserNameByCommentId(replyingTo) ?? t('common.comment') })}</span>
                     <button onClick={() => setReplyingTo(null)} className="text-neutral-500 hover:text-neutral-700">
                       <X className="w-4 h-4" />
                     </button>
@@ -741,7 +745,7 @@ export function PostModal({
 
                 <div className="flex gap-2">
                   <Textarea
-                    placeholder="Add a comment..."
+                    placeholder={t('posts.writeComment')}
                     value={newComment}
                     onChange={handleCommentChange}
                     onKeyDown={handleMentionKeyDown}

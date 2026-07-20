@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   MapPin, Star, Users, MessageCircle, Phone, Mail, Globe, CheckCircle, CheckCircle2, Heart, 
   ShoppingCart, Bookmark, X, Send, ThumbsUp, Reply as ReplyIcon, Edit, 
@@ -17,6 +18,7 @@ import { fetchProducts } from '../shared/api/products';
 import { fetchPosts, toggleLikePost, sharePost } from '../shared/api/posts';
 import { fetchThreads, toggleLikeThread, shareThread } from '../shared/api/threads';
 import { getImageUrl } from '../shared/api/client';
+import { DEFAULT_BANNER_URL } from '../shared/constants/branding';
 import { ThreadModal, type ThreadModalComment } from '../components/ThreadModal';
 import { fetchComments, createComment, toggleLikeComment, deleteComment, type CommentDto } from '../shared/api/comments';
 import { InteractiveRating } from '../components/InteractiveRating';
@@ -68,6 +70,7 @@ interface MentionUser {
 const mentionableUsers: MentionUser[] = [];
 
 export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusinesses, onFollowBusiness, onUnfollowBusiness, onNavigateToBusiness, businessThreads = [], savedItems = [], onSaveItem, onRemoveSavedItem, onNavigateWithParams }: BusinessPageProps) {
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [business, setBusiness] = useState<any | null>(null);
   const [businessPosts, setBusinessPosts] = useState<any[]>([]);
@@ -260,7 +263,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
   if (!business) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <p className="text-neutral-600">Loading business...</p>
+        <p className="text-neutral-600">{t('business.loading')}</p>
       </div>
     );
   }
@@ -529,13 +532,11 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Banner */}
       <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700 bg-neutral-200">
-        {(getImageUrl(business.coverImage) || business.coverImage) ? (
-          <img
-            src={getImageUrl(business.coverImage) || business.coverImage}
-            alt={`${displayName} cover`}
-            className="w-full h-full object-cover"
-          />
-        ) : null}
+        <img
+          src={getImageUrl(business.coverImage) || business.coverImage || DEFAULT_BANNER_URL}
+          alt={`${displayName} cover`}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
       </div>
 
@@ -572,7 +573,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                       <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{displayName}</h1>
                       <span className="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-green-200 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        Verified Business
+                        {t('business.verified')}
                       </span>
                     </div>
                     
@@ -622,7 +623,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                           }`}
                         >
                           <Heart className={`w-5 h-5 ${isFollowing ? 'fill-current' : ''}`} />
-                          <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                          <span>{isFollowing ? t('common.following') : t('common.follow')}</span>
                         </Button>
                         <Button 
                           onClick={() => onOpenChat(business.id)}
@@ -630,7 +631,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                           className="flex items-center justify-center gap-2 px-6 py-2.5 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-all"
                         >
                           <MessageCircle className="w-5 h-5" />
-                          <span>Message</span>
+                          <span>{t('business.message')}</span>
                         </Button>
                         <Button
                           onClick={() => !alreadyReported && setShowReportModal(true)}
@@ -644,7 +645,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                           title={alreadyReported ? 'You already reported this business' : 'Report this business'}
                         >
                           <Flag className="w-5 h-5" />
-                          <span>{alreadyReported ? 'Reported' : 'Report'}</span>
+                          <span>{alreadyReported ? t('business.reported') : t('business.report')}</span>
                         </Button>
                       </>
                     )}
@@ -655,15 +656,15 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                 <div className="grid grid-cols-3 gap-4 sm:gap-8 mt-8 pt-6 border-t border-neutral-100">
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{followersCount.toLocaleString()}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Followers</div>
+                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('business.followers')}</div>
                   </div>
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{businessPosts.length}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Posts</div>
+                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('profile.posts')}</div>
                   </div>
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{filteredBusinessThreads.length}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Threads</div>
+                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('threads.title')}</div>
                   </div>
                 </div>
               </div>
@@ -686,7 +687,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                 >
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    <span>Products</span>
+                    <span>{t('business.products')}</span>
                   </div>
                   {activeTab === 'products' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />}
                 </button>
@@ -699,7 +700,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    <span>Posts</span>
+                    <span>{t('profile.posts')}</span>
                   </div>
                   {activeTab === 'posts' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />}
                 </button>
@@ -712,7 +713,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                 >
                   <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4" />
-                    <span>Threads</span>
+                    <span>{t('threads.title')}</span>
                   </div>
                   {activeTab === 'threads' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />}
                 </button>
@@ -725,7 +726,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                 >
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    <span>About</span>
+                    <span>{t('business.about')}</span>
                   </div>
                   {activeTab === 'about' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />}
                 </button>
@@ -896,7 +897,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                   ) : (
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-neutral-500 font-medium">No posts yet</p>
+                      <p className="text-neutral-500 font-medium">{t('business.noPostsYet')}</p>
                     </div>
                   )}
                 </div>
@@ -949,7 +950,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                   ) : (
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <MessageCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-neutral-500 font-medium">No threads yet</p>
+                      <p className="text-neutral-500 font-medium">{t('business.noThreadsYet')}</p>
                     </div>
                   )}
                 </div>
@@ -961,7 +962,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
                   <section>
                     <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
                       <div className="w-1.5 h-6 bg-green-600 rounded-full" />
-                      About {displayName}
+                      {t('business.about')} {displayName}
                     </h3>
                     <p className="text-neutral-700 leading-relaxed bg-neutral-50 p-4 sm:p-6 rounded-xl border border-neutral-100 text-sm">
                       {business.bio}

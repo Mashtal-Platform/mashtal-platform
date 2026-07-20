@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Star, ThumbsUp, Award, X, Send, User, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -38,6 +39,7 @@ export function InteractiveRating({
   onSubmitReview,
   onEditReview,
 }: InteractiveRatingProps) {
+  const { t } = useTranslation();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedRating, setSelectedRating] = useState(0);
@@ -122,7 +124,7 @@ export function InteractiveRating({
       setReviewComment('');
       const newReview: Review = {
         id: Date.now().toString(),
-        author: 'You',
+        author: t('common.you'),
         avatar: 'https://via.placeholder.com/100',
         rating: selectedRating,
         comment: reviewComment,
@@ -173,7 +175,7 @@ export function InteractiveRating({
                   ))}
                 </div>
                 <p className="text-sm text-neutral-600">
-                  Based on <span className="font-semibold">{totalReviews}</span> reviews
+                  {t('reviews.basedOn', { count: totalReviews })}
                 </p>
               </div>
             </div>
@@ -184,7 +186,7 @@ export function InteractiveRating({
               onClick={() => setShowReviewModal(true)}
               className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-sm hover:shadow-md"
             >
-              Write a Review
+              {t('reviews.write')}
             </Button>
           )}
         </div>
@@ -216,7 +218,7 @@ export function InteractiveRating({
         <div>
           <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
             <Award className="w-5 h-5 text-green-600" />
-            Recent Reviews
+            {t('reviews.recent')}
           </h3>
           <div className="space-y-4">
             {displayedReviews.map((review) => (
@@ -258,7 +260,7 @@ export function InteractiveRating({
                         type="button"
                         onClick={() => openEditReview(review)}
                         className="ml-2 p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-green-600 transition-colors"
-                        title="Edit review"
+                        title={t('common.edit')}
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
@@ -278,7 +280,9 @@ export function InteractiveRating({
                 >
                   <ThumbsUp className={`w-4 h-4 ${helpfulReviews.has(review.id) ? 'fill-current' : ''}`} />
                   <span>
-                    Helpful ({helpfulLoadingId === review.id ? '…' : (review.helpful ?? 0) + (type !== 'business' && helpfulReviews.has(review.id) ? 1 : 0)})
+                    {t('reviews.helpful', {
+                      count: helpfulLoadingId === review.id ? '…' : (review.helpful ?? 0) + (type !== 'business' && helpfulReviews.has(review.id) ? 1 : 0),
+                    })}
                   </span>
                 </button>
               </div>
@@ -290,7 +294,7 @@ export function InteractiveRating({
               onClick={() => setShowAllReviews(!showAllReviews)}
               className="mt-4 w-full py-2.5 border-2 border-neutral-200 rounded-lg text-neutral-700 font-medium hover:border-green-200 hover:text-green-600 transition-all"
             >
-              {showAllReviews ? 'Show Less' : `View All ${allReviews.length} Reviews`}
+              {showAllReviews ? t('reviews.showLess') : t('reviews.viewAllCount', { count: allReviews.length })}
             </button>
           )}
         </div>
@@ -301,7 +305,7 @@ export function InteractiveRating({
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-              <h2 className="text-xl font-bold text-neutral-900">Edit your review</h2>
+              <h2 className="text-xl font-bold text-neutral-900">{t('reviews.editYours')}</h2>
               <button
                 onClick={() => setEditingReviewId(null)}
                 className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
@@ -311,7 +315,7 @@ export function InteractiveRating({
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <p className="text-sm text-neutral-600 mb-3">Your rating</p>
+                <p className="text-sm text-neutral-600 mb-3">{t('reviews.yourRating')}</p>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -334,11 +338,11 @@ export function InteractiveRating({
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Comment</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">{t('reviews.comment')}</label>
                 <Textarea
                   value={editComment}
                   onChange={(e) => setEditComment(e.target.value)}
-                  placeholder="Tell us about your experience..."
+                  placeholder={t('reviews.experiencePlaceholder')}
                   className="min-h-[120px] resize-none"
                 />
               </div>
@@ -348,14 +352,14 @@ export function InteractiveRating({
                   variant="outline"
                   className="flex-1"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleSaveEditReview}
                   disabled={editRating < 1 || editSaving}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {editSaving ? 'Saving...' : 'Save changes'}
+                  {editSaving ? t('common.saving') : t('profile.saveChanges')}
                 </Button>
               </div>
             </div>
@@ -368,7 +372,7 @@ export function InteractiveRating({
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-              <h2 className="text-xl font-bold text-neutral-900">Write a Review</h2>
+              <h2 className="text-xl font-bold text-neutral-900">{t('reviews.write')}</h2>
               <button
                 onClick={() => setShowReviewModal(false)}
                 className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
@@ -380,7 +384,7 @@ export function InteractiveRating({
             <div className="p-6 space-y-6">
               <div>
                 <p className="text-sm text-neutral-600 mb-3">
-                  How would you rate <span className="font-semibold text-neutral-900">{entityName}</span>?
+                  {t('reviews.howWouldYouRate', { name: entityName })}
                 </p>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -403,23 +407,23 @@ export function InteractiveRating({
                 </div>
                 {selectedRating > 0 && (
                   <p className="text-sm text-green-600 font-medium mt-2">
-                    {selectedRating === 5 && '⭐ Excellent!'}
-                    {selectedRating === 4 && '⭐ Very Good!'}
-                    {selectedRating === 3 && '⭐ Good'}
-                    {selectedRating === 2 && '⭐ Fair'}
-                    {selectedRating === 1 && '⭐ Needs Improvement'}
+                    {selectedRating === 5 && `⭐ ${t('reviews.excellent')}`}
+                    {selectedRating === 4 && `⭐ ${t('reviews.veryGood')}`}
+                    {selectedRating === 3 && `⭐ ${t('reviews.good')}`}
+                    {selectedRating === 2 && `⭐ ${t('reviews.fair')}`}
+                    {selectedRating === 1 && `⭐ ${t('reviews.needsImprovement')}`}
                   </p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Share your experience
+                  {t('reviews.shareExperience')}
                 </label>
                 <Textarea
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Tell us about your experience..."
+                  placeholder={t('reviews.experiencePlaceholder')}
                   className="min-h-[120px] resize-none"
                 />
               </div>
@@ -430,7 +434,7 @@ export function InteractiveRating({
                   variant="outline"
                   className="flex-1"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleSubmitReview}
@@ -438,7 +442,7 @@ export function InteractiveRating({
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
-                  Submit Review
+                  {t('reviews.submit')}
                 </Button>
               </div>
             </div>

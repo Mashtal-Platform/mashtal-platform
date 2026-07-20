@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 
@@ -122,6 +123,46 @@ async function assertBusinessSubscriptionActive(userDoc) {
   return { ok: true };
 }
 
+/** True if business subscription is currently sellable (active and not past expiry). */
+function isBusinessSubscriptionActive(userDoc) {
+  if (!userDoc || userDoc.role !== 'business') return false;
+  if (userDoc.subscriptionStatus !== 'active') return false;
+  if (userDoc.subscriptionExpiresAt && new Date(userDoc.subscriptionExpiresAt) <= new Date()) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Return ObjectIds of businesses among `ids` that currently have an active subscription.
+ * Used to hide (not delete) products from the public shop when a plan expires.
+ */
+async function getActiveBusinessObjectIds(ids) {
+  const unique = [...new Set((ids || []).map((id) => String(id)).filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  const objectIds = unique
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (objectIds.length === 0) return [];
+
+  const now = new Date();
+  const active = await User.find({
+    _id: { $in: objectIds },
+    role: 'business',
+    subscriptionStatus: 'active',
+    $or: [
+      { subscriptionExpiresAt: null },
+      { subscriptionExpiresAt: { $gt: now } },
+    ],
+  })
+    .select('_id')
+    .lean();
+
+  return active.map((u) => u._id);
+}
+
 /**
  * After successful business-fee payment: activate subscription and promote to
  * role=business only then (pendingBusinessProfile → businessProfile).
@@ -170,5 +211,7 @@ module.exports = {
   notifyExpiringTomorrow,
   startSubscriptionMaintenance,
   assertBusinessSubscriptionActive,
+  isBusinessSubscriptionActive,
+  getActiveBusinessObjectIds,
   activatePaidBusinessAccount,
 };

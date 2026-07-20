@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bell, Package, MessageCircle, Heart, AlertCircle, Trash2, CheckCheck, UserPlus, AtSign, Flag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Notification {
   id: string;
@@ -39,6 +40,8 @@ export function NotificationsPage({
   onNavigateToUserProfile,
   currentUserId,
 }: NotificationsPageProps) {
+  const { t } = useTranslation();
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'order':
@@ -161,43 +164,40 @@ export function NotificationsPage({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Notifications</h1>
+            <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">{t('notifications.title')}</h1>
             <p className="text-neutral-600">
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+              {t('notifications.unread', { count: unreadCount })}
             </p>
           </div>
           {notifications.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              {/* Mark All as Read */}
               {unreadCount > 0 && onMarkAllAsRead && (
                 <button
                   onClick={onMarkAllAsRead}
                   className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors text-xs sm:text-sm font-medium"
-                  title="Mark all notifications as read"
+                  title={t('notifications.markAllTitle')}
                 >
                   <CheckCheck className="w-4 h-4" />
-                  <span>Mark All Read</span>
+                  <span>{t('notifications.markAllRead')}</span>
                 </button>
               )}
-              {/* Delete Read Notifications */}
               {readCount > 0 && onDeleteRead && (
                 <button
                   onClick={onDeleteRead}
                   className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-xs sm:text-sm font-medium"
-                  title="Delete all read notifications"
+                  title={t('notifications.deleteReadTitle')}
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>Delete Read</span>
+                  <span>{t('notifications.deleteRead')}</span>
                 </button>
               )}
-              {/* Clear All */}
               <button
                 onClick={onClearAll}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs sm:text-sm font-medium"
-                title="Clear all notifications"
+                title={t('notifications.clearAllTitle')}
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Clear All</span>
+                <span>{t('notifications.clearAll')}</span>
               </button>
             </div>
           )}
@@ -206,8 +206,8 @@ export function NotificationsPage({
         {notifications.length === 0 ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 text-center shadow-sm">
             <Bell className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl text-neutral-900 mb-2">No notifications</h3>
-            <p className="text-neutral-600">You're all caught up!</p>
+            <h3 className="text-xl text-neutral-900 mb-2">{t('notifications.emptyTitle')}</h3>
+            <p className="text-neutral-600">{t('notifications.emptyBody')}</p>
           </div>
         ) : (
           <div className="space-y-2 sm:space-y-3">

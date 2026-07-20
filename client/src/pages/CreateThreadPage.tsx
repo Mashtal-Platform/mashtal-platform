@@ -5,6 +5,7 @@ import { Textarea } from '../components/ui/textarea';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchMentionableProfiles } from '../shared/api/users';
 import { getAvatarUrl } from '../shared/api/client';
+import { useTranslation } from 'react-i18next';
 
 interface CreateThreadPageProps {
   onCreateThread: (thread: { title: string; content: string; tags?: string[] }) => void;
@@ -20,11 +21,12 @@ interface MentionUser {
 }
 
 export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPageProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const displayName =
     user?.role === 'business'
-      ? (user.companyName || user.fullName || 'Business')
-      : (user?.fullName || 'User');
+      ? (user.companyName || user.fullName || t('common.business'))
+      : (user?.fullName || t('common.you'));
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -197,8 +199,8 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
               <X className="w-6 h-6 text-neutral-700" />
             </button>
             <div>
-              <h1 className="text-neutral-900">Create Thread</h1>
-              <p className="text-sm text-neutral-600">Share your thoughts with the community</p>
+              <h1 className="text-neutral-900">{t('createThread.title')}</h1>
+              <p className="text-sm text-neutral-600">{t('createThread.placeholder')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -208,14 +210,14 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
               className="gap-2"
             >
               <Eye className="w-4 h-4" />
-              {showPreview ? 'Edit' : 'Preview'}
+              {showPreview ? t('common.edit') : t('common.preview')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!content.trim()}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              Post Thread
+              {t('createThread.publish')}
             </Button>
           </div>
         </div>
@@ -230,7 +232,7 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Thread title (optional)"
+                  placeholder={t('createThread.titleOptional')}
                   className="w-full text-xl font-semibold text-neutral-900 placeholder:text-neutral-400 border-0 outline-none focus:ring-0 p-0"
                 />
               </div>
@@ -242,7 +244,7 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
                   value={content}
                   onChange={handleContentChange}
                   onKeyDown={handleMentionKeyDown}
-                  placeholder="What's on your mind? Use @ to mention someone..."
+                  placeholder={t('createThread.placeholder')}
                   className="min-h-[200px] resize-none border-0 outline-none focus:ring-0 text-neutral-900 placeholder:text-neutral-400 p-0"
                 />
 
@@ -287,7 +289,7 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
               <div className="border-t border-neutral-100 pt-4">
                 <label className="block text-sm font-medium text-neutral-900 mb-2">
                   <Hash className="w-4 h-4 inline mr-1" />
-                  Hashtags (Optional)
+                  {t('createPost.hashtagsOptional')}
                 </label>
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -405,7 +407,7 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
                 </button>
                 <button className="flex items-center gap-2 text-neutral-600 hover:text-green-600 transition-colors">
                   <Send className="w-5 h-5" />
-                  <span className="text-sm">Share</span>
+                  <span className="text-sm">{t('common.share')}</span>
                 </button>
               </div>
             </div>

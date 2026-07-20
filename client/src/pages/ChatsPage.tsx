@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, Send, Search, ArrowLeft, Circle, HardHat, Building2, User, Leaf, Shield, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
@@ -124,6 +125,7 @@ function SharedPostPreviewCard({
   isOwnMessage: boolean;
   onNavigateWithParams?: (page: string, params: { highlightPostId?: string; highlightThreadId?: string }) => void;
 }) {
+  const { t } = useTranslation();
   const postTitle = sharedPost.postTitle ?? sharedPost.title ?? '';
   const postImage = sharedPost.postImage ?? sharedPost.image;
   const postUrl = sharedPost.postUrl ?? sharedPost.url ?? '#';
@@ -152,17 +154,17 @@ function SharedPostPreviewCard({
       )}
       <div className="p-4">
         <p className="font-semibold text-gray-900 text-base mt-0 line-clamp-2">
-          Shared with you: {postTitle || 'Post'}
+          {t('chats.sharedWithYou', { title: postTitle || t('search.post') })}
         </p>
         <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-2">
           {postOwnerAvatar && (
             <img src={getImageUrl(postOwnerAvatar)} alt="" className="w-4 h-4 rounded-full object-cover" />
           )}
-          Uploaded by {postOwnerName}
+          {t('chats.uploadedBy', { name: postOwnerName })}
         </p>
         {postUrl && postUrl !== '#' && (
           <span className="text-blue-500 hover:text-blue-600 hover:underline font-medium cursor-pointer inline-flex items-center gap-1">
-            View post →
+            {t('chats.viewPost')}
           </span>
         )}
       </div>
@@ -192,6 +194,7 @@ function SharedPostPreviewCard({
 }
 
 export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWithParams }: ChatsPageProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const userIdRef = useRef<string | null>(null);
   userIdRef.current = user?.id ?? null;
@@ -239,7 +242,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return t('chats.justNow');
     if (diffMins < 60) return `${diffMins} min ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
@@ -494,14 +497,14 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
             {/* Chat List */}
             <div className={`border-r border-neutral-200 flex flex-col overflow-hidden ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
               <div className="p-4 border-b border-neutral-200 flex-shrink-0">
-                <h2 className="text-xl text-neutral-900 mb-4">Messages</h2>
+                <h2 className="text-xl text-neutral-900 mb-4">{t('chats.title')}</h2>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search conversations..."
+                    placeholder={t('chats.searchPlaceholder')}
                     className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
                   />
                 </div>
@@ -509,14 +512,14 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
 
               <div className="flex-1 overflow-y-auto chat-list-scroll">
                 {chatsLoading && chats.length === 0 ? (
-                  <div className="p-4 text-neutral-500 text-sm">Loading conversations...</div>
+                  <div className="p-4 text-neutral-500 text-sm">{t('chats.loadingConversations')}</div>
                 ) : !isAuthenticated ? (
-                  <div className="p-4 text-neutral-500 text-sm">Sign in to view messages</div>
+                  <div className="p-4 text-neutral-500 text-sm">{t('chats.signIn')}</div>
                 ) : sortedChats.length === 0 ? (
                   <div className="p-4 text-center text-neutral-500 text-sm">
                     <MessageCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>No conversations yet</p>
-                    <p className="text-xs mt-1">Click Message on a business profile to start chatting</p>
+                    <p>{t('chats.empty')}</p>
+                    <p className="text-xs mt-1">{t('chats.emptyHint')}</p>
                   </div>
                 ) : (
                 sortedChats.map((chat) => {
@@ -571,7 +574,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                           )}
                         </div>
                         <p className={`text-sm ${hasMessages ? 'text-neutral-600' : 'text-neutral-400 italic'} truncate`}>
-                          {hasMessages ? previewText : 'Start a conversation!'}
+                          {hasMessages ? previewText : t('chats.startConversation')}
                         </p>
                       </div>
                       {chat.unread > 0 && (
@@ -613,7 +616,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                       <h3 className="text-neutral-900 truncate">{selectedChat.profileName}</h3>
                       <div className="flex items-center gap-1 text-xs text-neutral-600">
                         <Circle className={`w-2 h-2 ${selectedChat.online ? 'text-green-500 fill-current' : 'text-neutral-400 fill-current'}`} />
-                        <span>{selectedChat.online ? 'Online' : 'Offline'}</span>
+                        <span>{selectedChat.online ? t('common.online') : t('common.offline')}</span>
                       </div>
                     </div>
                     <button
@@ -627,7 +630,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50 chat-messages-scroll" ref={messagesContainerRef}>
                     {messagesLoading ? (
-                      <div className="flex justify-center py-8 text-neutral-500">Loading messages...</div>
+                      <div className="flex justify-center py-8 text-neutral-500">{t('chats.loading')}</div>
                     ) : (
                       currentMessages.map((message) => (
                         <div
@@ -641,7 +644,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
                                   className="w-full min-h-[60px] px-3 py-2 rounded-lg bg-white/10 text-white placeholder-green-200 border border-white/20 resize-none text-sm"
-                                  placeholder="Edit message..."
+                                  placeholder={t('chats.editPlaceholder')}
                                   autoFocus
                                 />
                                 <div className="flex gap-2 justify-end">
@@ -692,7 +695,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                                           type="button"
                                           onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
                                           className="p-0.5 rounded hover:bg-white/20 text-green-100"
-                                          aria-label="Message options"
+                                          aria-label={t('chats.messageOptions')}
                                         >
                                           <MoreVertical className="w-3.5 h-3.5" />
                                         </button>
@@ -744,7 +747,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                             handleSendMessage();
                           }
                         }}
-                        placeholder="Type a message... (Shift+Enter for new line)"
+                        placeholder={t('chats.typeMessageHint')}
                         rows={1}
                         className="flex-1 min-h-[44px] max-h-32 px-4 py-3 border border-neutral-200 rounded-xl outline-none focus:border-green-600 resize-y"
                       />
@@ -759,7 +762,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                     <div className="flex items-center gap-2 mt-2">
                       <Circle className={`w-2 h-2 ${wsConnected ? 'text-green-500' : 'text-red-500'} fill-current`} />
                       <p className="text-xs text-neutral-500">
-                        {wsConnected ? 'Connected' : 'Connecting...'}
+                        {wsConnected ? t('chats.connected') : t('chats.connecting')}
                       </p>
                     </div>
                   </div>
@@ -768,8 +771,8 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
                     <MessageCircle className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                    <h3 className="text-xl text-neutral-900 mb-2">No conversation selected</h3>
-                    <p className="text-neutral-600">Choose a conversation to start messaging</p>
+                    <h3 className="text-xl text-neutral-900 mb-2">{t('chats.noSelected')}</h3>
+                    <p className="text-neutral-600">{t('chats.chooseConversation')}</p>
                   </div>
                 </div>
               )}
@@ -785,18 +788,18 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 mb-4">
-              <h3 className="text-lg font-semibold text-neutral-900">Delete message?</h3>
+              <h3 className="text-lg font-semibold text-neutral-900">{t('chats.deleteMessage')}</h3>
               <button
                 type="button"
                 onClick={() => setMessageToDelete(null)}
                 className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-neutral-600 text-sm mb-6">
-              This action cannot be undone. The message will be removed from this conversation.
+              {t('chats.deleteMessageBody')}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -804,7 +807,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                 onClick={() => setMessageToDelete(null)}
                 className="px-4 py-2 text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -812,7 +815,7 @@ export function ChatsPage({ onNavigateToProfile, selectedProfileId, onNavigateWi
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

@@ -1,11 +1,14 @@
 import React from 'react';
 import { ArrowRight, Shield, Leaf, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface HeroSectionProps {
   onNavigate: (page: any) => void;
 }
 
 export function HeroSection({ onNavigate }: HeroSectionProps) {
+  const { t } = useTranslation();
+
   return (
     <section className="relative bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 lg:py-24">
@@ -15,16 +18,15 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-200">
                 <Leaf className="w-4 h-4" />
-                <span className="text-sm">Trusted Agricultural Marketplace</span>
+                <span className="text-sm">{t('hero.badge')}</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl text-neutral-900 leading-tight">
-                Connect With Trusted Nurseries & Agricultural Experts
+                {t('hero.title')}
               </h1>
 
               <p className="text-base sm:text-lg text-neutral-600 leading-relaxed">
-                Discover quality plants, farming tools, and professional agricultural services. 
-                Shop online, chat with experts, and grow your farming business with Mashtal.
+                {t('hero.subtitle')}
               </p>
             </div>
 
@@ -34,14 +36,14 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
                 onClick={() => onNavigate('search')}
                 className="flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/30"
               >
-                <span>Start Shopping</span>
+                <span>{t('hero.startShopping')}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => onNavigate('posts')}
                 className="flex items-center justify-center gap-2 border-2 border-neutral-300 text-neutral-700 px-6 py-3 sm:px-8 sm:py-4 rounded-lg hover:border-green-600 hover:text-green-600 transition-colors"
               >
-                Browse Updates
+                {t('hero.browseUpdates')}
               </button>
             </div>
 
@@ -51,19 +53,19 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                   <Shield className="w-6 h-6 text-green-600" />
                 </div>
-                <div className="text-sm text-neutral-600">Verified Sellers</div>
+                <div className="text-sm text-neutral-600">{t('hero.verifiedSellers')}</div>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                   <Leaf className="w-6 h-6 text-green-600" />
                 </div>
-                <div className="text-sm text-neutral-600">Organic Products</div>
+                <div className="text-sm text-neutral-600">{t('hero.organicProducts')}</div>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                   <Users className="w-6 h-6 text-green-600" />
                 </div>
-                <div className="text-sm text-neutral-600">Expert Support</div>
+                <div className="text-sm text-neutral-600">{t('hero.expertSupport')}</div>
               </div>
             </div>
           </div>

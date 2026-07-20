@@ -33,6 +33,10 @@ function normalizeUser(apiUser: any): User {
       ? businessProfile.about
       : undefined,
     businessProfile: apiUser.businessProfile,
+    preferredLanguage:
+      apiUser.preferredLanguage === 'ar' || apiUser.preferredLanguage === 'en'
+        ? apiUser.preferredLanguage
+        : 'en',
   };
 }
 
@@ -61,6 +65,7 @@ export interface User {
   hours?: Array<{ day?: string; closed?: boolean; open?: Array<{ from?: string; to?: string }> }>;
   about?: Record<string, string>;
   businessProfile?: Record<string, unknown>;
+  preferredLanguage?: 'en' | 'ar';
 }
 
 interface AuthContextType {
@@ -102,8 +107,11 @@ interface AuthContextType {
     };
   }) => Promise<{ requiresVerification?: boolean; user?: any }>;
   signOut: () => Promise<void>;
-  /** Verify email via link token (from email). Returns true if verified and logged in. */
-  verifyEmail: (token: string) => Promise<boolean>;
+  /** Verify email via link token (from email). Returns true if verified and logged in.
+   *  When the account has a pending business upgrade, needsPayment is true. */
+  verifyEmail: (token: string) => Promise<{ ok: boolean; needsPayment?: boolean }>;
+  /** Email awaiting verification after signup (if any). */
+  pendingVerificationEmail: string | null;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   /** Convert current visitor account to a business account. */
   convertToBusiness: (businessProfile: {
@@ -228,8 +236,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { requiresVerification: false, user: data.user };
   };
 
-  const verifyEmail = async (token: string): Promise<boolean> => {
-    if (!token || !token.trim()) return false;
+  const verifyEmail = async (
+    token: string
+  ): Promise<{ ok: boolean; needsPayment?: boolean }> => {
+    if (!token || !token.trim()) return { ok: false };
     try {
       const data = await apiGet<{ token: string; user: any }>(
         `/auth/verify-email?token=${encodeURIComponent(token.trim())}`
@@ -240,11 +250,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('mashtal_user', JSON.stringify(nextUser));
         setUser(nextUser);
         setPendingVerification(null);
-        return true;
+        const needsPayment = !!(
+          data.user.needsPayment ||
+          data.user.pendingBusinessUpgrade ||
+          data.user.pendingBusinessProfile
+        );
+        return { ok: true, needsPayment };
       }
-      return false;
+      return { ok: false };
     } catch {
-      return false;
+      return { ok: false };
     }
   };
 
@@ -373,6 +388,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         verifyEmail,
+        pendingVerificationEmail: pendingVerification,
         updateProfile,
         convertToBusiness,
         refreshUser,
