@@ -309,6 +309,8 @@ async function getBusinessOrders(req, res) {
       { $limit: limit },
     ]);
 
+    const { normalizeOrderStatus } = require('../utils/orderStatus');
+
     const orders = (rows || []).map((r) => {
       const shipping = r.shipping || {};
       const buyerName =
@@ -321,7 +323,7 @@ async function getBusinessOrders(req, res) {
       return {
         id: String(r._id),
         createdAt: r.createdAt,
-        status: r.status || 'processing',
+        status: normalizeOrderStatus(r.status || 'processing'),
         buyer: {
           id: r.buyer?.id ? String(r.buyer.id) : undefined,
           fullName: buyerName,

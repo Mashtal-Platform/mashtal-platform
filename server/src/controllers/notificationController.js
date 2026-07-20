@@ -32,7 +32,14 @@ async function getMyNotifications(req, res) {
       else if (n.type === 'like_post' || n.type === 'like_thread') uiType = 'like';
       else if (n.type === 'comment_post' || n.type === 'comment_thread')
         uiType = 'comment';
-      else if (n.type === 'order_created') uiType = 'order';
+      else if (
+        n.type === 'order_created' ||
+        n.type === 'order_cancelled' ||
+        n.type === 'order_status_updated'
+      )
+        uiType = 'order';
+      else if (n.type === 'order_cancelled_admin' || n.type === 'order_ready_admin')
+        uiType = 'admin_order';
       else if (n.type === 'payment_received') uiType = 'transaction';
       else if (n.type === 'business_report') uiType = 'report';
       else if (n.type === 'admin_warning') uiType = 'alert';
@@ -42,6 +49,14 @@ async function getMyNotifications(req, res) {
       const message = buildNotificationMessage(n, senderName, lang);
 
       const messageCount = n.type === 'chat_message' ? (n.messageCount || 1) : 1;
+
+      const orderRelated = [
+        'order_created',
+        'order_cancelled',
+        'order_cancelled_admin',
+        'order_status_updated',
+        'order_ready_admin',
+      ].includes(n.type);
 
       return {
         id: n._id.toString(),
@@ -53,10 +68,7 @@ async function getMyNotifications(req, res) {
           ? new Date(n.createdAt).toLocaleString()
           : new Date().toLocaleString(),
         relatedUserId: n.sender ? n.sender._id.toString() : undefined,
-        orderId:
-          n.type === 'order_created' && n.entityId
-            ? n.entityId.toString()
-            : undefined,
+        orderId: orderRelated && n.entityId ? n.entityId.toString() : undefined,
         paymentId:
           n.type === 'payment_received' && n.entityId
             ? n.entityId.toString()

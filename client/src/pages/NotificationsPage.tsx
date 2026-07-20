@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Notification {
   id: string;
-  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report';
+  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report' | 'admin_order';
   message: string;
   read: boolean;
   time: string;
@@ -28,6 +28,7 @@ interface NotificationsPageProps {
   onNavigate?: (page: string, params?: any) => void;
   onNavigateToUserProfile?: (userId: string) => void;
   currentUserId?: string;
+  userRole?: string;
 }
 
 export function NotificationsPage({
@@ -39,6 +40,7 @@ export function NotificationsPage({
   onNavigate,
   onNavigateToUserProfile,
   currentUserId,
+  userRole,
 }: NotificationsPageProps) {
   const { t } = useTranslation();
 
@@ -46,6 +48,8 @@ export function NotificationsPage({
     switch (type) {
       case 'order':
         return <Package className="w-5 h-5 text-green-600" />;
+      case 'admin_order':
+        return <Package className="w-5 h-5 text-emerald-700" />;
       case 'transaction':
         return <Package className="w-5 h-5 text-emerald-700" />;
       case 'message':
@@ -137,7 +141,19 @@ export function NotificationsPage({
           onNavigate('user-profile', { userId: notification.relatedUserId });
         }
       } else if (notification.type === 'order') {
-        onNavigate('dashboard', {
+        // Buyers → purchase history; businesses → dashboard orders
+        if (userRole === 'business') {
+          onNavigate('dashboard', {
+            section: 'orders',
+            highlightOrderId: notification.orderId,
+          });
+        } else {
+          onNavigate('purchase-history', {
+            highlightOrderId: notification.orderId,
+          });
+        }
+      } else if (notification.type === 'admin_order') {
+        onNavigate('admin', {
           section: 'orders',
           highlightOrderId: notification.orderId,
         });

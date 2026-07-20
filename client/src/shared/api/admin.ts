@@ -152,3 +152,48 @@ export async function notifyExpiringSubscriptions(): Promise<{
 }> {
   return apiPost('/admin/subscriptions/notify-expiring', {});
 }
+
+export type AdminOrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled';
+
+export interface AdminOrderDto {
+  id: string;
+  status: AdminOrderStatus;
+  total: number;
+  createdAt?: string;
+  cancelledBy?: string | null;
+  cancelFeePercent?: number | null;
+  cancelRefundPercent?: number | null;
+  buyer?: { id: string; fullName: string; email: string; phone?: string } | null;
+  items: Array<{
+    quantity: number;
+    priceAtPurchase: number;
+    product: {
+      id: string;
+      name: string;
+      image?: string;
+      businessId?: string;
+      businessName?: string;
+    };
+  }>;
+}
+
+export async function fetchAdminOrders(params?: {
+  status?: string;
+}): Promise<{ orders: AdminOrderDto[]; total: number; statuses: string[] }> {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  const qs = q.toString();
+  return apiGet(`/admin/orders${qs ? `?${qs}` : ''}`);
+}
+
+export async function updateAdminOrderStatus(
+  orderId: string,
+  status: AdminOrderStatus
+): Promise<{ order: AdminOrderDto }> {
+  return apiPatch(`/admin/orders/${orderId}/status`, { status });
+}
