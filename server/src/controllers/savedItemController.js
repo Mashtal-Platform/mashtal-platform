@@ -2,7 +2,9 @@ const SavedItem = require('../models/SavedItem');
 const Post = require('../models/Post');
 const Thread = require('../models/Thread');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const { Types } = require('mongoose');
+const { isBusinessSubscriptionActive } = require('../utils/subscription');
 
 async function getMySaved(req, res) {
   try {
@@ -50,6 +52,15 @@ async function getMySaved(req, res) {
             if (!product) {
               await SavedItem.deleteOne({ _id: item._id });
               return null;
+            }
+            // Hide saved products whose seller plan expired (keep SavedItem; reappear on renew)
+            if (product.business) {
+              const seller = await User.findById(product.business)
+                .select('role subscriptionStatus subscriptionExpiresAt')
+                .lean();
+              if (!isBusinessSubscriptionActive(seller)) {
+                return null;
+              }
             }
             out.title = product.name || '';
             out.image = product.image || '';

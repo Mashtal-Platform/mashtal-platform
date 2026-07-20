@@ -4,6 +4,7 @@ import { ThreadsFeed } from '../components/ThreadsFeed';
 import { SavedItem } from '../App';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface ThreadsPageProps {
   onSaveThread: (item: SavedItem) => void;
@@ -42,6 +43,7 @@ export function ThreadsPage({
   feedVersion = 0,
   lastCreatedThread = null,
 }: ThreadsPageProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
@@ -328,7 +330,7 @@ export function ThreadsPage({
           className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-top duration-300"
         >
           <CheckCircle className="w-5 h-5" />
-          <span>Thread posted successfully!</span>
+          <span>{t('threads.threadPublished')}</span>
         </div>
       )}
 
@@ -343,7 +345,7 @@ export function ThreadsPage({
           className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-white text-green-600 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-green-50 transition-all duration-200 ease-out"
         >
           <RefreshCw className="w-4 h-4" />
-          <span className="text-sm font-medium">New threads available</span>
+          <span className="text-sm font-medium">{t('threads.newThreadsAvailable')}</span>
         </button>
       )}
 
@@ -356,8 +358,8 @@ export function ThreadsPage({
       >
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-neutral-900 mb-2">Threads</h1>
-          <p className="text-neutral-600">Share your thoughts and connect with the agricultural community</p>
+          <h1 className="text-neutral-900 mb-2">{t('threads.title')}</h1>
+          <p className="text-neutral-600">{t('threads.subtitle')}</p>
         </div>
 
         {/* Create Thread Button */}
@@ -375,18 +377,18 @@ export function ThreadsPage({
                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12 flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                Create Thread
+                {t('threads.createThread')}
               </Button>
             ) : isAuthenticated ? (
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-center">
                 <p className="text-neutral-700">
-                  Only business accounts can create threads. You can still like, comment, and save.
+                  {t('threads.signInToCreate')}
                 </p>
               </div>
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                 <p className="text-green-800">
-                  Please sign in to join the conversation
+                  {t('common.signInRequired')}
                 </p>
               </div>
             )}
@@ -421,7 +423,7 @@ export function ThreadsPage({
         {/* End of Threads Message */}
         {!hasMoreThreads && (
           <div className="text-center py-8 text-neutral-500">
-            <p>You've reached the end of threads</p>
+            <p>{t('threads.seenAll')}</p>
           </div>
         )}
 

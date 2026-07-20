@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import i18n from '../../i18n';
 
 /** User-facing copy when moderation rejects content */
 export const CONTENT_BLOCKED_TITLE = 'Unable to publish';
@@ -24,19 +25,20 @@ export function isContentBlockedError(err: unknown): boolean {
 }
 
 /** Professional toast for moderation (and generic API) errors */
-export function notifyError(err: unknown, fallback = 'Something went wrong. Please try again.') {
+export function notifyError(err: unknown, fallback?: string) {
+  const fallbackMsg = fallback || i18n.t('common.somethingWentWrong');
   if (isContentBlockedError(err)) {
-    toast.error(CONTENT_BLOCKED_TITLE, {
-      description: CONTENT_BLOCKED_DESCRIPTION,
+    toast.error(i18n.t('moderation.blockedTitle'), {
+      description: i18n.t('moderation.blockedDescription'),
     });
     return;
   }
-  const message = err instanceof Error ? err.message : fallback;
+  const message = err instanceof Error ? err.message : fallbackMsg;
   toast.error(message);
 }
 
 export function notifyContentBlocked() {
-  toast.error(CONTENT_BLOCKED_TITLE, {
-    description: CONTENT_BLOCKED_DESCRIPTION,
+  toast.error(i18n.t('moderation.blockedTitle'), {
+    description: i18n.t('moderation.blockedDescription'),
   });
 }

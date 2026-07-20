@@ -294,7 +294,16 @@ async function verifyEmail(req, res) {
     await user.save({ validateBeforeSave: false });
 
     const jwtToken = signToken(user);
-    res.json({ token: jwtToken, user: toUserResponse(user) });
+    const json = toUserResponse(user);
+    const pendingUpgrade = !!(user.pendingBusinessProfile && user.role !== 'business');
+    res.json({
+      token: jwtToken,
+      user: {
+        ...json,
+        needsPayment: pendingUpgrade || (user.role === 'business' && user.subscriptionStatus !== 'active'),
+        pendingBusinessUpgrade: pendingUpgrade,
+      },
+    });
   } catch (err) {
     console.error('[Auth] verifyEmail error:', err);
     res.status(500).json({ message: 'Verification failed' });

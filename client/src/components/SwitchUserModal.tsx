@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Search, User, Building2, Shield, CheckCircle } from 'lucide-react';
 import { useAuth, User as UserType } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -9,6 +10,7 @@ interface SwitchUserModalProps {
 }
 
 export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
+  const { t } = useTranslation();
   const { availableUsers, switchUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,6 +51,19 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
         return 'bg-purple-100 text-purple-700 border-purple-200';
       default:
         return 'bg-neutral-100 text-neutral-700 border-neutral-200';
+    }
+  };
+
+  const getRoleLabel = (role: string | null | undefined) => {
+    switch (role) {
+      case 'business':
+        return t('common.business');
+      case 'admin':
+        return t('common.administrator');
+      case 'visitor':
+        return t('common.visitor');
+      default:
+        return t('common.user');
     }
   };
 
@@ -98,8 +113,8 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
                   <h4 className="font-semibold text-neutral-900 truncate group-hover:text-green-600 transition-colors">
                     {user.fullName}
                   </h4>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${getRoleBadgeColor(user.role)}`}>
-                    {user.role || 'user'}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(user.role)}`}>
+                    {getRoleLabel(user.role)}
                   </span>
                 </div>
                 <p className="text-sm text-neutral-500 truncate">{user.email}</p>
@@ -128,9 +143,9 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
         <div className="sticky top-0 bg-white border-b border-neutral-200 p-6 z-10">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-neutral-900">Switch Account</h2>
+              <h2 className="text-2xl font-bold text-neutral-900">{t('profile.switchAccount')}</h2>
               <p className="text-sm text-neutral-500 mt-1">
-                Choose a different account to switch to
+                {t('switchUser.subtitle')}
               </p>
             </div>
             <button
@@ -146,7 +161,7 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <Input
               type="text"
-              placeholder="Search by name, email, or role..."
+              placeholder={t('switchUser.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 w-full"
@@ -159,13 +174,13 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12">
               <User className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-              <p className="text-neutral-500">No users found</p>
+              <p className="text-neutral-500">{t('switchUser.noUsers')}</p>
             </div>
           ) : (
             <>
-              {renderUserGroup('Businesses', groupedUsers.business)}
-              {renderUserGroup('Administrators', groupedUsers.admin)}
-              {renderUserGroup('Visitors', groupedUsers.visitor)}
+              {renderUserGroup(t('profile.businesses'), groupedUsers.business)}
+              {renderUserGroup(t('switchUser.administrators'), groupedUsers.admin)}
+              {renderUserGroup(t('profile.visitors'), groupedUsers.visitor)}
             </>
           )}
         </div>
@@ -177,7 +192,7 @@ export function SwitchUserModal({ onClose }: SwitchUserModalProps) {
             variant="outline"
             className="px-6"
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </div>

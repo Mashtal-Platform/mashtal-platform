@@ -42,6 +42,14 @@ async function submitWishSubscriptionPayment(req, res) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
+    const me = await User.findById(userId).select('verified role pendingBusinessProfile').lean();
+    if (!me) return res.status(404).json({ message: 'User not found' });
+    if (!me.verified) {
+      return res.status(403).json({
+        message: 'Please verify your email before paying the business fee.',
+      });
+    }
+
     const { planRole, senderFullName, senderPhone, transferReference, transferDate, amountTotal } = req.body || {};
 
     if (planRole !== 'business') {

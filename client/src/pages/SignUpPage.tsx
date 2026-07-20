@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { ArrowLeft, User, Building2, Mail, Lock, CheckCircle2, Store, Loader2, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -20,6 +21,7 @@ interface SignUpPageProps {
 }
 
 export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, onPaymentNeeded }: SignUpPageProps) {
+  const { t } = useTranslation();
   const { signUp, signInWithGoogle } = useAuth();
   const [step, setStep] = useState<'role' | 'details'>('role');
   const [selectedRole, setSelectedRole] = useState<UserRole>(null);
@@ -54,12 +56,12 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsMismatch'));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -142,11 +144,15 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
 
       await signUp(input as any);
 
+      // Always show "check your email" first. Business payment happens only after verification.
       if (selectedRole === 'business') {
-        onPaymentNeeded('business');
-      } else {
-        onVerificationNeeded();
+        try {
+          sessionStorage.setItem('mashtal_after_verify', 'payment');
+        } catch {
+          /* ignore */
+        }
       }
+      onVerificationNeeded();
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to create account. Please try again.';
       setError(msg);
@@ -204,7 +210,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
         onNavigate('home');
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to sign up with Google');
+      setError(err?.message || t('auth.googleSignUpFailed'));
     } finally {
       setLoading(false);
     }
@@ -219,8 +225,8 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-white">M</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Join Mashtal</h1>
-              <p className="text-neutral-600">Choose your account type</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{t('auth.joinMashtal')}</h1>
+              <p className="text-neutral-600">{t('auth.chooseAccountType')}</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto">
@@ -232,10 +238,10 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 <div className="w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-neutral-200 transition-colors">
                   <User className="w-6 h-6 text-neutral-600" />
                 </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Visitor</h3>
-                <p className="text-sm text-neutral-600 mb-3">Browse, follow businesses, and engage with the community</p>
+                <h3 className="font-semibold text-neutral-900 mb-2">{t('auth.visitorTitle')}</h3>
+                <p className="text-sm text-neutral-600 mb-3">{t('auth.visitorDesc')}</p>
                 <div className="text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2">
-                  <strong>Free</strong> - Email verification required
+                  {t('auth.visitorFreeNote')}
                 </div>
               </button>
 
@@ -247,23 +253,23 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
                   <Building2 className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold text-neutral-900 mb-2">Business</h3>
-                <p className="text-sm text-neutral-600 mb-3">Sell products & manage business</p>
+                <h3 className="font-semibold text-neutral-900 mb-2">{t('auth.businessTitle')}</h3>
+                <p className="text-sm text-neutral-600 mb-3">{t('auth.businessDesc')}</p>
                 <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 font-medium">
-                  <strong>Business</strong> - Email verification required
+                  {t('auth.businessNote')}
                 </div>
               </button>
             </div>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-neutral-600">
-                Already have an account?{' '}
+                {t('auth.haveAccount')}{' '}
                 <button
                   type="button"
                   onClick={onSignInClick}
                   className="text-green-600 hover:text-green-700 font-medium"
                 >
-                  Sign in
+                  {t('auth.signIn')}
                 </button>
               </p>
             </div>
@@ -283,16 +289,16 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               onClick={() => setStep('role')}
               className="text-sm text-neutral-600 hover:text-green-600 mb-4 inline-block"
             >
-              ← Back to account type
+              {t('auth.backToAccountType')}
             </button>
             <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               {selectedRole === 'visitor' && <User className="w-8 h-8 text-white" />}
               {selectedRole === 'business' && <Building2 className="w-8 h-8 text-white" />}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Create Account</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{t('auth.createAccount')}</h1>
             <p className="text-neutral-600">
-              {selectedRole === 'visitor' && 'Free account with email verification'}
-              {selectedRole === 'business' && 'Business account — verify your email to continue'}
+              {selectedRole === 'visitor' && t('auth.visitorAccountHint')}
+              {selectedRole === 'business' && t('auth.businessAccountHint')}
             </p>
           </div>
 
@@ -307,7 +313,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
           <div className={`mb-6 flex justify-center ${loading ? 'pointer-events-none opacity-60' : ''}`}>
             <GoogleLogin
               onSuccess={(response) => handleGoogleSignUp(response.credential)}
-              onError={() => setError('Google sign-up was cancelled or failed')}
+              onError={() => setError(t('auth.googleSignUpCancelled'))}
               text="continue_with"
               shape="rectangular"
               size="large"
@@ -319,14 +325,14 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               <div className="w-full border-t border-neutral-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-neutral-500">Or continue with email</span>
+              <span className="px-4 bg-white text-neutral-500">{t('auth.orEmail')}</span>
             </div>
           </div>
 
           {/* Sign Up Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">{t('auth.fullName')}</Label>
               <div className="relative mt-1">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -342,7 +348,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             </div>
 
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <div className="relative mt-1">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -358,7 +364,7 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
             </div>
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <div className="relative mt-1">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -371,11 +377,11 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                   required
                 />
               </div>
-              <p className="text-xs text-neutral-500 mt-1">Minimum 8 characters</p>
+              <p className="text-xs text-neutral-500 mt-1">{t('auth.minPassword')}</p>
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
               <div className="relative mt-1">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                 <Input
@@ -423,9 +429,9 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
                     required
                   >
                     <option value="">Select type</option>
-                    {BUSINESS_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
+                    {BUSINESS_TYPES.map((bt) => (
+                      <option key={bt.value} value={bt.value}>
+                        {bt.label}
                       </option>
                     ))}
                   </select>
@@ -528,16 +534,16 @@ export function SignUpPage({ onNavigate, onSignInClick, onVerificationNeeded, on
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating account...
+                  {t('auth.creatingAccount')}
                 </>
               ) : (
-                'Create Account'
+                t('auth.createAccount')
               )}
             </Button>
           </form>
 
           <p className="text-xs text-neutral-500 text-center mt-4">
-            By creating an account, you agree to our Terms of Service and Privacy Policy
+            {t('auth.agreeTerms')}
           </p>
         </div>
       </div>

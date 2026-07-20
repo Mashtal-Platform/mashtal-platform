@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Heart, MapPin, Star, ExternalLink, X, Building2, Leaf, HardHat, Shield, Users, MessageCircle, Search } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -15,6 +16,7 @@ interface FollowingPageProps {
 type RoleFilter = 'all' | 'business' | 'visitor';
 
 export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followedBusinesses, onUnfollowBusiness, onOpenChat }: FollowingPageProps) {
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<RoleFilter>('all');
   const [showUnfollowConfirm, setShowUnfollowConfirm] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,11 +56,9 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
     <div className="min-h-screen bg-neutral-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-            Following
-          </h1>
+          <h1 className="text-3xl font-bold text-neutral-900 mb-2">{t('profile.followingTitle')}</h1>
           <p className="text-neutral-600">
-            Accounts and businesses you're following for updates
+            {t('profile.followingSubtitle')}
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <Input
               type="text"
-              placeholder="Search by name..."
+              placeholder={t('profile.searchByName')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-12 pr-4 py-6 rounded-2xl border-neutral-200 focus:border-green-600 focus:ring-green-600 bg-white"
@@ -88,7 +88,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                   : 'bg-white border-neutral-200 text-neutral-600 hover:border-green-600 hover:text-green-600'
               }`}
             >
-              {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1) + (filter === 'business' ? 'es' : 's')}
+              {filter === 'all' ? t('common.all') : filter === 'business' ? t('profile.businesses') : t('profile.visitors')}
             </button>
           ))}
         </div>
@@ -124,7 +124,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                           onOpenChat(entity.id);
                         }}
                         className="w-12 h-12 bg-white/95 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center group/chat border border-white/50"
-                        title="Send Message"
+                        title={t('common.message')}
                       >
                         <MessageCircle className="w-5 h-5 text-green-600 group-hover/chat:text-green-700 transition-colors" strokeWidth={2.5} />
                       </button>
@@ -137,7 +137,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                         setShowUnfollowConfirm(entity.id);
                       }}
                       className="w-12 h-12 bg-white/95 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center group/unfollow border border-white/50"
-                      title="Unfollow"
+                      title={t('common.unfollow')}
                     >
                       <X className="w-5 h-5 text-red-600 group-hover/unfollow:text-red-700 transition-colors" strokeWidth={2.5} />
                     </button>
@@ -184,7 +184,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                     ) : (
                       <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-lg">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-bold text-green-700">Verified Expert</span>
+                        <span className="text-xs font-bold text-green-700">{t('profile.verifiedExpert')}</span>
                       </div>
                     )}
                   </div>
@@ -192,7 +192,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                   {/* Followers Count */}
                   <div className="mb-4 text-center">
                     <div className="text-2xl font-bold text-neutral-900">{(typeof entity.followers === 'number' ? entity.followers : (entity.followers?.length ?? 0)).toLocaleString()}</div>
-                    <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Followers</div>
+                    <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('profile.followers')}</div>
                   </div>
 
                   {/* Action Button */}
@@ -200,7 +200,7 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                     onClick={() => handleViewProfile(entity)}
                     className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 rounded-xl transition-all shadow-lg hover:shadow-xl font-semibold"
                   >
-                    <span>View Profile</span>
+                    <span>{t('profile.viewProfile')}</span>
                     <ExternalLink className="w-4 h-4" />
                   </Button>
                 </div>
@@ -212,18 +212,16 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
             <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <Users className="w-10 h-10 text-neutral-300" />
             </div>
-            <h3 className="text-2xl font-bold text-neutral-900 mb-2">No {activeFilter === 'all' ? 'one' : activeFilter + 's'} found</h3>
+            <h3 className="text-2xl font-bold text-neutral-900 mb-2">{activeFilter === 'all' ? t('profile.noOneFound') : t('profile.noFilterFound', { filter: activeFilter === 'business' ? t('profile.businesses') : t('profile.visitors') })}</h3>
             <p className="text-neutral-500 max-w-sm mx-auto">
-              {activeFilter === 'all' 
-                ? "You haven't followed anyone yet. Start exploring the community!" 
-                : `You aren't following any ${activeFilter}s at the moment.`}
+              {activeFilter === 'all' ? t('profile.emptyFollowingAll') : t('profile.emptyFollowingFilter', { filter: activeFilter === 'business' ? t('profile.businesses') : t('profile.visitors') })}
             </p>
             {activeFilter !== 'all' && (
               <button 
                 onClick={() => setActiveFilter('all')}
                 className="mt-6 text-green-600 font-bold hover:underline"
               >
-                Clear Filters
+                {t('profile.clearFilters')}
               </button>
             )}
           </div>
@@ -246,9 +244,9 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
               </button>
             </div>
 
-            <h3 className="text-2xl font-bold text-neutral-900 mb-2">Unfollow {followedBusinesses.find(e => e.id === showUnfollowConfirm)?.name}?</h3>
+            <h3 className="text-2xl font-bold text-neutral-900 mb-2">{t('profile.unfollowNamed', { name: followedBusinesses.find(e => e.id === showUnfollowConfirm)?.name })}</h3>
             <p className="text-neutral-600 mb-8 leading-relaxed">
-              You will stop receiving updates and posts from this account. You can always follow them again later.
+              {t('profile.unfollowBody')}
             </p>
 
             <div className="flex gap-4">
@@ -256,13 +254,13 @@ export function FollowingPage({ onViewBusiness, onNavigateToUserProfile, followe
                 onClick={() => setShowUnfollowConfirm(null)}
                 className="flex-1 border-2 border-neutral-100 text-neutral-600 py-3.5 rounded-2xl font-bold hover:bg-neutral-50 transition-colors"
               >
-                Keep Following
+                {t('profile.keepFollowing')}
               </button>
               <button
                 onClick={() => handleUnfollow(showUnfollowConfirm)}
                 className="flex-1 bg-red-600 text-white py-3.5 rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
               >
-                Unfollow
+                {t('common.unfollow')}
               </button>
             </div>
           </div>

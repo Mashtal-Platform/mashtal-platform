@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
-const { assertBusinessSubscriptionActive } = require('../utils/subscription');
+const {
+  assertBusinessSubscriptionActive,
+  isBusinessSubscriptionActive,
+  getActiveBusinessObjectIds,
+} = require('../utils/subscription');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
 let Product;
 let User;
@@ -76,7 +80,8 @@ async function getProducts(req, res) {
     const businessId = query.businessId;
     const category = query.category;
 
-    // No businessId => return all products from all businesses (e.g. shop page)
+    // Public shop: only products from businesses with an active (non-expired) subscription.
+    // Products are never deleted on expiry — they reappear automatically after renew.
     const filter = {};
 
     if (businessId) {
@@ -86,14 +91,16 @@ async function getProducts(req, res) {
             $or: [{ _id: businessId }, { businessId }],
             role: 'business',
           }).lean();
-          if (business) {
-            filter.business = business._id;
-          } else {
+          if (!business) {
             try {
               filter.business = new mongoose.Types.ObjectId(businessId);
             } catch (_) {
               return sendEmpty();
             }
+          } else if (!isBusinessSubscriptionActive(business)) {
+            return sendEmpty();
+          } else {
+            filter.business = business._id;
           }
         } else {
           filter.business = new mongoose.Types.ObjectId(businessId);
@@ -106,6 +113,21 @@ async function getProducts(req, res) {
           return sendEmpty();
         }
       }
+    } else if (User && typeof User.find === 'function') {
+      const now = new Date();
+      const activeBusinesses = await User.find({
+        role: 'business',
+        subscriptionStatus: 'active',
+        $or: [
+          { subscriptionExpiresAt: null },
+          { subscriptionExpiresAt: { $gt: now } },
+        ],
+      })
+        .select('_id')
+        .lean();
+      const activeIds = activeBusinesses.map((b) => b._id);
+      if (activeIds.length === 0) return sendEmpty();
+      filter.business = { $in: activeIds };
     }
 
     if (category && typeof category === 'string') {
@@ -125,13 +147,43 @@ async function getProducts(req, res) {
 
     if (!Array.isArray(products)) return sendEmpty();
 
-    const businessIds = [...new Set(products.map((p) => {
-      const ref = p.business;
-      if (!ref) return null;
-      if (ref._id) return String(ref._id);
-      if (ref.toString && typeof ref.toString === 'function') return ref.toString();
-      return null;
-    }).filter(Boolean))];
+    // Safety net: drop any products whose seller is no longer active
+    if (!businessId && products.length > 0) {
+      const sellerIds = [
+        ...new Set(
+          products
+            .map((p) => {
+              const ref = p.business;
+              if (!ref) return null;
+              if (ref._id) return String(ref._id);
+              if (ref.toString) return ref.toString();
+              return null;
+            })
+            .filter(Boolean)
+        ),
+      ];
+      const activeIds = await getActiveBusinessObjectIds(sellerIds);
+      const activeSet = new Set(activeIds.map((id) => String(id)));
+      products = products.filter((p) => {
+        const ref = p.business;
+        const id = ref?._id ? String(ref._id) : ref?.toString?.() || '';
+        return id && activeSet.has(id);
+      });
+    }
+
+    const businessIds = [
+      ...new Set(
+        products
+          .map((p) => {
+            const ref = p.business;
+            if (!ref) return null;
+            if (ref._id) return String(ref._id);
+            if (ref.toString && typeof ref.toString === 'function') return ref.toString();
+            return null;
+          })
+          .filter(Boolean)
+      ),
+    ];
     let businessMap = {};
     if (User && businessIds.length > 0) {
       try {
@@ -166,7 +218,11 @@ async function getProducts(req, res) {
       }
     }
     if (!res.headersSent) {
-      console.log('[Products] GET /products: returning', shaped.length, 'products (filter:', Object.keys(filter).length ? 'with filters' : 'all businesses', ')');
+      console.log(
+        '[Products] GET /products: returning',
+        shaped.length,
+        'products (active subscriptions only)'
+      );
       res.json(shaped);
     }
   } catch (err) {
@@ -184,6 +240,11 @@ async function getProductById(req, res) {
     }
 
     const b = product.business || {};
+    // Hide (do not delete) products when the seller's plan is inactive/expired
+    if (!isBusinessSubscriptionActive(b)) {
+      return res.status(404).json({ message: 'Product not available' });
+    }
+
     const shaped = {
       id: product._id.toString(),
       name: product.name,

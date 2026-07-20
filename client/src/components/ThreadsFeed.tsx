@@ -10,6 +10,8 @@ import { fetchComments, createComment, toggleLikeComment, deleteComment, Comment
 import { getAvatarUrl } from '../shared/api/client';
 import { fetchMentionableProfiles } from '../shared/api/users';
 import { notifyError } from '../shared/utils/notify';
+import { SeeTranslation } from './SeeTranslation';
+import { useTranslation } from 'react-i18next';
 
 interface ThreadsFeedProps {
   onSaveThread?: (thread: any) => void;
@@ -42,6 +44,7 @@ const getTotalCommentCount = (comments: any[]): number => {
 };
 
 export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight, feedVersion = 0, lastCreatedThread = null }: ThreadsFeedProps) {
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
   const [backendThreads, setBackendThreads] = useState<any[]>([]);
@@ -1000,8 +1003,8 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       </div>
                       {/* Role name under username */}
                       <span className="text-xs text-neutral-500 capitalize">
-                        {thread.author.type === 'business' ? 'Business' : 
-                         thread.author.type === 'admin' ? 'Administrator' : 'Visitor'}
+                        {thread.author.type === 'business' ? t('posts.business') : 
+                         thread.author.type === 'admin' ? t('posts.administrator') : t('posts.visitor')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
@@ -1017,7 +1020,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       className="flex items-center gap-2 ml-auto"
                     >
                       <UserPlus className="w-4 h-4" />
-                      Follow
+                      {t('common.follow')}
                     </Button>
                   )}
                   {isAuthenticated && thread.author.type === 'business' && !isOwnThread(thread.author) && isFollowingAuthor(thread.author) && (
@@ -1028,7 +1031,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                       disabled
                     >
                       <Check className="w-4 h-4" />
-                      Following
+                      {t('common.following')}
                     </Button>
                   )}
                 </div>
@@ -1042,6 +1045,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
 
                 {/* Thread Content */}
                 <p className="text-sm sm:text-base text-neutral-800 whitespace-pre-wrap">{renderTextWithMentions(thread.content)}</p>
+                <SeeTranslation text={thread.content} className="mb-2" />
 
                 {/* Hashtags */}
                 {thread.tags && thread.tags.length > 0 && (
@@ -1069,7 +1073,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                         ? 'text-red-600' 
                         : 'text-neutral-600 hover:text-red-600'
                     }`}
-                    title={!isAuthenticated ? 'Sign in to like threads' : likingThreadId === thread.id ? 'Updating...' : ''}
+                    title={!isAuthenticated ? t('common.signInRequired') : ''}
                   >
                     <Heart className={`w-5 h-5 ${thread.isLiked ? 'fill-current' : ''}`} />
                     <span className="text-sm font-medium">{thread.likes}</span>
@@ -1090,7 +1094,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                         ? 'text-neutral-400 cursor-not-allowed' 
                         : 'text-neutral-600 hover:text-blue-600'
                     }`}
-                    title={!isAuthenticated ? 'Sign in to share' : 'Share thread'}
+                    title={!isAuthenticated ? t('common.signInRequired') : t('common.share')}
                   >
                     <Send className="w-5 h-5" />
                     <span className="text-sm font-medium">{thread.shares}</span>
@@ -1105,10 +1109,10 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                         ? 'text-green-600' 
                         : 'text-neutral-600 hover:text-green-600'
                     }`}
-                    title={!isAuthenticated ? 'Sign in to save threads' : ''}
+                    title={!isAuthenticated ? t('common.signInRequired') : ''}
                   >
                     <Bookmark className={`w-5 h-5 ${thread.isSaved ? 'fill-current' : ''}`} />
-                    <span className="text-sm font-medium">{thread.isSaved ? 'Saved' : 'Save'}</span>
+                    <span className="text-sm font-medium">{thread.isSaved ? t('common.saved') : t('common.saveItem')}</span>
                   </button>
                 </div>
               </div>
@@ -1120,11 +1124,11 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
         {loadingMoreThreads && (
           <div className="text-center py-6">
             <span className="inline-block w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-2 text-neutral-500 text-sm">Loading more threads...</p>
+            <p className="mt-2 text-neutral-500 text-sm">{t('threads.loadingMore')}</p>
           </div>
         )}
         {!hasMoreThreads && threads.length > 0 && (
-          <p className="text-center py-6 text-neutral-500 text-sm">You&apos;ve seen all threads.</p>
+          <p className="text-center py-6 text-neutral-500 text-sm">{t('threads.seenAll')}</p>
         )}
       </div>
 
@@ -1141,7 +1145,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
             {/* Modal Header */}
             <div className="p-6 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
               <h3 className="text-xl text-neutral-900 font-semibold">
-                Comments ({totalCommentsInModal})
+                {t('common.comments')} ({totalCommentsInModal})
               </h3>
               <button
                 onClick={closeCommentsModal}
@@ -1156,7 +1160,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
               {displayedComments.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-600">No comments yet. Be the first to comment!</p>
+                  <p className="text-neutral-600">{t('threads.noCommentsYet')}</p>
                 </div>
               ) : (
                 <>
@@ -1246,7 +1250,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                     onClick={() => handleSaveEdit(commentsModalThread)}
                                     className="bg-green-600 hover:bg-green-700 text-white"
                                   >
-                                    Save
+                                    {t('common.save')}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -1256,17 +1260,20 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                       setEditContent('');
                                     }}
                                   >
-                                    Cancel
+                                    {t('common.cancel')}
                                   </Button>
                                 </div>
                               </div>
-                            ) : (
-                              <p className="text-neutral-700">{renderTextWithMentions(comment.content)}</p>
-                            )}
-                          </div>
-                          
-                          {/* Comment Actions */}
-                          {editingCommentId !== comment.id && (
+                              ) : (
+                                <>
+                                  <p className="text-neutral-700">{renderTextWithMentions(comment.content)}</p>
+                                  <SeeTranslation text={comment.content} />
+                                </>
+                              )}
+                            </div>
+                            
+                            {/* Comment Actions */}
+                            {editingCommentId !== comment.id && (
                             <div className="flex items-center gap-4 mt-2 px-2">
                               <button
                                 onClick={() => handleLikeComment(commentsModalThread, comment.id)}
@@ -1275,7 +1282,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                 }`}
                               >
                                 <ThumbsUp className={`w-4 h-4 ${comment.isLiked ? 'fill-current' : ''}`} />
-                                <span>{comment.likes > 0 ? comment.likes : 'Like'}</span>
+                                <span>{comment.likes > 0 ? comment.likes : t('posts.like')}</span>
                               </button>
                               {canReply() && (
                                 <button
@@ -1283,7 +1290,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                   className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                 >
                                   <ReplyIcon className="w-4 h-4" />
-                                  <span>Reply</span>
+                                  <span>{t('common.reply')}</span>
                                 </button>
                               )}
                               {comment.author.name === (user?.fullName || 'User') && (
@@ -1291,7 +1298,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                   onClick={() => handleEditComment(comment.id, comment.content)}
                                   className="text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                 >
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                               )}
                               {comment.author.id && user?.id === comment.author.id && (
@@ -1300,7 +1307,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                   className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
                                   type="button"
                                 >
-                                  Delete
+                                  {t('common.delete')}
                                 </button>
                               )}
                             </div>
@@ -1343,6 +1350,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                         </span>
                                       </div>
                                       <p className="text-neutral-700 text-sm">{renderTextWithMentions(reply.content)}</p>
+                                      <SeeTranslation text={reply.content} />
                                     </div>
                                     <div className="flex items-center gap-3 mt-1 px-2">
                                       <button
@@ -1352,7 +1360,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                         }`}
                                       >
                                         <ThumbsUp className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
-                                        <span>{reply.likes > 0 ? reply.likes : 'Like'}</span>
+                                        <span>{reply.likes > 0 ? reply.likes : t('posts.like')}</span>
                                       </button>
                                       {canReply() && (
                                         <button
@@ -1360,7 +1368,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                           className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                         >
                                           <ReplyIcon className="w-3 h-3" />
-                                          <span>Reply</span>
+                                          <span>{t('common.reply')}</span>
                                         </button>
                                       )}
                                       {reply.author.id && user?.id === reply.author.id && (
@@ -1369,7 +1377,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                                           className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
                                           type="button"
                                         >
-                                          Delete
+                                          {t('common.delete')}
                                         </button>
                                       )}
                                     </div>
@@ -1485,7 +1493,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                           handleAddComment();
                         }
                       }}
-                      placeholder="Write a comment... (Type @ to mention)"
+                      placeholder={t('threads.writeReply')}
                       className="flex-1 min-h-[80px] resize-none"
                     />
                     <Button
@@ -1499,7 +1507,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
                 </div>
               ) : (
                 <div className="text-center py-4 bg-neutral-50 rounded-lg">
-                  <p className="text-neutral-600">Please sign in to comment</p>
+                  <p className="text-neutral-600">{t('common.signInRequired')}</p>
                 </div>
               )}
             </div>

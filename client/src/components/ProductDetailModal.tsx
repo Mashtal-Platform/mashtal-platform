@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Star, Send, User, Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -25,6 +26,7 @@ export function ProductDetailModal({
   onAddToCart,
   onRated,
 }: ProductDetailModalProps) {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const [reviews, setReviews] = useState<ReviewDto[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -110,9 +112,9 @@ export function ProductDetailModal({
       const count = res.reviewsCount ?? 1;
       onRated?.(product.id, avg, count);
     } catch (err: any) {
-      const msg = err?.message || err?.response?.data?.message || 'Failed to submit rating. Please try again.';
+      const msg = err?.message || err?.response?.data?.message || t('shopping.failedSubmitRating');
       setSubmitError(isContentBlockedError(err) ? CONTENT_BLOCKED_DESCRIPTION : msg);
-      notifyError(err, 'Failed to submit rating. Please try again.');
+      notifyError(err, t('shopping.failedSubmitRating'));
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +131,7 @@ export function ProductDetailModal({
       setComment('');
       onRated?.(product.id, res.averageRating ?? 0, res.reviewsCount ?? 0);
     } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to delete review. Please try again.');
+      setSubmitError(err?.message || t('shopping.failedDeleteReview'));
     } finally {
       setDeleting(false);
     }
@@ -162,12 +164,12 @@ export function ProductDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-neutral-200 flex-shrink-0">
-          <h2 className="text-base font-semibold text-neutral-900">Product details</h2>
+          <h2 className="text-base font-semibold text-neutral-900">{t('shopping.productDetails')}</h2>
           <button
             type="button"
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-700"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -175,7 +177,7 @@ export function ProductDetailModal({
 
         <div className="overflow-y-auto flex-1 p-3 space-y-4">
           {!displayProduct ? (
-            <p className="text-neutral-500">No product selected.</p>
+            <p className="text-neutral-500">{t('shopping.noProductSelected')}</p>
           ) : (
             <>
               <div className="flex gap-3">
@@ -201,7 +203,7 @@ export function ProductDetailModal({
                       className="mt-1.5 h-8 text-xs"
                       onClick={() => onAddToCart(displayProduct)}
                     >
-                      Add to cart
+                      {t('shopping.addToCart')}
                     </Button>
                   )}
                 </div>
@@ -212,7 +214,7 @@ export function ProductDetailModal({
                 <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50/50">
                   <h4 className="text-xs font-semibold text-neutral-800 mb-2 flex items-center gap-1.5">
                     {myReview ? <Pencil className="w-3.5 h-3.5" /> : null}
-                    {myReview ? 'Edit your review' : 'Rate this product'}
+                    {myReview ? t('shopping.editYourReview') : t('shopping.rateThisProduct')}
                   </h4>
                   <div className="flex items-center gap-0.5 mb-2">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -235,7 +237,7 @@ export function ProductDetailModal({
                     ))}
                   </div>
                   <Textarea
-                    placeholder="Optional comment..."
+                    placeholder={t('shopping.optionalComment')}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="min-h-[60px] resize-none text-sm mb-2 py-2 px-3"
@@ -250,7 +252,7 @@ export function ProductDetailModal({
                       className="flex-1 gap-1.5 h-8 text-xs"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      {submitting ? 'Saving...' : myReview ? 'Update review' : 'Submit rating'}
+                      {submitting ? t('common.saving') : myReview ? t('shopping.updateReview') : t('shopping.submitRating')}
                     </Button>
                     {myReview && (
                       <Button
@@ -261,7 +263,7 @@ export function ProductDetailModal({
                         className="h-8 text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        {deleting ? 'Deleting...' : 'Delete'}
+                        {deleting ? t('common.deleting') : t('common.delete')}
                       </Button>
                     )}
                   </div>
@@ -270,11 +272,11 @@ export function ProductDetailModal({
 
               {/* Reviews list */}
               <div>
-                <h4 className="text-xs font-semibold text-neutral-800 mb-2">Reviews</h4>
+                <h4 className="text-xs font-semibold text-neutral-800 mb-2">{t('reviews.title')}</h4>
                 {reviewsLoading ? (
-                  <p className="text-xs text-neutral-500">Loading...</p>
+                  <p className="text-xs text-neutral-500">{t('common.loading')}</p>
                 ) : reviews.length === 0 ? (
-                  <p className="text-xs text-neutral-500">No reviews yet.</p>
+                  <p className="text-xs text-neutral-500">{t('shopping.noReviewsYet')}</p>
                 ) : (
                   <ul className="space-y-2 max-h-36 overflow-y-auto">
                     {reviews.map((r) => (
@@ -283,7 +285,7 @@ export function ProductDetailModal({
                           {r.userAvatar ? (
                             <img
                               src={getImageUrl(r.userAvatar)}
-                              alt={r.userFullName || 'User'}
+                              alt={r.userFullName || t('common.user')}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -293,9 +295,9 @@ export function ProductDetailModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-xs font-medium text-neutral-800">
-                              {r.userFullName || 'User'}
+                              {r.userFullName || t('common.user')}
                               {r.user === currentUser?.id && (
-                                <span className="ml-1 text-neutral-500 font-normal">(you)</span>
+                                <span className="ml-1 text-neutral-500 font-normal">({t('common.you')})</span>
                               )}
                             </p>
                             {r.user === currentUser?.id && (
@@ -304,8 +306,8 @@ export function ProductDetailModal({
                                 onClick={handleDeleteReview}
                                 disabled={deleting}
                                 className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
-                                title="Delete review"
-                                aria-label="Delete review"
+                                title={t('shopping.deleteReview')}
+                                aria-label={t('shopping.deleteReview')}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>

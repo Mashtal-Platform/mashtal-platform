@@ -10,6 +10,8 @@ import { fetchUser, fetchBusinesses, fetchMentionableProfiles, UserDto } from '.
 import { fetchComments, createComment, toggleLikeComment, deleteComment, CommentDto } from '../shared/api/comments';
 import { getImageUrl, getAvatarUrl } from '../shared/api/client';
 import { notifyError } from '../shared/utils/notify';
+import { SeeTranslation } from './SeeTranslation';
+import { useTranslation } from 'react-i18next';
 
 interface PostsFeedProps {
   onSavePost?: (post: any) => void;
@@ -49,6 +51,7 @@ export function PostsFeed({
   lastCreatedPost = null,
 }: PostsFeedProps) {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
   const [backendPosts, setBackendPosts] = useState<any[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState<boolean>(false);
@@ -1075,20 +1078,20 @@ export function PostsFeed({
                               className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
                             >
                               <UserPlus className="w-3 h-3" />
-                              Follow
+                              {t('common.follow')}
                             </button>
                           )}
                           {(post.author.type === 'business') && !isOwnPost && isFollowing && (
                             <span className="flex items-center gap-1 text-xs text-neutral-500">
                               <Check className="w-3 h-3" />
-                              Following
+                              {t('common.following')}
                             </span>
                           )}
                         </div>
                         {/* Role name under username */}
                         <span className="text-xs text-neutral-500 capitalize">
-                          {post.author.type === 'business' ? 'Business' : 
-                           post.author.type === 'admin' ? 'Administrator' : 'Visitor'}
+                          {post.author.type === 'business' ? t('posts.business') : 
+                           post.author.type === 'admin' ? t('posts.administrator') : t('posts.visitor')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-neutral-600 mt-1">
@@ -1108,10 +1111,11 @@ export function PostsFeed({
                         onClick={toggleShowFullText}
                         className="text-green-600 hover:text-green-700 font-medium ml-1"
                       >
-                        {showFullText ? 'Read less' : 'Read more'}
+                        {showFullText ? t('common.readLess') : t('common.readMore')}
                       </button>
                     )}
                   </p>
+                  <SeeTranslation text={post.content} className="mb-3" />
 
                   {/* Post Tags */}
                   {post.tags && post.tags.length > 0 && (
@@ -1161,7 +1165,7 @@ export function PostsFeed({
                           ? 'text-red-600' 
                           : 'text-neutral-600 hover:text-red-600'
                       }`}
-                      title={!isAuthenticated ? 'Sign in to like posts' : ''}
+                      title={!isAuthenticated ? t('common.signInRequired') : ''}
                     >
                       <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
                       <span className="font-medium">{post.likes}</span>
@@ -1184,7 +1188,7 @@ export function PostsFeed({
                           ? 'text-neutral-400 cursor-not-allowed' 
                           : 'text-neutral-600 hover:text-blue-600'
                       }`}
-                      title={!isAuthenticated ? 'Sign in to share' : 'Share post'}
+                      title={!isAuthenticated ? t('common.signInRequired') : t('posts.share')}
                     >
                       <Send className="w-5 h-5" />
                       <span className="font-medium">{post.shares}</span>
@@ -1199,10 +1203,10 @@ export function PostsFeed({
                           ? 'text-green-600' 
                           : 'text-neutral-600 hover:text-green-600'
                       }`}
-                      title={!isAuthenticated ? 'Sign in to save posts' : ''}
+                      title={!isAuthenticated ? t('common.signInRequired') : ''}
                     >
                       <Bookmark className={`w-5 h-5 ${post.isSaved ? 'fill-current' : ''}`} />
-                      <span className="font-medium">{post.isSaved ? 'Saved' : 'Save'}</span>
+                      <span className="font-medium">{post.isSaved ? t('common.saved') : t('posts.save')}</span>
                     </button>
                   </div>
                 </div>
@@ -1216,11 +1220,11 @@ export function PostsFeed({
         {loadingMorePosts && (
           <div className="text-center py-6">
             <span className="inline-block w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-2 text-neutral-500 text-sm">Loading more posts...</p>
+            <p className="mt-2 text-neutral-500 text-sm">{t('posts.loadingMore')}</p>
           </div>
         )}
         {!hasMorePosts && posts.length > 0 && (
-          <p className="text-center py-6 text-neutral-500 text-sm">You&apos;ve seen all posts.</p>
+          <p className="text-center py-6 text-neutral-500 text-sm">{t('posts.seenAll')}</p>
         )}
       </div>
 
@@ -1242,7 +1246,7 @@ export function PostsFeed({
             {/* Modal Header */}
             <div className="p-6 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
               <h3 className="text-xl text-neutral-900 font-semibold">
-                Comments ({getTotalComments(commentsModalPost)})
+                {t('posts.comments')} ({getTotalComments(commentsModalPost)})
               </h3>
               <button
                 onClick={() => {
@@ -1297,7 +1301,7 @@ export function PostsFeed({
                                 }
                               }}
                               className="min-h-[80px]"
-                              placeholder="Edit comment... (Type @ to mention)"
+                              placeholder={t('posts.editComment')}
                             />
                             
                             {/* Mention Dropdown for Edit Mode - Below textarea */}
@@ -1332,11 +1336,11 @@ export function PostsFeed({
                             )}
                             
                             <div className="flex gap-2">
-                              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                              <Button size="sm" onClick={handleSaveEdit}>{t('common.save')}</Button>
                               <Button size="sm" variant="outline" onClick={() => {
                                 setEditingCommentId(null);
                                 setShowEditMentions(false);
-                              }}>Cancel</Button>
+                              }}>{t('common.cancel')}</Button>
                             </div>
                           </div>
                         ) : (
@@ -1354,10 +1358,11 @@ export function PostsFeed({
                                 )}
                                 <span className="text-xs text-neutral-500">
                                   {comment.timeAgo}
-                                  {comment.isEdited && ' · Edited'}
+                                  {comment.isEdited && ` · ${t('posts.edited')}`}
                                 </span>
                               </div>
                               <p className="text-neutral-700">{renderTextWithMentions(comment.text)}</p>
+                              <SeeTranslation text={comment.text} />
                             </div>
                             <div className="flex items-center gap-4 mt-2 px-2">
                               <button
@@ -1367,7 +1372,7 @@ export function PostsFeed({
                                 }`}
                               >
                                 <ThumbsUp className={`w-4 h-4 ${comment.isLiked ? 'fill-current' : ''}`} />
-                                <span>{comment.likes > 0 ? comment.likes : 'Like'}</span>
+                                <span>{comment.likes > 0 ? comment.likes : t('posts.like')}</span>
                               </button>
                               {canReply(comment.userId) && (
                                 <button
@@ -1375,7 +1380,7 @@ export function PostsFeed({
                                   className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                 >
                                   <ReplyIcon className="w-4 h-4" />
-                                  <span>Reply</span>
+                                  <span>{t('common.reply')}</span>
                                 </button>
                               )}
                               {user?.id === comment.userId && (
@@ -1383,7 +1388,7 @@ export function PostsFeed({
                                   onClick={() => handleEditComment(comment.id, comment.text)}
                                   className="text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                 >
-                                  Edit
+                                  {t('common.edit')}
                                 </button>
                               )}
                               {user?.id === comment.userId && (
@@ -1392,7 +1397,7 @@ export function PostsFeed({
                                   className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
                                   type="button"
                                 >
-                                  Delete
+                                  {t('common.delete')}
                                 </button>
                               )}
                             </div>
@@ -1436,6 +1441,7 @@ export function PostsFeed({
                                       </span>
                                     </div>
                                     <p className="text-neutral-700 text-sm">{renderTextWithMentions(reply.text)}</p>
+                                    <SeeTranslation text={reply.text} />
                                   </div>
                                   <div className="flex items-center gap-3 mt-1 px-2">
                                     <button
@@ -1445,7 +1451,7 @@ export function PostsFeed({
                                       }`}
                                     >
                                       <ThumbsUp className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
-                                      <span>{reply.likes > 0 ? reply.likes : 'Like'}</span>
+                                      <span>{reply.likes > 0 ? reply.likes : t('posts.like')}</span>
                                     </button>
                                     {canReply(reply.userId) && (
                                       <button
@@ -1453,7 +1459,7 @@ export function PostsFeed({
                                         className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                       >
                                         <ReplyIcon className="w-3 h-3" />
-                                        <span>Reply</span>
+                                        <span>{t('common.reply')}</span>
                                       </button>
                                     )}
                                     {user?.id === reply.userId && (
@@ -1462,7 +1468,7 @@ export function PostsFeed({
                                         className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
                                         type="button"
                                       >
-                                        Delete
+                                        {t('common.delete')}
                                       </button>
                                     )}
                                   </div>
@@ -1503,6 +1509,7 @@ export function PostsFeed({
                                                 </span>
                                               </div>
                                               <p className="text-neutral-700 text-xs">{renderTextWithMentions(nestedReply.text)}</p>
+                                              <SeeTranslation text={nestedReply.text} />
                                             </div>
                                             <div className="flex items-center gap-3 mt-1 px-2">
                                               <button
@@ -1512,7 +1519,7 @@ export function PostsFeed({
                                                 }`}
                                               >
                                                 <ThumbsUp className={`w-3 h-3 ${nestedReply.isLiked ? 'fill-current' : ''}`} />
-                                                <span className="text-[10px]">{nestedReply.likes > 0 ? nestedReply.likes : 'Like'}</span>
+                                                <span className="text-[10px]">{nestedReply.likes > 0 ? nestedReply.likes : t('posts.like')}</span>
                                               </button>
                                               {canReply(nestedReply.userId) && (
                                                 <button
@@ -1520,7 +1527,7 @@ export function PostsFeed({
                                                   className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-green-600 transition-colors"
                                                 >
                                                   <ReplyIcon className="w-3 h-3" />
-                                                  <span className="text-[10px]">Reply</span>
+                                                  <span className="text-[10px]">{t('common.reply')}</span>
                                                 </button>
                                               )}
                                               {user?.id === nestedReply.userId && (
@@ -1529,7 +1536,7 @@ export function PostsFeed({
                                                   className="text-xs font-medium text-neutral-600 hover:text-red-600 transition-colors"
                                                   type="button"
                                                 >
-                                                  Delete
+                                                  {t('common.delete')}
                                                 </button>
                                               )}
                                             </div>
@@ -1582,7 +1589,7 @@ export function PostsFeed({
               {(!comments[commentsModalPost] || comments[commentsModalPost].length === 0) && (
                 <div className="text-center py-8">
                   <MessageCircle className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-600">No comments yet. Be the first to comment!</p>
+                  <p className="text-neutral-600">{t('posts.noCommentsYet')}</p>
                 </div>
               )}
             </div>
@@ -1657,7 +1664,7 @@ export function PostsFeed({
                           handleAddComment(commentsModalPost);
                         }
                       }}
-                      placeholder="Write a comment... (Type @ to mention)"
+                      placeholder={t('posts.writeComment')}
                       className="flex-1 min-h-[80px] resize-none"
                     />
                     <Button
@@ -1671,7 +1678,7 @@ export function PostsFeed({
                 </div>
               ) : (
                 <div className="text-center py-4 bg-neutral-50 rounded-lg">
-                  <p className="text-neutral-600">Please sign in to comment</p>
+                  <p className="text-neutral-600">{t('common.signInRequired')}</p>
                 </div>
               )}
             </div>

@@ -7,6 +7,7 @@ import { Page, SavedItem } from '../App';
 import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface HomePageProps {
   onViewBusiness: (businessId: string) => void;
@@ -33,6 +34,7 @@ export function HomePage({
   savedItems = [],
   feedVersion = 0,
 }: HomePageProps) {
+  const { t } = useTranslation();
   return (
     <>
       <HeroSection onNavigate={onNavigate} />
@@ -44,10 +46,10 @@ export function HomePage({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
             <div>
               <h2 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
-                Latest Updates
+                {t('home.latestUpdates')}
               </h2>
               <p className="text-neutral-600">
-                Recent posts and discussions from the agricultural community
+                {t('posts.subtitle')}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -56,7 +58,7 @@ export function HomePage({
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50"
               >
-                View All Posts
+                {t('home.viewAllPosts')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
               <Button
@@ -64,7 +66,7 @@ export function HomePage({
                 variant="outline"
                 className="border-purple-600 text-purple-600 hover:bg-purple-50"
               >
-                View All Threads
+                {t('common.viewAll')} {t('threads.title')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -90,7 +92,7 @@ export function HomePage({
               onClick={() => onNavigate('posts')}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              Explore More Updates
+              {t('home.latestUpdates')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -103,13 +105,13 @@ export function HomePage({
           <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-4">
               <Sparkles className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">Shop Agricultural Products</span>
+              <span className="text-sm font-medium text-green-600">{t('home.shopProducts')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl text-neutral-900 mb-3">
-              Browse Quality Products
+              {t('shopping.title')}
             </h2>
             <p className="text-neutral-600 max-w-2xl mx-auto">
-              Discover a wide range of agricultural products from verified businesses - seeds, tools, fertilizers, and more
+              {t('shopping.subtitle')}
             </p>
           </div>
 
@@ -119,8 +121,8 @@ export function HomePage({
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">🌱</span>
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Premium Seeds & Plants</h3>
-                <p className="text-sm text-neutral-600">High-quality seeds and healthy plants for your farm</p>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{t('shopping.seeds')} & {t('shopping.plants')}</h3>
+                <p className="text-sm text-neutral-600">{t('shopping.subtitle')}</p>
               </CardContent>
             </Card>
 
@@ -129,8 +131,8 @@ export function HomePage({
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">🔧</span>
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Farming Tools</h3>
-                <p className="text-sm text-neutral-600">Professional equipment and tools for agriculture</p>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{t('shopping.tools')}</h3>
+                <p className="text-sm text-neutral-600">{t('shopping.subtitle')}</p>
               </CardContent>
             </Card>
 
@@ -139,8 +141,8 @@ export function HomePage({
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="text-3xl">💧</span>
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Irrigation & Fertilizers</h3>
-                <p className="text-sm text-neutral-600">Complete solutions for crop nutrition and watering</p>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{t('shopping.fertilizers')}</h3>
+                <p className="text-sm text-neutral-600">{t('shopping.subtitle')}</p>
               </CardContent>
             </Card>
           </div>
@@ -152,7 +154,7 @@ export function HomePage({
               className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all"
             >
               <ShoppingBag className="w-5 h-5 mr-2" />
-              Explore All Products
+              {t('home.shopProducts')}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

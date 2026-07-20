@@ -5,6 +5,7 @@ import { Textarea } from '../components/ui/textarea';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchMentionableProfiles } from '../shared/api/users';
 import { getAvatarUrl } from '../shared/api/client';
+import { useTranslation } from 'react-i18next';
 
 interface CreatePostPageProps {
   onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }, imageFile?: File) => void;
@@ -20,11 +21,12 @@ interface MentionUser {
 }
 
 export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const displayName =
     user?.role === 'business'
-      ? (user.companyName || user.fullName || 'Business')
-      : (user?.fullName || 'User');
+      ? (user.companyName || user.fullName || t('common.business'))
+      : (user?.fullName || t('common.you'));
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -211,8 +213,8 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl text-neutral-900 mb-2">New Post</h1>
-            <p className="text-neutral-600">Share updates, tips, or announcements with your followers</p>
+            <h1 className="text-3xl text-neutral-900 mb-2">{t('createPost.title')}</h1>
+            <p className="text-neutral-600">{t('createPost.placeholder')}</p>
           </div>
           <button
             onClick={onBack}
@@ -227,13 +229,13 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
           <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
             <div>
               <label className="block text-sm font-medium text-neutral-900 mb-2">
-                Title (Optional)
+                {t('createPost.titleOptional')}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Give your post a catchy title..."
+                placeholder={t('createPost.titleOptional')}
                 className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                 maxLength={100}
               />
@@ -242,14 +244,14 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
             
             <div className="relative">
               <label className="block text-sm font-medium text-neutral-900 mb-2">
-                Description *
+                {t('common.description')} *
               </label>
               <Textarea
                 ref={textareaRef}
                 value={content}
                 onChange={handleContentChange}
                 onKeyDown={handleMentionKeyDown}
-                placeholder="Write your post content here... Use @ to mention users or businesses."
+                placeholder={t('createPost.placeholder')}
                 className="min-h-[200px] resize-none"
                 maxLength={2000}
               />
@@ -276,11 +278,14 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
                           <span className="font-medium text-neutral-900">{mentionUser.name}</span>
                           {mentionUser.verified && (
                             <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-                              Verified
+                              {t('common.verified')}
                             </span>
                           )}
                         </div>
-                        <span className="text-sm text-neutral-500 capitalize">{mentionUser.type}</span>
+                        <span className="text-sm text-neutral-500 capitalize">
+                          {mentionUser.type === 'business' ? t('common.business') :
+                           mentionUser.type === 'admin' ? t('common.administrator') : t('common.visitor')}
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -291,7 +296,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
             <div>
               <label className="block text-sm font-medium text-neutral-900 mb-2">
                 <Hash className="w-4 h-4 inline mr-1" />
-                Hashtags (Optional)
+                {t('createPost.hashtagsOptional')}
               </label>
               <div className="space-y-3">
                 <div className="flex gap-2">
@@ -337,7 +342,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
 
             <div>
               <label className="block text-sm font-medium text-neutral-900 mb-2">
-                Image *
+                {t('common.image')} *
               </label>
               
               {!image ? (
@@ -359,8 +364,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
                         <Upload className="w-8 h-8 text-neutral-400 group-hover:text-green-600 transition-colors" />
                       </div>
                       <div className="text-center">
-                        <p className="text-neutral-700 font-medium">Upload an image *</p>
-                        <p className="text-sm text-neutral-500">PNG, JPG up to 10MB (Required)</p>
+                        <p className="text-neutral-700 font-medium">{t('createPost.addImage')} *</p>
                       </div>
                     </div>
                   </button>
@@ -389,7 +393,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
                 disabled={!isValid}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                Post
+                {t('createPost.publish')}
               </Button>
               <Button
                 onClick={() => setShowPreview(!showPreview)}
@@ -405,7 +409,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
           <div className={`bg-white rounded-2xl p-6 shadow-sm ${showPreview ? 'block' : 'hidden lg:block'}`}>
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-neutral-200">
               <Eye className="w-5 h-5 text-green-600" />
-              <h2 className="font-semibold text-neutral-900">Preview</h2>
+              <h2 className="font-semibold text-neutral-900">{t('common.preview')}</h2>
             </div>
 
             {!content && !image ? (

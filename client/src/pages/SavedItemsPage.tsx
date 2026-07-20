@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Bookmark, Trash2, ExternalLink, FileText, MessageCircle, Package, Building2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SavedItem } from '../App';
 import { getImageUrl } from '../shared/api/client';
 import { filterOutOrphanSavedItems } from '../shared/utils/saved';
@@ -11,6 +12,7 @@ interface SavedItemsPageProps {
 }
 
 export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedItemsPageProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<'all' | 'product' | 'post' | 'thread' | 'business'>('all');
 
   const validItems = filterOutOrphanSavedItems(savedItems);
@@ -22,8 +24,8 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
     <div className="min-h-screen bg-neutral-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">Saved Items</h1>
-          <p className="text-neutral-600">{validItems.length} items saved for later</p>
+          <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">{t('saved.title')}</h1>
+          <p className="text-neutral-600">{t('saved.subtitle', { count: validItems.length })}</p>
         </div>
 
         {/* Filters */}
@@ -34,7 +36,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
               filter === 'all' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
             }`}
           >
-            All ({validItems.length})
+            {t('common.all')} ({validItems.length})
           </button>
           <button
             onClick={() => setFilter('product')}
@@ -42,7 +44,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
               filter === 'product' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
             }`}
           >
-            Products ({validItems.filter(i => i.type === 'product').length})
+            {t('saved.products')} ({validItems.filter(i => i.type === 'product').length})
           </button>
           <button
             onClick={() => setFilter('post')}
@@ -50,7 +52,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
               filter === 'post' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
             }`}
           >
-            Posts ({validItems.filter(i => i.type === 'post').length})
+            {t('saved.posts')} ({validItems.filter(i => i.type === 'post').length})
           </button>
           <button
             onClick={() => setFilter('thread')}
@@ -58,7 +60,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
               filter === 'thread' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
             }`}
           >
-            Threads ({validItems.filter(i => i.type === 'thread').length})
+            {t('saved.threads')} ({validItems.filter(i => i.type === 'thread').length})
           </button>
           <button
             onClick={() => setFilter('business')}
@@ -66,18 +68,18 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
               filter === 'business' ? 'bg-green-600 text-white' : 'bg-white text-neutral-700 hover:bg-neutral-100'
             }`}
           >
-            Businesses ({validItems.filter(i => i.type === 'business').length})
+            {t('saved.businesses')} ({validItems.filter(i => i.type === 'business').length})
           </button>
         </div>
 
         {filteredItems.length === 0 ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 text-center">
             <Bookmark className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl text-neutral-900 mb-2">No saved items</h3>
+            <h3 className="text-xl text-neutral-900 mb-2">{t('saved.emptyTitle')}</h3>
             <p className="text-neutral-600">
               {filter === 'all' 
-                ? 'Start saving items you\'re interested in'
-                : `No saved ${filter}s yet`
+                ? t('saved.emptyStart')
+                : t('saved.emptyFilter', { type: filter })
               }
             </p>
           </div>
@@ -117,11 +119,11 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
                 </div>
 
                 <div className="p-4">
-                  <h3 className="text-lg text-neutral-900 mb-2">{item.title || 'Untitled'}</h3>
-                  <p className="text-neutral-600 text-sm mb-3 line-clamp-2">{item.description || 'No description'}</p>
+                  <h3 className="text-lg text-neutral-900 mb-2">{item.title || t('saved.untitled')}</h3>
+                  <p className="text-neutral-600 text-sm mb-3 line-clamp-2">{item.description || t('saved.noDescription')}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-neutral-500">
-                      Saved {new Date(item.savedAt).toLocaleDateString()}
+                      {t('saved.savedOn', { date: new Date(item.savedAt).toLocaleDateString() })}
                     </span>
                     {item.type === 'product' && item.businessId && (
                       <button
@@ -129,7 +131,7 @@ export function SavedItemsPage({ savedItems, onRemove, onViewBusiness }: SavedIt
                         className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium"
                       >
                         <ExternalLink className="w-4 h-4" />
-                        <span>View business</span>
+                        <span>{t('saved.viewBusiness')}</span>
                       </button>
                     )}
                   </div>

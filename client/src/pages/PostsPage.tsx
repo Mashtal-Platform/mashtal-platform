@@ -4,6 +4,7 @@ import { PostsFeed } from '../components/PostsFeed';
 import { SavedItem } from '../App';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface PostsPageProps {
   onSavePost: (item: SavedItem) => void;
@@ -42,6 +43,7 @@ export function PostsPage({
   feedVersion = 0,
   lastCreatedPost = null,
 }: PostsPageProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
@@ -334,10 +336,10 @@ export function PostsPage({
         <div className="mb-6 sm:mb-12 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
-              Agricultural Updates & Posts
+              {t('posts.title')}
             </h1>
             <p className="text-neutral-600">
-              Stay updated with the latest news, tips, and announcements from agricultural businesses
+              {t('posts.subtitle')}
             </p>
           </div>
           
@@ -351,7 +353,7 @@ export function PostsPage({
                 }`}
               >
                 <Plus className="w-5 h-5" />
-                Create Post
+                {t('posts.createPost')}
               </Button>
             </div>
           )}
@@ -372,8 +374,7 @@ export function PostsPage({
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-neutral-900">Post Published!</p>
-                  <p className="text-sm text-neutral-600">Your post is now live.</p>
+                  <p className="font-semibold text-neutral-900">{t('posts.postPublished')}</p>
                 </div>
                 <button
                   onClick={() => setShowSuccess(false)}
@@ -397,7 +398,7 @@ export function PostsPage({
             className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-white text-green-600 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-green-50 transition-all duration-200 ease-out"
           >
             <RefreshCw className="w-4 h-4" />
-            <span className="text-sm font-medium">New posts available</span>
+            <span className="text-sm font-medium">{t('posts.newPostsAvailable')}</span>
           </button>
         )}
         
@@ -432,7 +433,7 @@ export function PostsPage({
         {/* End of Posts Message */}
         {!hasMorePosts && (
           <div className="text-center py-8 text-neutral-500">
-            <p>You've reached the end of posts</p>
+            <p>{t('posts.seenAll')}</p>
           </div>
         )}
       </div>

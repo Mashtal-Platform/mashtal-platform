@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Lock, CheckCircle, Loader2, AlertCircle, CreditCard } from 'lucide-react';
 import { UserRole, useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
@@ -26,6 +27,7 @@ function SubscriptionPayButton({
   onConfirmed: () => void;
   onError: (message: string) => void;
 }) {
+  const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -60,12 +62,12 @@ function SubscriptionPayButton({
       {submitting ? (
         <>
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Processing…
+          {t('checkout.processing')}
         </>
       ) : (
         <>
           <Lock className="w-4 h-4 mr-2" />
-          Pay business fee
+          {t('checkout.payBusinessFee')}
         </>
       )}
     </Button>
@@ -73,6 +75,7 @@ function SubscriptionPayButton({
 }
 
 export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, refreshUser } = useAuth() as any;
   const subscriptionPrice = Number((import.meta as any).env?.VITE_BUSINESS_FEE_USD) || 499;
   const planRole: SubscriptionPlanRole = 'business';
@@ -93,7 +96,7 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
   useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false);
-      setError('Please sign in before completing payment.');
+      setError(t('checkout.signInBeforePayment'));
       return;
     }
     if (!stripePromise) {
@@ -125,12 +128,12 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl p-4 sm:p-8 max-w-md w-full text-center shadow-sm border border-neutral-100">
           <CheckCircle className="w-14 h-14 text-green-600 mx-auto mb-4" />
-          <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-2">Business account activated</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 mb-2">{t('checkout.businessActivated')}</h1>
           <p className="text-neutral-600 mb-6">
-            Your subscription payment succeeded. You can now sell products on Mashtal.
+            {t('checkout.businessActivatedBody')}
           </p>
           <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => onPaymentSuccess()}>
-            Continue to dashboard
+            {t('checkout.continueDashboard')}
           </Button>
         </div>
       </div>
@@ -141,17 +144,17 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
     <div className="min-h-screen bg-neutral-50 py-5 sm:py-10 px-4">
       <div className="max-w-lg mx-auto bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-green-700 to-green-600 text-white p-4 sm:p-6">
-          <h1 className="text-xl sm:text-2xl font-semibold mb-1">Business subscription</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1">{t('checkout.businessSubscription')}</h1>
           <p className="text-green-50 text-sm">
-            Pay with card (Whish Visa works). Card data goes to Stripe only — never stored on Mashtal.
+            {t('checkout.businessSubSubtitle')}
           </p>
         </div>
         <div className="p-4 sm:p-6 space-y-6">
           <div className="flex justify-between items-center p-4 rounded-xl bg-neutral-50 border border-neutral-100">
             <div>
-              <div className="text-sm text-neutral-500">Plan</div>
+              <div className="text-sm text-neutral-500">{t('checkout.plan')}</div>
               <div className="font-semibold text-neutral-900">
-                {role === 'business' ? 'Business' : 'Business'} · monthly
+                {t('checkout.businessMonthly')}
               </div>
             </div>
             <div className="text-2xl font-bold text-green-700">${Number(amountTotal).toFixed(2)}</div>
@@ -160,7 +163,7 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
           {loading ? (
             <div className="flex items-center justify-center py-8 text-neutral-500 gap-2">
               <Loader2 className="w-5 h-5 animate-spin" />
-              Preparing secure payment…
+              {t('checkout.preparingPayment')}
             </div>
           ) : error && !clientSecret ? (
             <div className="flex gap-2 p-4 rounded-lg bg-red-50 text-red-700 text-sm">
@@ -172,7 +175,7 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2 flex items-center gap-2">
                   <CreditCard className="w-4 h-4" />
-                  Card details
+                  {t('checkout.cardDetailsLabel')}
                 </label>
                 <div className="p-3 border border-neutral-200 rounded-lg">
                   <Elements stripe={stripePromise} options={{ clientSecret }}>
@@ -239,7 +242,7 @@ export function PaymentPage({ role, onNavigate, onPaymentSuccess }: PaymentPageP
             className="text-sm text-neutral-500 hover:text-neutral-800 underline"
             onClick={() => onNavigate('home')}
           >
-            Cancel and go home
+            {t('checkout.cancelGoHome')}
           </button>
         </div>
       </div>

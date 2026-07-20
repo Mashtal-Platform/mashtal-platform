@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   User, Mail, Phone, MapPin, Settings, X, Save, MoreVertical, 
   Edit2, Trash2, Camera, Heart, MessageCircle, Bookmark, 
@@ -10,6 +11,7 @@ import { UserProfile, Page, SavedItem } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import { uploadAvatar, uploadCover } from '../shared/api/users';
 import { getImageUrl, getAvatarUrl } from '../shared/api/client';
+import { DEFAULT_BANNER_URL } from '../shared/constants/branding';
 import { notifyError } from '../shared/utils/notify';
 import { filterOutOrphanSavedItems } from '../shared/utils/saved';
 import { UserEditProfile } from '../components/UserEditProfile';
@@ -152,6 +154,7 @@ export function ProfilePage({
   onRemoveSavedItem,
   onNavigateWithParams,
 }: ProfilePageProps) {
+  const { t } = useTranslation();
   const { user, signOut, updateProfile, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'posts' | 'threads' | 'about' | 'saved'>('posts');
   const [isEditing, setIsEditing] = useState(false);
@@ -270,10 +273,7 @@ export function ProfilePage({
   const getBannerImage = () => {
     const cover = (editedProfile as any)?.coverImage || (userProfile as any)?.coverImage || (user as any)?.coverImage;
     if (cover) return getImageUrl(cover);
-    if (userRole === 'business') {
-      return "https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200";
-    }
-    return "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200";
+    return DEFAULT_BANNER_URL;
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -806,7 +806,7 @@ export function ProfilePage({
                       {userRole === 'admin' && (
                         <span className="bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-purple-200 flex items-center gap-1">
                           <Shield className="w-3 h-3" />
-                          Administrator
+                          {t('common.administrator')}
                         </span>
                       )}
                     </div>
@@ -843,7 +843,7 @@ export function ProfilePage({
                       className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Settings className="w-4 h-4" />
-                      <span>Edit Profile</span>
+                      <span>{t('profile.editProfile')}</span>
                     </Button>
                   
                   </div>
@@ -861,7 +861,7 @@ export function ProfilePage({
                   </div>
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">{followingCount}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Following</div>
+                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('profile.following')}</div>
                   </div>
                 </div>
               </div>
@@ -939,7 +939,7 @@ export function ProfilePage({
                     onNavigate('purchase-history');
                   }}
                 >
-                  Manage Purchase History
+                  {t('profile.purchaseHistory')}
                 </Button>
               </div>
             )}
@@ -956,7 +956,7 @@ export function ProfilePage({
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-bold text-neutral-900">Following</h3>
+                  <h3 className="font-bold text-neutral-900">{t('profile.following')}</h3>
                   <p className="text-sm text-neutral-500">{followingCount} accounts</p>
                 </div>
               </div>
@@ -1008,7 +1008,7 @@ export function ProfilePage({
                     onNavigate('following');
                   }}
                 >
-                  Manage Following
+                  {t('profile.manageFollowing')}
                 </Button>
               </div>
             )}
@@ -1025,7 +1025,7 @@ export function ProfilePage({
                     <Heart className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-bold text-neutral-900">Followers</h3>
+                    <h3 className="font-bold text-neutral-900">{t('profile.followers')}</h3>
                     <p className="text-sm text-neutral-500">{followersCount} followers</p>
                   </div>
                 </div>
@@ -1049,7 +1049,7 @@ export function ProfilePage({
                   <Bookmark className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-bold text-neutral-900">Saved</h3>
+                  <h3 className="font-bold text-neutral-900">{t('profile.saved')}</h3>
                   <p className="text-sm text-neutral-500">{savedItems.length} items</p>
                 </div>
               </div>
@@ -1098,7 +1098,7 @@ export function ProfilePage({
                 >
                   <div className="flex items-center gap-2">
                     <Bookmark className="w-4 h-4" />
-                    <span>Saved</span>
+                    <span>{t('profile.saved')}</span>
                   </div>
                   {activeTab === 'saved' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />}
                 </button>
@@ -1172,7 +1172,7 @@ export function ProfilePage({
                       <div className="bg-neutral-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Camera className="w-10 h-10 text-neutral-300" />
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 mb-2">No posts yet</h3>
+                      <h3 className="text-xl font-bold text-neutral-900 mb-2">{t('profile.noPostsYet')}</h3>
                       <p className="text-neutral-600">Share your agricultural journey with the community.</p>
                       <Button className="mt-6 bg-green-600 hover:bg-green-700 text-white">Create First Post</Button>
                     </div>
@@ -1249,7 +1249,7 @@ export function ProfilePage({
                       <div className="bg-neutral-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <MessageCircle className="w-10 h-10 text-neutral-300" />
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 mb-2">No discussions yet</h3>
+                      <h3 className="text-xl font-bold text-neutral-900 mb-2">{t('profile.noDiscussionsYet')}</h3>
                       <p className="text-neutral-600">Start a discussion to connect with other farmers.</p>
                       <Button className="mt-6 bg-green-600 hover:bg-green-700 text-white">Start Discussion</Button>
                     </div>
@@ -1312,7 +1312,7 @@ export function ProfilePage({
                               {item.title || 'Untitled'}
                             </h3>
                             <p className="text-neutral-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-                              {item.description || 'No description'}
+                              {item.description || t('profile.noDescription')}
                             </p>
                             <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                               <div className="flex items-center gap-2">
@@ -1428,7 +1428,7 @@ export function ProfilePage({
                       <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                         <Bookmark className="w-10 h-10 text-green-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 mb-2">No saved items found</h3>
+                      <h3 className="text-xl font-bold text-neutral-900 mb-2">{t('profile.noSavedItems')}</h3>
                       <p className="text-neutral-500 max-w-sm mx-auto leading-relaxed">
                         {savedFilter === 'all' 
                           ? 'Items you save will appear here for easy access.' 

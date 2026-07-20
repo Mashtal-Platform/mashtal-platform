@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { Card } from "./ui/card";
 import { PostModal } from "./PostModal";
 import { EditPostModal } from "./EditPostModal";
@@ -7,6 +8,7 @@ import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { PurchasesCard } from "./PurchasesCard";
 import { fetchProducts } from "../shared/api/products";
 import { getImageUrl, getAvatarUrl } from "../shared/api/client";
+import { DEFAULT_BANNER_URL } from "../shared/constants/branding";
 import { filterOutOrphanSavedItems } from "../shared/utils/saved";
 import {
   DropdownMenu,
@@ -193,6 +195,7 @@ export function BusinessProfileView({
   onRemoveSavedItem,
   onNavigateWithParams,
 }: BusinessProfileViewProps) {
+  const { t } = useTranslation();
   const { signOut, user } = useAuth();
   const [activeTab, setActiveTab] = useState<
     | "products"
@@ -371,7 +374,7 @@ export function BusinessProfileView({
       bgColor: "bg-purple-100",
     },
     {
-      label: "Followers",
+      label: t('business.followers'),
       value: "1,243",
       change: "+8.3%",
       icon: Users,
@@ -638,7 +641,7 @@ export function BusinessProfileView({
         <img
           src={
             getImageUrl(userProfile.coverImage) ||
-            'https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?w=1200'
+            DEFAULT_BANNER_URL
           }
           alt="Business Banner"
           className="w-full h-full object-cover opacity-40"
@@ -768,7 +771,7 @@ export function BusinessProfileView({
                           className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <Settings className="w-4 h-4" />
-                          <span>Edit Profile</span>
+                          <span>{t('profile.editProfile')}</span>
                         </Button>
                       
                       </>
@@ -776,7 +779,7 @@ export function BusinessProfileView({
                       <>
                         <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white">
                           <Heart className="w-5 h-5 mr-2" />
-                          Follow
+                          {t('common.follow')}
                         </Button>
                         <Button
                           variant="outline"
@@ -796,7 +799,7 @@ export function BusinessProfileView({
                       {followersCount.toLocaleString()}
                     </div>
                     <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">
-                      Followers
+                      {t('business.followers')}
                     </div>
                   </div>
                   <div className="text-center md:text-left">
@@ -838,7 +841,7 @@ export function BusinessProfileView({
                   </div>
                   <div className="text-left">
                     <h3 className="font-bold text-neutral-900">
-                      Following
+                      {t('business.following')}
                     </h3>
                     <p className="text-sm text-neutral-500">
                       {followingCount.toLocaleString()} accounts
@@ -863,7 +866,7 @@ export function BusinessProfileView({
                   </div>
                   <div className="text-left">
                     <h3 className="font-bold text-neutral-900">
-                      Followers
+                      {t('business.followers')}
                     </h3>
                     <p className="text-sm text-neutral-500">
                       {followersCount.toLocaleString()} followers
@@ -893,7 +896,7 @@ export function BusinessProfileView({
                   </div>
                   <div className="text-left">
                     <h3 className="font-bold text-neutral-900">
-                      Saved
+                      {t('profile.saved')}
                     </h3>
                     <p className="text-sm text-neutral-500">
                       {savedItems.length} items
@@ -1003,7 +1006,7 @@ export function BusinessProfileView({
                   >
                     <div className="flex items-center gap-2">
                       <Bookmark className="w-4 h-4" />
-                      <span>Saved</span>
+                      <span>{t('profile.saved')}</span>
                     </div>
                     {activeTab === "saved" && (
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 rounded-t-full" />
@@ -1197,7 +1200,7 @@ export function BusinessProfileView({
                                     className="cursor-pointer gap-2"
                                   >
                                     <Edit2 className="w-4 h-4" />
-                                    <span>Edit Post</span>
+                                    <span>{t('posts.editPost')}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={(e) => {
@@ -1220,7 +1223,7 @@ export function BusinessProfileView({
                     <div className="text-center py-20 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
                       <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
                       <p className="text-neutral-500 font-medium">
-                        No posts yet
+                        {t('business.noPostsYet')}
                       </p>
                     </div>
                   )}
@@ -1307,7 +1310,7 @@ export function BusinessProfileView({
                                       className="cursor-pointer gap-2"
                                     >
                                       <Edit2 className="w-4 h-4" />
-                                      <span>Edit Thread</span>
+                                      <span>{t('posts.editThread')}</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={(e) => {
@@ -1404,7 +1407,7 @@ export function BusinessProfileView({
                           1,243
                         </div>
                         <div className="text-xs text-neutral-500">
-                          Followers
+                          {t('business.followers')}
                         </div>
                       </div>
                     </div>

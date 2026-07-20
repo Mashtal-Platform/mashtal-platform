@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Users,
@@ -73,6 +74,7 @@ export function AdminDashboardPage({
   highlightPaymentId?: string | null;
   onClearHighlight?: () => void;
 } = {}) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>(initialTab || 'overview');
   const [overview, setOverview] = useState<AdminOverviewDto | null>(null);
   const [users, setUsers] = useState<AdminUserDto[]>([]);
@@ -243,8 +245,8 @@ export function AdminDashboardPage({
 
   const pieData = overview
     ? [
-        { name: 'Tax', value: overview.revenueTax },
-        { name: 'Subscriptions', value: overview.revenueFees },
+        { name: t('admin.tax'), value: overview.revenueTax },
+        { name: t('admin.subscriptions'), value: overview.revenueFees },
       ].filter((d) => d.value > 0)
     : [];
 
@@ -253,26 +255,26 @@ export function AdminDashboardPage({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Admin dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('admin.title')}</h1>
             <p className="text-neutral-600 mt-1">
-              Mashtal income, subscriptions, and payment ledgers
+              {t('admin.subtitle')}
             </p>
           </div>
           <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('admin.refresh')}
           </Button>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
           {(
             [
-              ['overview', LayoutDashboard, 'Overview'],
-              ['users', Users, 'Users'],
-              ['businesses', Building2, 'Businesses'],
-              ['subscriptions', CalendarClock, 'Subscriptions'],
-              ['transactions', ArrowLeftRight, 'Transactions'],
-              ['reports', Flag, 'Reports'],
+              ['overview', LayoutDashboard, t('admin.overview')],
+              ['users', Users, t('admin.users')],
+              ['businesses', Building2, t('admin.businesses')],
+              ['subscriptions', CalendarClock, t('admin.subscriptions')],
+              ['transactions', ArrowLeftRight, t('admin.transactions')],
+              ['reports', Flag, t('admin.reports')],
             ] as const
           ).map(([id, Icon, label]) => (
             <button
@@ -315,10 +317,10 @@ export function AdminDashboardPage({
           <div className="space-y-6">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                ['Users', overview.usersCount],
-                ['Businesses', overview.businessesCount],
-                ['Active paid', overview.activeBusinesses],
-                ['Expiring ≤7d', overview.expiringSoonCount ?? 0],
+                [t('admin.users'), overview.usersCount],
+                [t('admin.businesses'), overview.businessesCount],
+                [t('admin.activePaid'), overview.activeBusinesses],
+                [t('admin.expiringSoon'), overview.expiringSoonCount ?? 0],
               ].map(([label, value]) => (
                 <div key={String(label)} className="bg-white rounded-xl border border-neutral-100 p-5">
                   <div className="text-sm text-neutral-500">{label}</div>
@@ -329,7 +331,7 @@ export function AdminDashboardPage({
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
-                <div className="text-sm text-neutral-500">Mashtal income (all time)</div>
+                <div className="text-sm text-neutral-500">{t('admin.income')}</div>
                 <div className="text-xl sm:text-2xl font-bold text-green-700 mt-1">
                   {fmtMoney(overview.mashtalIncomeTotal)}
                 </div>
@@ -338,7 +340,7 @@ export function AdminDashboardPage({
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
-                <div className="text-sm text-neutral-500">Mashtal income (this year)</div>
+                <div className="text-sm text-neutral-500">{t('admin.incomeYear')}</div>
                 <div className="text-xl sm:text-2xl font-bold text-green-700 mt-1">
                   {fmtMoney(overview.mashtalIncomeYear)}
                 </div>
@@ -348,13 +350,13 @@ export function AdminDashboardPage({
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
-                <div className="text-sm text-neutral-500">Seller GMV</div>
+                <div className="text-sm text-neutral-500">{t('admin.sellerGmv')}</div>
                 <div className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">
                   {fmtMoney(overview.gmvSellers)}
                 </div>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
-                <div className="text-sm text-neutral-500">Orders</div>
+                <div className="text-sm text-neutral-500">{t('admin.orders')}</div>
                 <div className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">
                   {overview.ordersCount}
                 </div>
@@ -364,7 +366,7 @@ export function AdminDashboardPage({
             <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <h3 className="font-semibold text-neutral-900 mb-4">
-                  Mashtal income by month
+                  {t('admin.incomeByMonth')}
                 </h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={overview.mashtalIncomeByMonth || []}>
@@ -373,14 +375,14 @@ export function AdminDashboardPage({
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="tax" stackId="a" fill="#16a34a" name="Tax" />
-                    <Bar dataKey="fees" stackId="a" fill="#2563eb" name="Subscriptions" />
+                    <Bar dataKey="tax" stackId="a" fill="#16a34a" name={t('admin.tax')} />
+                    <Bar dataKey="fees" stackId="a" fill="#2563eb" name={t('admin.subscriptions')} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="bg-white rounded-xl border border-neutral-100 p-5">
                 <h3 className="font-semibold text-neutral-900 mb-4">
-                  Mashtal income (30 days)
+                  {t('admin.income30Days')}
                 </h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={overview.volumeByDay}>
@@ -389,12 +391,12 @@ export function AdminDashboardPage({
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="tax" stroke="#16a34a" name="Tax" strokeWidth={2} />
+                    <Line type="monotone" dataKey="tax" stroke="#16a34a" name={t('admin.tax')} strokeWidth={2} />
                     <Line
                       type="monotone"
                       dataKey="fees"
                       stroke="#2563eb"
-                      name="Subscriptions"
+                      name={t('admin.subscriptions')}
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -403,9 +405,9 @@ export function AdminDashboardPage({
             </div>
 
             <div className="bg-white rounded-xl border border-neutral-100 p-5 max-w-md">
-              <h3 className="font-semibold text-neutral-900 mb-4">Income mix</h3>
+              <h3 className="font-semibold text-neutral-900 mb-4">{t('admin.incomeMix')}</h3>
               {pieData.length === 0 ? (
-                <p className="text-sm text-neutral-500 py-10 text-center">No Mashtal income yet</p>
+                <p className="text-sm text-neutral-500 py-10 text-center">{t('admin.noIncomeYet')}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
@@ -427,16 +429,16 @@ export function AdminDashboardPage({
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-neutral-100 p-5">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Create user
+                <Plus className="w-4 h-4" /> {t('admin.createUser')}
               </h3>
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Input
-                  placeholder="Full name"
+                  placeholder={t('admin.fullName')}
                   value={newUser.fullName}
                   onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
                 />
                 <Input
-                  placeholder="Email"
+                  placeholder={t('common.email')}
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 />
@@ -747,7 +749,7 @@ export function AdminDashboardPage({
                 </tbody>
               </table>
               {subscriptions.length === 0 && (
-                <p className="p-6 text-center text-neutral-500 text-sm">No businesses found</p>
+                <p className="p-6 text-center text-neutral-500 text-sm">{t('admin.noBusinesses')}</p>
               )}
             </div>
           </div>
@@ -773,7 +775,7 @@ export function AdminDashboardPage({
 
             {txGroups.length === 0 ? (
               <div className="bg-white rounded-xl border border-neutral-100 p-4 sm:p-8 text-center text-neutral-500 text-sm">
-                No transactions yet
+                {t('admin.noTransactions')}
               </div>
             ) : (
               <div className="space-y-4">
@@ -798,7 +800,7 @@ export function AdminDashboardPage({
                         <span className="text-neutral-500">Buyer </span>
                         <span className="font-medium">{g.buyer?.fullName || '—'}</span>
                         <div className="text-xs text-neutral-600">
-                          {g.buyer?.phone || 'No phone on file'}
+                          {g.buyer?.phone || t('admin.noPhoneOnFile')}
                         </div>
                       </div>
                       <div>
@@ -839,33 +841,33 @@ export function AdminDashboardPage({
                           </tr>
                         </thead>
                         <tbody>
-                          {g.legs.map((t) => {
-                            const fromPhone = t.fromUser?.phone || g.buyer?.phone || '';
+                          {g.legs.map((leg) => {
+                            const fromPhone = leg.fromUser?.phone || g.buyer?.phone || '';
                             const toPhone =
-                              t.toPhone || t.toWishPhone || t.toUser?.phone || '';
+                              leg.toPhone || leg.toWishPhone || leg.toUser?.phone || '';
                             return (
-                            <tr key={t.id} className="border-t border-neutral-100">
-                              <td className="p-2 sm:p-3">{t.type}</td>
+                            <tr key={leg.id} className="border-t border-neutral-100">
+                              <td className="p-2 sm:p-3">{leg.type}</td>
                               <td className="p-2 sm:p-3">
                                 <div className="font-medium text-neutral-900">
-                                  {t.fromUser?.fullName || '—'}
+                                  {leg.fromUser?.fullName || '—'}
                                 </div>
                                 <div className="text-xs text-neutral-500">
-                                  {fromPhone || 'No phone'}
+                                  {fromPhone || t('admin.noPhone')}
                                 </div>
                               </td>
                               <td className="p-2 sm:p-3">
                                 <div className="font-medium text-neutral-900">
-                                  {t.toLabel || t.toUser?.fullName || 'Mashtal'}
+                                  {leg.toLabel || leg.toUser?.fullName || 'Mashtal'}
                                 </div>
                                 <div className="text-xs text-neutral-500">
-                                  {toPhone || (t.type === 'order_tax' ? 'Platform' : 'No phone')}
+                                  {toPhone || (leg.type === 'order_tax' ? t('admin.platform') : t('admin.noPhone'))}
                                 </div>
                               </td>
                               <td className="p-2 sm:p-3 font-medium">
-                                {t.currency} {Number(t.amount).toFixed(2)}
+                                {leg.currency} {Number(leg.amount).toFixed(2)}
                               </td>
-                              <td className="p-2 sm:p-3">{t.status}</td>
+                              <td className="p-2 sm:p-3">{leg.status}</td>
                             </tr>
                             );
                           })}                        </tbody>
@@ -901,7 +903,7 @@ export function AdminDashboardPage({
             </div>
 
             {reports.length === 0 ? (
-              <p className="text-neutral-500 text-sm py-8 text-center">No reports in this filter.</p>
+              <p className="text-neutral-500 text-sm py-8 text-center">{t('admin.noReports')}</p>
             ) : (
               <div className="space-y-4">
                 {reports.map((r) => (

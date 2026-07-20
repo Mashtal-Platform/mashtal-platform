@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   ShoppingBag, 
   Calendar, 
@@ -44,6 +45,7 @@ type StatusFilter = 'all' | 'delivered' | 'processing' | 'shipped' | 'cancelled'
 type SortOption = 'newest' | 'oldest' | 'price-high' | 'price-low';
 
 export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToCart }: PurchaseHistoryPageProps) {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -233,22 +235,22 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
 
   const getSortLabel = (option: SortOption) => {
     switch (option) {
-      case 'newest': return 'Newest First';
-      case 'oldest': return 'Oldest First';
-      case 'price-high': return 'Price: High to Low';
-      case 'price-low': return 'Price: Low to High';
-      default: return 'Sort By';
+      case 'newest': return t('purchaseHistory.newestFirst');
+      case 'oldest': return t('purchaseHistory.oldestFirst');
+      case 'price-high': return t('purchaseHistory.priceHighLow');
+      case 'price-low': return t('purchaseHistory.priceLowHigh');
+      default: return t('purchaseHistory.sortBy');
     }
   };
 
   const getStatusLabel = (status: StatusFilter) => {
     switch (status) {
-      case 'all': return 'All Orders';
-      case 'delivered': return 'Delivered';
-      case 'processing': return 'Processing';
-      case 'shipped': return 'Shipped';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Filter';
+      case 'all': return t('purchaseHistory.allOrders');
+      case 'delivered': return t('purchaseHistory.delivered');
+      case 'processing': return t('purchaseHistory.processing');
+      case 'shipped': return t('purchaseHistory.shipped');
+      case 'cancelled': return t('purchaseHistory.cancelled');
+      default: return t('common.filter');
     }
   };
 
@@ -262,9 +264,9 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <ShoppingBag className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">Purchase History</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">{t('purchaseHistory.title')}</h1>
               <p className="text-sm text-neutral-600 mt-0.5">
-                Track and manage all your orders
+                {t('purchaseHistory.subtitle')}
               </p>
             </div>
           </div>
@@ -275,7 +277,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-neutral-600">Total Orders</p>
+                    <p className="text-sm text-neutral-600">{t('purchaseHistory.totalOrders')}</p>
                     <p className="text-2xl font-semibold text-neutral-900 mt-1">
                       {statusCounts.all}
                     </p>
@@ -291,7 +293,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-neutral-600">Total Spent</p>
+                    <p className="text-sm text-neutral-600">{t('purchaseHistory.totalSpent')}</p>
                     <p className="text-2xl font-semibold text-neutral-900 mt-1">
                       ${purchases.reduce((sum, p) => sum + (p.price * p.quantity), 0).toFixed(2)}
                     </p>
@@ -307,7 +309,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-neutral-600">Delivered</p>
+                    <p className="text-sm text-neutral-600">{t('purchaseHistory.delivered')}</p>
                     <p className="text-2xl font-semibold text-green-600 mt-1">
                       {statusCounts.delivered}
                     </p>
@@ -323,7 +325,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-neutral-600">In Progress</p>
+                    <p className="text-sm text-neutral-600">{t('purchaseHistory.inProgress')}</p>
                     <p className="text-2xl font-semibold text-blue-600 mt-1">
                       {statusCounts.processing + statusCounts.shipped}
                     </p>
@@ -347,7 +349,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search orders by name, business, or order ID..."
+                placeholder={t('purchaseHistory.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -368,23 +370,23 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <DropdownMenuContent align="end" className="w-[200px]">
                 <DropdownMenuItem onClick={() => setStatusFilter('all')}>
                   <Package className="w-4 h-4 mr-2" />
-                  All Orders ({statusCounts.all})
+                  {t('purchaseHistory.allOrders')} ({statusCounts.all})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('delivered')}>
                   <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                  Delivered ({statusCounts.delivered})
+                  {t('purchaseHistory.delivered')} ({statusCounts.delivered})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('processing')}>
                   <Clock className="w-4 h-4 mr-2 text-yellow-600" />
-                  Processing ({statusCounts.processing})
+                  {t('purchaseHistory.processing')} ({statusCounts.processing})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('shipped')}>
                   <Truck className="w-4 h-4 mr-2 text-blue-600" />
-                  Shipped ({statusCounts.shipped})
+                  {t('purchaseHistory.shipped')} ({statusCounts.shipped})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('cancelled')}>
                   <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                  Cancelled ({statusCounts.cancelled})
+                  {t('purchaseHistory.cancelled')} ({statusCounts.cancelled})
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -409,7 +411,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         setIsSortOpen(false);
                       }}
                     >
-                      Newest First
+                      {t('purchaseHistory.newestFirst')}
                     </div>
                     <div
                       className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 cursor-pointer"
@@ -418,7 +420,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         setIsSortOpen(false);
                       }}
                     >
-                      Oldest First
+                      {t('purchaseHistory.oldestFirst')}
                     </div>
                     <div
                       className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 cursor-pointer"
@@ -427,7 +429,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         setIsSortOpen(false);
                       }}
                     >
-                      Price: High to Low
+                      {t('purchaseHistory.priceHighLow')}
                     </div>
                     <div
                       className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 cursor-pointer"
@@ -436,7 +438,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         setIsSortOpen(false);
                       }}
                     >
-                      Price: Low to High
+                      {t('purchaseHistory.priceLowHigh')}
                     </div>
                   </div>
                 </div>
@@ -450,11 +452,11 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-neutral-600">
-                    Showing {filteredPurchases.length} of {purchases.length} orders
+                    {t('purchaseHistory.showingOf', { shown: filteredPurchases.length, total: purchases.length })}
                   </span>
                   {filteredPurchases.length > 0 && (
                     <span className="text-sm text-neutral-600">
-                      • Total: ${totalSpent.toFixed(2)}
+                      • {t('purchaseHistory.total')} ${totalSpent.toFixed(2)}
                     </span>
                   )}
                 </div>
@@ -467,7 +469,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                   }}
                   className="text-sm"
                 >
-                  Clear Filters
+                  {t('purchaseHistory.clearFilters')}
                 </Button>
               </div>
             </div>
@@ -485,12 +487,12 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-neutral-900 mb-1">
-                      No Orders Found
+                      {t('purchaseHistory.noOrdersFound')}
                     </h3>
                     <p className="text-sm text-neutral-600">
                       {searchQuery.trim() || statusFilter !== 'all' 
-                        ? 'Try adjusting your filters or search query'
-                        : 'Start shopping to see your purchase history'}
+                        ? t('purchaseHistory.emptyFilterBody')
+                        : t('purchaseHistory.emptyStartBody')}
                     </p>
                   </div>
                   {onNavigate && (
@@ -498,7 +500,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                       onClick={() => onNavigate('businesses')}
                       className="mt-2"
                     >
-                      Browse Businesses
+                      {t('purchaseHistory.browseBusinesses')}
                     </Button>
                   )}
                 </div>
@@ -515,7 +517,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-medium text-neutral-900">
-                              Order #{purchase.orderId}
+                              {t('purchaseHistory.orderNumber', { id: purchase.orderId })}
                             </span>
                             <Badge 
                               variant="outline" 
@@ -551,7 +553,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                             className="gap-2"
                           >
                             <Download className="w-4 h-4" />
-                            Invoice
+                            {t('purchaseHistory.invoice')}
                           </Button>
                         )}
                         <Button
@@ -561,7 +563,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                           className="gap-2"
                         >
                           <ExternalLink className="w-4 h-4" />
-                          View Store
+                          {t('purchaseHistory.viewStore')}
                         </Button>
                       </div>
                     </div>
@@ -586,17 +588,17 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                         </h3>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-600">
                           <div>
-                            <span className="text-neutral-500">Quantity:</span>{' '}
+                            <span className="text-neutral-500">{t('purchaseHistory.quantity')}</span>{' '}
                             <span className="font-medium text-neutral-900">{purchase.quantity}</span>
                           </div>
                           <div>
-                            <span className="text-neutral-500">Price:</span>{' '}
+                            <span className="text-neutral-500">{t('purchaseHistory.price')}</span>{' '}
                             <span className="font-medium text-neutral-900">
                               ${purchase.price.toFixed(2)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-neutral-500">Total:</span>{' '}
+                            <span className="text-neutral-500">{t('purchaseHistory.total')}</span>{' '}
                             <span className="font-semibold text-green-600">
                               ${(purchase.price * purchase.quantity).toFixed(2)}
                             </span>
@@ -621,7 +623,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                                 />
                               ))}
                             </div>
-                            <span className="text-sm text-neutral-600">Your Rating</span>
+                            <span className="text-sm text-neutral-600">{t('purchaseHistory.yourRating')}</span>
                           </div>
                         )}
                       </div>
@@ -637,7 +639,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                             className="gap-2 whitespace-nowrap"
                           >
                             <XCircle className="w-4 h-4" />
-                            Cancel Order
+                            {t('purchaseHistory.cancelOrder')}
                           </Button>
                         )}
                         {purchase.status === 'delivered' && (
@@ -647,7 +649,7 @@ export function PurchaseHistoryPage({ onNavigateToBusiness, onNavigate, onAddToC
                             className="gap-2 whitespace-nowrap"
                           >
                             <RefreshCw className="w-4 h-4" />
-                            Buy Again
+                            {t('purchaseHistory.buyAgain')}
                           </Button>
                         )}
                         {purchase.status === 'delivered' && !purchase.rating && (

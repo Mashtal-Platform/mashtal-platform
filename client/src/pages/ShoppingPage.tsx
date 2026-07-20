@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ShoppingBag,
   Search,
@@ -35,26 +36,26 @@ import type { SavedItem } from '../shared/types';
 const productCategories = ['all', 'seeds', 'plants', 'trees', 'fertilizers', 'tools', 'equipment', 'irrigation', 'medicament', 'other'] as const;
 type ProductCategory = (typeof productCategories)[number];
 
-const categoryLabels: Record<ProductCategory, string> = {
-  all: 'All',
-  seeds: 'Seeds',
-  plants: 'Plants',
-  trees: 'Trees',
-  fertilizers: 'Fertilizers',
-  tools: 'Tools',
-  equipment: 'Equipment',
-  irrigation: 'Irrigation',
-  medicament: 'Medicament',
-  other: 'Other',
+const categoryLabelKeys: Record<ProductCategory, string> = {
+  all: 'shopping.all',
+  seeds: 'shopping.seeds',
+  plants: 'shopping.plants',
+  trees: 'shopping.trees',
+  fertilizers: 'shopping.fertilizers',
+  tools: 'shopping.tools',
+  equipment: 'shopping.equipment',
+  irrigation: 'shopping.irrigation',
+  medicament: 'shopping.medicament',
+  other: 'shopping.other',
 };
-const priceRanges = [
-  { id: 'all', label: 'All Prices', min: 0, max: Infinity },
-  { id: '0-100', label: 'Under $100', min: 0, max: 100 },
-  { id: '100-300', label: '$100 - $300', min: 100, max: 300 },
-  { id: '300-500', label: '$300 - $500', min: 300, max: 500 },
-  { id: '500+', label: '$500+', min: 500, max: Infinity },
+const priceRangeDefs = [
+  { id: 'all', labelKey: 'shopping.allPrices', min: 0, max: Infinity },
+  { id: '0-100', labelKey: 'shopping.under100', min: 0, max: 100 },
+  { id: '100-300', labelKey: 'shopping.range100_300', min: 100, max: 300 },
+  { id: '300-500', labelKey: 'shopping.range300_500', min: 300, max: 500 },
+  { id: '500+', labelKey: 'shopping.range500plus', min: 500, max: Infinity },
 ] as const;
-type PriceRangeId = (typeof priceRanges)[number]['id'];
+type PriceRangeId = (typeof priceRangeDefs)[number]['id'];
 type ShoppingProduct = ShoppingProductDto;
 
 interface ShoppingPageProps {
@@ -81,6 +82,7 @@ export function ShoppingPage({
   highlightProductId,
   onClearHighlight,
 }: ShoppingPageProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('all');
   const [selectedBusiness, setSelectedBusiness] = useState<string>('all');
@@ -194,7 +196,7 @@ export function ShoppingPage({
 
     // Price range filter
     if (selectedPriceRange !== 'all') {
-      const range = priceRanges.find((r) => r.id === selectedPriceRange);
+      const range = priceRangeDefs.find((r) => r.id === selectedPriceRange);
       if (range) {
         filtered = filtered.filter((p) => p.price >= range.min && p.price <= range.max);
       }
@@ -303,26 +305,26 @@ export function ShoppingPage({
   const getSortLabel = (option: SortOption) => {
     switch (option) {
       case 'featured':
-        return 'Featured';
+        return t('shopping.featured');
       case 'price-low':
-        return 'Price: Low to High';
+        return t('shopping.priceLowHigh');
       case 'price-high':
-        return 'Price: High to Low';
+        return t('shopping.priceHighLow');
       case 'rating':
-        return 'Highest Rated';
+        return t('shopping.highestRated');
       case 'newest':
-        return 'Newest';
+        return t('shopping.newest');
       case 'popular':
-        return 'Most Popular';
+        return t('shopping.mostPopular');
       case 'best-seller':
-        return 'Best Sellers';
+        return t('shopping.bestSellers');
       default:
-        return 'Sort By';
+        return t('shopping.sortBy');
     }
   };
 
   const getCategoryLabel = (category: ProductCategory) =>
-    category === 'all' ? 'All Categories' : categoryLabels[category];
+    category === 'all' ? t('shopping.allCategories') : t(categoryLabelKeys[category]);
 
   const activeFiltersCount = [
     selectedCategory !== 'all',
@@ -393,9 +395,9 @@ export function ShoppingPage({
               <ShoppingBag className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">Shop Products</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900">{t('shopping.title')}</h1>
               <p className="text-sm text-neutral-600 mt-0.5">
-                Browse agricultural products from verified businesses
+                {t('shopping.subtitle')}
               </p>
             </div>
           </div>
@@ -407,7 +409,7 @@ export function ShoppingPage({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search products, businesses, categories..."
+                placeholder={t('shopping.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -420,16 +422,16 @@ export function ShoppingPage({
               onChange={(e) => setSelectedCategory(e.target.value as ProductCategory)}
               className="min-w-[180px] px-4 py-2.5 border-2 border-green-600 rounded-lg outline-none bg-white text-neutral-900 focus:ring-2 focus:ring-green-200"
             >
-              <option value="all">Select category</option>
-              <option value="seeds">Seeds</option>
-              <option value="plants">Plants</option>
-              <option value="trees">Trees</option>
-              <option value="fertilizers">Fertilizers</option>
-              <option value="tools">Tools</option>
-              <option value="equipment">Equipment</option>
-              <option value="irrigation">Irrigation</option>
-              <option value="medicament">Medicament</option>
-              <option value="other">Other</option>
+              <option value="all">{t('shopping.selectCategory')}</option>
+              <option value="seeds">{t('shopping.seeds')}</option>
+              <option value="plants">{t('shopping.plants')}</option>
+              <option value="trees">{t('shopping.trees')}</option>
+              <option value="fertilizers">{t('shopping.fertilizers')}</option>
+              <option value="tools">{t('shopping.tools')}</option>
+              <option value="equipment">{t('shopping.equipment')}</option>
+              <option value="irrigation">{t('shopping.irrigation')}</option>
+              <option value="medicament">{t('shopping.medicament')}</option>
+              <option value="other">{t('shopping.other')}</option>
             </select>
 
             {/* Sort */}
@@ -443,28 +445,28 @@ export function ShoppingPage({
               <DropdownMenuContent align="end" className="w-[200px]">
                 <DropdownMenuItem onClick={() => setSortBy('featured')}>
                   <TrendingUp className="w-4 h-4 mr-2" />
-                  Featured
+                  {t('shopping.featured')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('best-seller')}>
                   <Award className="w-4 h-4 mr-2" />
-                  Best Sellers
+                  {t('shopping.bestSellers')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('popular')}>
                   <Flame className="w-4 h-4 mr-2" />
-                  Most Popular
+                  {t('shopping.mostPopular')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('rating')}>
                   <Star className="w-4 h-4 mr-2" />
-                  Highest Rated
+                  {t('shopping.highestRated')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('newest')}>
-                  Newest
+                  {t('shopping.newest')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('price-low')}>
-                  Price: Low to High
+                  {t('shopping.priceLowHigh')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('price-high')}>
-                  Price: High to Low
+                  {t('shopping.priceHighLow')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -476,7 +478,7 @@ export function ShoppingPage({
               className="relative"
             >
               <SlidersHorizontal className="w-4 h-4 mr-2" />
-              Filters
+              {t('shopping.filters')}
               {activeFiltersCount > 0 && (
                 <Badge
                   variant="default"
@@ -520,14 +522,14 @@ export function ShoppingPage({
                   {/* Business Filter */}
                   <div>
                     <label className="text-sm font-medium text-neutral-700 mb-2 block">
-                      Business
+                      {t('shopping.business')}
                     </label>
                     <select
                       value={selectedBusiness}
                       onChange={(e) => setSelectedBusiness(e.target.value)}
                       className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     >
-                      <option value="all">All Businesses</option>
+                      <option value="all">{t('shopping.allBusinesses')}</option>
                       {businesses.map((business) => (
                         <option key={business.id} value={business.id}>
                           {business.name}
@@ -539,16 +541,16 @@ export function ShoppingPage({
                   {/* Price Range Filter */}
                   <div>
                     <label className="text-sm font-medium text-neutral-700 mb-2 block">
-                      Price Range
+                      {t('shopping.priceRange')}
                     </label>
                     <select
                       value={selectedPriceRange}
                       onChange={(e) => setSelectedPriceRange(e.target.value as PriceRangeId)}
                       className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     >
-                      {priceRanges.map((range) => (
+                      {priceRangeDefs.map((range) => (
                         <option key={range.id} value={range.id}>
-                          {range.label}
+                          {t(range.labelKey)}
                         </option>
                       ))}
                     </select>
@@ -557,7 +559,7 @@ export function ShoppingPage({
                   {/* Stock Filter */}
                   <div>
                     <label className="text-sm font-medium text-neutral-700 mb-2 block">
-                      Availability
+                      {t('shopping.availability')}
                     </label>
                     <label className="flex items-center gap-2 px-3 py-2 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50">
                       <input
@@ -566,7 +568,7 @@ export function ShoppingPage({
                         onChange={(e) => setInStockOnly(e.target.checked)}
                         className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
                       />
-                      <span className="text-sm text-neutral-700">In Stock Only</span>
+                      <span className="text-sm text-neutral-700">{t('shopping.inStockOnly')}</span>
                     </label>
                   </div>
 
@@ -579,7 +581,7 @@ export function ShoppingPage({
                       disabled={activeFiltersCount === 0}
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Clear All
+                      {t('shopping.clearAll')}
                     </Button>
                   </div>
                 </div>
@@ -590,15 +592,14 @@ export function ShoppingPage({
           {/* Results Summary */}
           <div className="mt-4 flex items-center justify-between text-sm text-neutral-600">
             <span>
-              Showing {filteredProducts.length} of{' '}
-              {backendProducts.length} products
+              {t('shopping.showingOf', { shown: filteredProducts.length, total: backendProducts.length })}
             </span>
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
                 className="text-green-600 hover:text-green-700 font-medium"
               >
-                Clear filters
+                {t('shopping.clearFilters')}
               </button>
             )}
           </div>
@@ -620,7 +621,7 @@ export function ShoppingPage({
             <CardContent className="p-6 sm:p-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-10 w-10 border-2 border-green-600 border-t-transparent" />
-                <p className="text-sm text-neutral-600">Loading products…</p>
+                <p className="text-sm text-neutral-600">{t('shopping.loadingProducts')}</p>
               </div>
             </CardContent>
           </Card>
@@ -634,22 +635,22 @@ export function ShoppingPage({
                 <div>
                   <h3 className="text-lg font-medium text-neutral-900 mb-1">
                     {backendProducts.length === 0
-                      ? 'No Products Available'
-                      : 'No Products Found'}
+                      ? t('shopping.noProductsAvailable')
+                      : t('shopping.noProducts')}
                   </h3>
                   <p className="text-sm text-neutral-600">
                     {backendProducts.length === 0
-                      ? 'The catalog is empty or products could not be loaded. Try again in a moment.'
-                      : 'Try adjusting your filters or search query.'}
+                      ? t('shopping.noProductsEmptyBody')
+                      : t('shopping.noProductsBody')}
                   </p>
                 </div>
                 {backendProducts.length === 0 ? (
                   <Button onClick={() => setRetryCount((c) => c + 1)} className="mt-2">
-                    Retry
+                    {t('shopping.retry')}
                   </Button>
                 ) : (
                   <Button onClick={clearAllFilters} className="mt-2">
-                    Clear All Filters
+                    {t('shopping.clearAllFilters')}
                   </Button>
                 )}
               </div>
@@ -681,11 +682,11 @@ export function ShoppingPage({
                     />
                     {product.inStock ? (
                       <Badge className="absolute top-3 right-3 bg-green-600 text-white">
-                        In Stock
+                        {t('shopping.inStock')}
                       </Badge>
                     ) : (
                       <Badge className="absolute top-3 right-3 bg-red-600 text-white">
-                        Out of Stock
+                        {t('shopping.outOfStock')}
                       </Badge>
                     )}
                     <button
@@ -748,7 +749,7 @@ export function ShoppingPage({
                       </div>
                       <span className="text-xs text-neutral-400">•</span>
                       <span className="text-xs text-neutral-600">
-                        {product.reviewsCount} reviews
+                        {t('shopping.reviews', { count: product.reviewsCount })}
                       </span>
                       <span className="text-xs text-neutral-400">•</span>
                       <Badge variant="secondary" className="text-xs">
@@ -776,7 +777,7 @@ export function ShoppingPage({
                         className="w-full mt-3 gap-2"
                       >
                         <ShoppingCart className="w-4 h-4" />
-                        {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                        {product.inStock ? t('shopping.addToCart') : t('shopping.outOfStock')}
                       </Button>
                     )}
                   </div>
@@ -804,11 +805,11 @@ export function ShoppingPage({
                       />
                       {product.inStock ? (
                         <Badge className="absolute top-2 right-2 bg-green-600 text-white text-xs">
-                          In Stock
+                          {t('shopping.inStock')}
                         </Badge>
                       ) : (
                         <Badge className="absolute top-2 right-2 bg-red-600 text-white text-xs">
-                          Out of Stock
+                          {t('shopping.outOfStock')}
                         </Badge>
                       )}
                     </div>
@@ -853,7 +854,7 @@ export function ShoppingPage({
                           {product.category}
                         </Badge>
                         <span className="text-neutral-400">•</span>
-                        <span className="text-neutral-600">{product.stock} in stock</span>
+                        <span className="text-neutral-600">{t('shopping.inStockCount', { count: product.stock })}</span>
                       </div>
                     </div>
 
@@ -865,7 +866,7 @@ export function ShoppingPage({
                           handleSaveProduct(product.id);
                         }}
                         className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
-                        aria-label="Save product"
+                        aria-label={t('shopping.saveProduct')}
                       >
                         <Bookmark
                           className={`w-5 h-5 ${
@@ -891,7 +892,7 @@ export function ShoppingPage({
                             size="sm"
                           >
                             <ShoppingCart className="w-4 h-4" />
-                            Add to Cart
+                            {t('shopping.addToCart')}
                           </Button>
                         )}
                       </div>

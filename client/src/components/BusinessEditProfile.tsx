@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Building2, Save, X, Plus, Trash2, Clock, Globe } from 'lucide-react';
 import { LebanonLocationPicker } from './LebanonLocationPicker';
 import { PhoneInput } from './PhoneInput';
@@ -125,6 +126,7 @@ function isTimeBefore(a: string, b: string): boolean {
 }
 
 export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditProfileProps) {
+  const { t } = useTranslation();
   const bp = profile.businessProfile || {};
   const [fullName, setFullName] = useState(profile.fullName || '');
   const [companyName, setCompanyName] = useState(bp.companyName || profile.companyName || '');
@@ -302,12 +304,12 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
               <div className="p-2 bg-green-100 rounded-lg">
                 <Building2 className="w-5 h-5 text-green-600" />
               </div>
-              Edit Business Profile
+              {t('business.editProfile')}
             </h2>
             <button
               onClick={onCancel}
               className="p-2.5 hover:bg-neutral-200 rounded-lg transition-colors text-neutral-600"
-              aria-label="Cancel"
+              aria-label={t('common.cancel')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -337,7 +339,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Business / Company name *</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">{t('business.companyName')} *</label>
                   <input
                     type="text"
                     value={companyName}
@@ -348,7 +350,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                 </div>
               </div>
               <div className="mt-4">
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Business type *</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">{t('business.businessType')} *</label>
                 <select
                   value={businessType}
                   onChange={(e) => setBusinessType(e.target.value)}
@@ -388,7 +390,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                     label="City / Village (Lebanon) *"
                     value={location}
                     required
-                    placeholder="Search city or village in Lebanon…"
+                    placeholder={t('common.searchLebanonLocation')}
                     onChange={setLocation}
                   />
                 </div>
@@ -460,7 +462,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
             <section className="bg-neutral-50/50 rounded-xl p-6 border border-neutral-100">
               <h3 className="text-base font-semibold text-neutral-800 mb-1 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-green-600" />
-                Working hours (optional)
+                {t('business.workingHours')} ({t('common.optional')})
               </h3>
               <p className="text-sm text-neutral-600 mb-4">Opening time must be before closing time for each day.</p>
               <div className="rounded-xl border border-neutral-200 overflow-hidden bg-white shadow-sm">
@@ -569,9 +571,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                 onClick={onCancel}
                 disabled={saving}
                 className="flex-1 py-3 rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors font-medium disabled:opacity-50"
-              >
-                Cancel
-              </button>
+              >{t('common.cancel')}</button>
               <button
                 type="button"
                 onClick={handleSave}
@@ -586,7 +586,7 @@ export function BusinessEditProfile({ profile, onSave, onCancel }: BusinessEditP
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save changes
+                    {t('business.saveChanges')}
                   </>
                 )}
               </button>

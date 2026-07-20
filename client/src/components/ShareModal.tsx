@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { X, Link as LinkIcon, Download, Check, Share2, MessageCircle, Send, Mail, Linkedin, Twitter, Facebook, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getConversations, createOrGetConversation, sendMessage as sendChatMessage } from '../shared/api/chat';
 import { searchShareRecipients } from '../shared/api/users';
 import { getImageUrl } from '../shared/api/client';
@@ -53,6 +54,7 @@ function formatLastActive(iso: string): string {
 const RECENT_CONVERSATIONS_LIMIT = 9;
 
 export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postImage, postOwnerName, postOwnerAvatar, postAuthorName, onShare }: ShareModalProps) {
+  const { t } = useTranslation();
   const ownerName = postOwnerName ?? postAuthorName;
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [copiedLink, setCopiedLink] = useState(false);
@@ -277,11 +279,11 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
       >
         {/* Header */}
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between flex-shrink-0">
-          <h3 className="text-lg font-semibold text-neutral-900">Share</h3>
+          <h3 className="text-lg font-semibold text-neutral-900">{t('common.share')}</h3>
           <button
             onClick={handleClose}
             className="p-1.5 hover:bg-neutral-100 rounded-full transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -289,7 +291,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
 
         {/* External Share Options - Prominent at top */}
         <div className="p-4 bg-neutral-50 border-b border-neutral-200 flex-shrink-0">
-          <h4 className="text-sm font-semibold text-neutral-900 mb-3">Share outside Mashtal</h4>
+          <h4 className="text-sm font-semibold text-neutral-900 mb-3">{t('share.title')}</h4>
           
           <div className="grid grid-cols-4 gap-3">
             {/* WhatsApp */}
@@ -300,7 +302,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               <div className="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-6 h-6 text-white" fill="currentColor" />
               </div>
-              <span className="text-xs text-neutral-700 text-center">WhatsApp</span>
+              <span className="text-xs text-neutral-700 text-center">{t('share.whatsapp')}</span>
             </button>
 
             {/* Telegram */}
@@ -322,7 +324,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               <div className="w-12 h-12 bg-[#1DA1F2] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Twitter className="w-5 h-5 text-white" fill="currentColor" />
               </div>
-              <span className="text-xs text-neutral-700 text-center">Twitter</span>
+              <span className="text-xs text-neutral-700 text-center">{t('share.twitter')}</span>
             </button>
 
             {/* Facebook */}
@@ -333,7 +335,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               <div className="w-12 h-12 bg-[#1877F2] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Facebook className="w-5 h-5 text-white" fill="currentColor" />
               </div>
-              <span className="text-xs text-neutral-700 text-center">Facebook</span>
+              <span className="text-xs text-neutral-700 text-center">{t('share.facebook')}</span>
             </button>
 
             {/* LinkedIn */}
@@ -355,7 +357,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               <div className="w-12 h-12 bg-neutral-700 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Mail className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xs text-neutral-700 text-center">Email</span>
+              <span className="text-xs text-neutral-700 text-center">{t('share.email')}</span>
             </button>
 
             {/* Copy Link */}
@@ -371,7 +373,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
                 )}
               </div>
               <span className="text-xs text-neutral-700 text-center">
-                {copiedLink ? 'Copied!' : 'Copy Link'}
+                {copiedLink ? t('common.copied') : t('share.copyLink')}
               </span>
             </button>
 
@@ -493,7 +495,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               </div>
             )}
             {searchQuery.trim() && !searchLoading && searchResults.length === 0 && (
-              <p className="text-xs text-neutral-500 py-2">No results found.</p>
+              <p className="text-xs text-neutral-500 py-2">{t('common.noResults')}</p>
             )}
           </div>
         </div>
@@ -505,7 +507,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
               <Check className="w-8 h-8 text-green-600" />
             </div>
-            <h4 className="text-lg font-semibold text-neutral-900 mb-1">Shared successfully</h4>
+            <h4 className="text-lg font-semibold text-neutral-900 mb-1">{t('common.done')}</h4>
             <p className="text-sm text-neutral-600 mb-6">
               The post has been sent to {shareCount} {shareCount === 1 ? 'conversation' : 'conversations'}. Recipients will see it in their chats.
             </p>
@@ -513,7 +515,7 @@ export function ShareModal({ isOpen, onClose, postId, postUrl, postTitle, postIm
               onClick={handleClose}
               className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         )}

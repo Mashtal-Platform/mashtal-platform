@@ -1,8 +1,8 @@
-
 import { createRoot } from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.tsx";
 import "./styles/globals.css";
+import "./i18n";
 
 console.log("[Mashtal] main.tsx starting");
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CartItem } from '../App';
 import { getImageUrl } from '../shared/api/client';
 
@@ -11,6 +12,7 @@ interface CartPageProps {
 }
 
 export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: CartPageProps) {
+  const { t } = useTranslation();
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.15; // 15% VAT
   const total = subtotal + tax;
@@ -20,18 +22,18 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
-            Shopping Cart
+            {t('cart.title')}
           </h1>
           <p className="text-neutral-600">
-            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
+            {t('cart.itemsCount', { count: cartItems.length })}
           </p>
         </div>
 
         {cartItems.length === 0 ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 text-center">
             <ShoppingBag className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-xl text-neutral-900 mb-2">Your cart is empty</h3>
-            <p className="text-neutral-600 mb-6">Add some products to get started</p>
+            <h3 className="text-xl text-neutral-900 mb-2">{t('cart.empty')}</h3>
+            <p className="text-neutral-600 mb-6">{t('cart.emptyBody')}</p>
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
@@ -60,6 +62,7 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
                       <button
                         onClick={() => onRemove(item.id)}
                         className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label={t('cart.remove')}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -93,20 +96,20 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl p-4 sm:p-6 sticky top-24">
-                <h3 className="text-xl text-neutral-900 mb-6">Order Summary</h3>
+                <h3 className="text-xl text-neutral-900 mb-6">{t('cart.orderSummary')}</h3>
                 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-neutral-700">
-                    <span>Subtotal</span>
+                    <span>{t('cart.subtotal')}</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-neutral-700">
-                    <span>Tax (15%)</span>
+                    <span>{t('cart.taxPercent', { percent: 15 })}</span>
                     <span>${tax.toFixed(2)}</span>
                   </div>
                   <div className="border-t border-neutral-200 pt-3">
                     <div className="flex justify-between text-lg">
-                      <span className="text-neutral-900">Total</span>
+                      <span className="text-neutral-900">{t('cart.total')}</span>
                       <span className="text-neutral-900">${total.toFixed(2)}</span>
                     </div>
                   </div>
@@ -116,11 +119,11 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
                   onClick={onCheckout}
                   className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors mb-3"
                 >
-                  Proceed to Checkout
+                  {t('cart.checkout')}
                 </button>
                 
                 <p className="text-xs text-neutral-500 text-center">
-                  Secure checkout powered by Mashtal
+                  {t('cart.secureCheckout')}
                 </p>
               </div>
             </div>
