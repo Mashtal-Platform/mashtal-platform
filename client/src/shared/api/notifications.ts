@@ -3,7 +3,7 @@ import { apiGet, apiPost } from './client';
 // Shape returned by backend notificationController, already adapted for UI
 export interface NotificationDto {
   id: string;
-  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction';
+  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report' | 'admin_order';
   message: string;
   read: boolean;
   time: string;
@@ -16,6 +16,7 @@ export interface NotificationDto {
   authorId?: string;
   orderId?: string;
   paymentId?: string;
+  reportId?: string;
 }
 
 export async function fetchNotifications(): Promise<NotificationDto[]> {

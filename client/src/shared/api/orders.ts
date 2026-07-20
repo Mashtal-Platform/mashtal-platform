@@ -1,4 +1,11 @@
-import { apiGet, apiPost } from './client';
+import { apiGet, apiPost, apiPatch } from './client';
+
+export type OrderStatus =
+  | 'pending'
+  | 'processing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled';
 
 export interface OrderItemDto {
   product: {
@@ -17,14 +24,35 @@ export interface OrderItemDto {
 
 export interface OrderDto {
   id: string;
-  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: OrderStatus;
   total: number;
   createdAt: string;
+  updatedAt?: string;
   items: OrderItemDto[];
+  cancelledBy?: string | null;
+  cancelFeePercent?: number | null;
+  cancelRefundPercent?: number | null;
 }
 
 export async function fetchMyOrders(): Promise<OrderDto[]> {
   return apiGet('/orders');
+}
+
+export async function cancelOrder(orderId: string): Promise<{
+  order: OrderDto;
+  message: string;
+  cancelFeePercent: number;
+  cancelRefundPercent: number;
+}> {
+  return apiPost(`/orders/${orderId}/cancel`, {});
+}
+
+/** Business: mark order ready (from pending/processing). */
+export async function markOrderReady(orderId: string): Promise<{
+  order: OrderDto;
+  status: 'ready';
+}> {
+  return apiPatch(`/orders/${orderId}/ready`, {});
 }
 
 export async function createOrder(input: {
@@ -32,4 +60,3 @@ export async function createOrder(input: {
 }) {
   return apiPost('/orders', input);
 }
-

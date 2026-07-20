@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Bell,
   Flag,
+  Package,
 } from 'lucide-react';
 import {
   BarChart,
@@ -36,6 +37,8 @@ import {
   fetchAdminBusinesses,
   fetchAdminTransactions,
   fetchAdminSubscriptions,
+  fetchAdminOrders,
+  updateAdminOrderStatus,
   notifyExpiringSubscriptions,
   createAdminUser,
   updateAdminUser,
@@ -43,6 +46,8 @@ import {
   type AdminOverviewDto,
   type AdminUserDto,
   type AdminTransactionGroupDto,
+  type AdminOrderDto,
+  type AdminOrderStatus,
 } from '../shared/api/admin';
 import {
   fetchAdminReports,
@@ -50,8 +55,34 @@ import {
   type BusinessReportDto,
 } from '../shared/api/reports';
 import { toast } from 'sonner';
+import { getImageUrl } from '../shared/api/client';
 
-type Tab = 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'reports';
+type Tab = 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'orders' | 'reports';
+
+const ORDER_STATUSES: AdminOrderStatus[] = [
+  'pending',
+  'processing',
+  'ready',
+  'completed',
+  'cancelled',
+];
+
+function orderStatusClass(status: string) {
+  switch (status) {
+    case 'pending':
+      return 'bg-amber-50 text-amber-800 border-amber-200';
+    case 'processing':
+      return 'bg-yellow-50 text-yellow-800 border-yellow-200';
+    case 'ready':
+      return 'bg-blue-50 text-blue-800 border-blue-200';
+    case 'completed':
+      return 'bg-green-50 text-green-800 border-green-200';
+    case 'cancelled':
+      return 'bg-red-50 text-red-800 border-red-200';
+    default:
+      return 'bg-neutral-50 text-neutral-700 border-neutral-200';
+  }
+}
 
 const PIE_COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#64748b'];
 
@@ -68,10 +99,12 @@ function fmtMoney(n: number) {
 export function AdminDashboardPage({
   initialTab = null,
   highlightPaymentId = null,
+  highlightOrderId = null,
   onClearHighlight,
 }: {
   initialTab?: Tab | null;
   highlightPaymentId?: string | null;
+  highlightOrderId?: string | null;
   onClearHighlight?: () => void;
 } = {}) {
   const { t } = useTranslation();
@@ -82,6 +115,9 @@ export function AdminDashboardPage({
   const [subscriptions, setSubscriptions] = useState<AdminUserDto[]>([]);
   const [periodDays, setPeriodDays] = useState(60);
   const [txGroups, setTxGroups] = useState<AdminTransactionGroupDto[]>([]);
+  const [orders, setOrders] = useState<AdminOrderDto[]>([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderBusyId, setOrderBusyId] = useState<string | null>(null);
   const [reports, setReports] = useState<BusinessReportDto[]>([]);
   const [reportStatusFilter, setReportStatusFilter] = useState('pending');
   const [pendingReportsCount, setPendingReportsCount] = useState(0);
@@ -94,6 +130,7 @@ export function AdminDashboardPage({
   const [txType, setTxType] = useState('');
   const [subStatus, setSubStatus] = useState('');
   const [highlightedPaymentId, setHighlightedPaymentId] = useState<string | null>(null);
+  const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({
     fullName: '',
     email: '',
@@ -102,6 +139,7 @@ export function AdminDashboardPage({
   });
   const onClearHighlightRef = useRef(onClearHighlight);
   const highlightedPaymentHandledRef = useRef<string | null>(null);
+  const highlightedOrderHandledRef = useRef<string | null>(null);
 
   useEffect(() => {
     onClearHighlightRef.current = onClearHighlight;
@@ -119,6 +157,15 @@ export function AdminDashboardPage({
     setTab('transactions');
     setHighlightedPaymentId(highlightPaymentId);
   }, [highlightPaymentId]);
+
+  useEffect(() => {
+    if (!highlightOrderId) {
+      highlightedOrderHandledRef.current = null;
+      return;
+    }
+    setTab('orders');
+    setHighlightedOrderId(highlightOrderId);
+  }, [highlightOrderId]);
 
   const loadOverview = useCallback(async () => {
     const data = await fetchAdminOverview();
@@ -148,6 +195,26 @@ export function AdminDashboardPage({
     setTxGroups(data.groups || []);
   }, [txType]);
 
+  const loadOrders = useCallback(async () => {
+    const data = await fetchAdminOrders({
+      status: orderStatusFilter !== 'all' ? orderStatusFilter : undefined,
+    });
+    setOrders(data.orders || []);
+  }, [orderStatusFilter]);
+
+  const handleUpdateOrderStatus = async (orderId: string, status: AdminOrderStatus) => {
+    setOrderBusyId(orderId);
+    try {
+      const { order } = await updateAdminOrderStatus(orderId, status);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...order } : o)));
+      toast.success(`Order status updated to ${status}`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update order status');
+    } finally {
+      setOrderBusyId(null);
+    }
+  };
+
   const loadReports = useCallback(async () => {
     const data = await fetchAdminReports({
       status: reportStatusFilter || undefined,
@@ -164,6 +231,7 @@ export function AdminDashboardPage({
       else if (tab === 'users') await loadUsers();
       else if (tab === 'businesses') await loadBusinesses();
       else if (tab === 'subscriptions') await loadSubscriptions();
+      else if (tab === 'orders') await loadOrders();
       else if (tab === 'reports') await loadReports();
       else await loadTransactions();
     } catch (err: any) {
@@ -178,6 +246,7 @@ export function AdminDashboardPage({
     loadBusinesses,
     loadSubscriptions,
     loadTransactions,
+    loadOrders,
     loadReports,
   ]);
 
@@ -243,6 +312,25 @@ export function AdminDashboardPage({
     return () => clearTimeout(clearTimer);
   }, [highlightPaymentId, highlightedPaymentId, txGroups, loading, tab]);
 
+  useEffect(() => {
+    if (!highlightOrderId || !highlightedOrderId) return;
+    if (loading && tab === 'orders' && orders.length === 0) return;
+    if (highlightedOrderHandledRef.current === highlightOrderId) return;
+
+    const el = document.querySelector(`[data-order-id="${highlightOrderId}"]`);
+    if (!el) return;
+
+    highlightedOrderHandledRef.current = highlightOrderId;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const clearTimer = setTimeout(() => {
+      setHighlightedOrderId(null);
+      onClearHighlightRef.current?.();
+    }, 3000);
+
+    return () => clearTimeout(clearTimer);
+  }, [highlightOrderId, highlightedOrderId, orders, loading, tab]);
+
   const pieData = overview
     ? [
         { name: t('admin.tax'), value: overview.revenueTax },
@@ -274,6 +362,7 @@ export function AdminDashboardPage({
               ['businesses', Building2, t('admin.businesses')],
               ['subscriptions', CalendarClock, t('admin.subscriptions')],
               ['transactions', ArrowLeftRight, t('admin.transactions')],
+              ['orders', Package, t('admin.orders')],
               ['reports', Flag, t('admin.reports')],
             ] as const
           ).map(([id, Icon, label]) => (
@@ -872,6 +961,144 @@ export function AdminDashboardPage({
                             );
                           })}                        </tbody>
                       </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'orders' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <select
+                className="border border-neutral-200 rounded-md px-3 py-2 text-sm bg-white"
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+              >
+                <option value="all">All statuses</option>
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+              <Button variant="outline" onClick={() => void loadOrders()}>
+                Filter
+              </Button>
+              <span className="text-sm text-neutral-500">{orders.length} orders</span>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="bg-white rounded-xl border border-neutral-100 p-4 sm:p-8 text-center text-neutral-500 text-sm">
+                {t('admin.noOrders', { defaultValue: 'No orders found' })}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    data-order-id={order.id}
+                    className={`bg-white rounded-xl border overflow-hidden transition-colors duration-500 ${
+                      highlightedOrderId === order.id
+                        ? 'border-green-500 ring-2 ring-green-500 bg-green-50/40'
+                        : 'border-neutral-200'
+                    }`}
+                  >
+                    <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-100 flex flex-wrap gap-x-6 gap-y-2 text-sm items-center justify-between">
+                      <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        <div>
+                          <span className="text-neutral-500">Order </span>
+                          <span className="font-mono text-xs font-medium">{order.id}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500">When </span>
+                          <span className="font-medium">
+                            {order.createdAt
+                              ? new Date(order.createdAt).toLocaleString()
+                              : '—'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500">Buyer </span>
+                          <span className="font-medium">
+                            {order.buyer?.fullName || '—'}
+                          </span>
+                          <div className="text-xs text-neutral-600">
+                            {order.buyer?.phone || order.buyer?.email || t('admin.noPhoneOnFile')}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500">Total </span>
+                          <span className="font-medium">{fmtMoney(order.total)}</span>
+                        </div>
+                        {order.cancelledBy ? (
+                          <div>
+                            <span className="text-neutral-500">Cancelled by </span>
+                            <span className="font-medium">{order.cancelledBy}</span>
+                            {order.cancelRefundPercent != null ? (
+                              <span className="text-xs text-neutral-600 ml-1">
+                                ({order.cancelRefundPercent}% refund / {order.cancelFeePercent}% fee)
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium capitalize ${orderStatusClass(order.status)}`}
+                        >
+                          {order.status}
+                        </span>
+                        <select
+                          className="border border-neutral-200 rounded-md px-2 py-1.5 text-sm bg-white"
+                          value={order.status}
+                          disabled={orderBusyId === order.id}
+                          onChange={(e) =>
+                            void handleUpdateOrderStatus(
+                              order.id,
+                              e.target.value as AdminOrderStatus
+                            )
+                          }
+                        >
+                          {ORDER_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {s.charAt(0).toUpperCase() + s.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-neutral-100">
+                      {order.items.map((it, idx) => (
+                        <div
+                          key={`${order.id}-item-${idx}`}
+                          className="px-4 py-3 flex gap-3 items-center text-sm"
+                        >
+                          {getImageUrl(it.product.image) ? (
+                            <img
+                              src={getImageUrl(it.product.image)}
+                              alt={it.product.name}
+                              className="w-12 h-12 rounded-md object-cover border border-neutral-100 bg-neutral-50"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-md border border-neutral-100 bg-neutral-100 flex items-center justify-center">
+                              <Package className="w-5 h-5 text-neutral-400" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-neutral-900 truncate">
+                              {it.product.name}
+                            </div>
+                            <div className="text-xs text-neutral-500">
+                              {it.product.businessName || 'Business'} · qty {it.quantity} ·{' '}
+                              {fmtMoney(it.priceAtPurchase)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

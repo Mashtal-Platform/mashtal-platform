@@ -100,6 +100,30 @@ function buildNotificationMessage(n, senderName, lang) {
         `${name} أرسل لك ${count} رسائل.`
       );
     }
+    case 'order_cancelled':
+      return pick(
+        L,
+        `${name} cancelled an order. A 25% fee applies; 75% will be refunded.`,
+        `${name} ألغى طلباً. تُطبَّق رسوم إلغاء 25% ويُسترد 75%.`
+      );
+    case 'order_cancelled_admin':
+      return pick(
+        L,
+        `${name} cancelled an order. Open Admin → Orders to review.`,
+        `${name} ألغى طلباً. افتح الإدارة → الطلبات للمراجعة.`
+      );
+    case 'order_status_updated':
+      return pick(
+        L,
+        'Your order status was updated.',
+        'تم تحديث حالة طلبك.'
+      );
+    case 'order_ready_admin':
+      return pick(
+        L,
+        `${name} marked an order as ready for delivery. Open Admin → Orders to review.`,
+        `${name} عيّن طلباً كجاهز للتسليم. افتح الإدارة → الطلبات للمراجعة.`
+      );
     case 'product_review':
       return pick(
         L,

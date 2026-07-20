@@ -623,6 +623,140 @@ async function notifyExpiringSubscriptions(req, res) {
   }
 }
 
+async function listOrders(req, res) {
+  try {
+    const Order = require('../models/Order');
+    const {
+      shapeOrders,
+      normalizeOrderStatus,
+      ORDER_STATUSES,
+    } = require('./orderController');
+    const { status, limit = 100, skip = 0 } = req.query || {};
+
+    const filter = {};
+    if (status && String(status) !== 'all') {
+      const s = normalizeOrderStatus(status);
+      if (ORDER_STATUSES.includes(s)) {
+        // Include legacy aliases so older docs still match
+        if (s === 'ready') filter.status = { $in: ['ready', 'shipped'] };
+        else if (s === 'completed') filter.status = { $in: ['completed', 'delivered'] };
+        else if (s === 'cancelled') filter.status = { $in: ['cancelled', 'canceled'] };
+        else filter.status = s;
+      }
+    }
+
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(Number(skip) || 0)
+        .limit(Math.min(Number(limit) || 100, 200))
+        .populate('user', 'fullName email phone')
+        .populate('items.product')
+        .lean(),
+      Order.countDocuments(filter),
+    ]);
+
+    const shaped = await shapeOrders(orders);
+    const withBuyer = shaped.map((o, i) => {
+      const raw = orders[i];
+      const u = raw?.user || {};
+      return {
+        ...o,
+        buyer: u._id
+          ? {
+              id: String(u._id),
+              fullName: u.fullName || '',
+              email: u.email || '',
+              phone: u.phone || '',
+            }
+          : null,
+      };
+    });
+
+    res.json({ orders: withBuyer, total, statuses: ORDER_STATUSES });
+  } catch (err) {
+    console.error('[Admin] listOrders error:', err);
+    res.status(500).json({ message: 'Failed to list orders' });
+  }
+}
+
+async function updateOrderStatus(req, res) {
+  try {
+    const Order = require('../models/Order');
+    const Notification = require('../models/Notification');
+    const Product = require('../models/Product');
+    const {
+      shapeOrders,
+      normalizeOrderStatus,
+      ORDER_STATUSES,
+    } = require('./orderController');
+    const {
+      CANCEL_FEE_PERCENT,
+      CANCEL_REFUND_PERCENT,
+      isCancellableStatus,
+    } = require('../utils/orderStatus');
+
+    const { status } = req.body || {};
+    const next = normalizeOrderStatus(status);
+    if (!ORDER_STATUSES.includes(next)) {
+      return res.status(400).json({
+        message: `status must be one of: ${ORDER_STATUSES.join(', ')}`,
+      });
+    }
+
+    const order = await Order.findById(req.params.id).populate('items.product');
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    const prev = normalizeOrderStatus(order.status);
+    if (prev === next) {
+      const shaped = (await shapeOrders([order.toObject()]))[0];
+      return res.json({ order: shaped });
+    }
+
+    order.status = next;
+    order.statusUpdatedBy = req.user.id;
+    order.statusUpdatedAt = new Date();
+
+    if (next === 'cancelled' && prev !== 'cancelled') {
+      order.cancelledBy = 'admin';
+      order.cancelledAt = new Date();
+      order.cancelFeePercent = CANCEL_FEE_PERCENT;
+      order.cancelRefundPercent = CANCEL_REFUND_PERCENT;
+      // Restock when admin cancels
+      for (const item of order.items || []) {
+        const productId = item.product?._id || item.product;
+        if (!productId) continue;
+        await Product.updateOne(
+          { _id: productId },
+          { $inc: { stock: Number(item.quantity) || 0 } }
+        );
+      }
+    }
+
+    await order.save();
+
+    // Notify buyer of status change
+    if (order.user) {
+      await Notification.create({
+        recipient: order.user,
+        sender: req.user.id,
+        type: 'order_status_updated',
+        entityId: order._id,
+        message:
+          next === 'cancelled'
+            ? `Your order was cancelled by admin. A ${CANCEL_FEE_PERCENT}% fee applies; ${CANCEL_REFUND_PERCENT}% will be refunded.`
+            : `Your order status is now: ${next}.`,
+      });
+    }
+
+    const shaped = (await shapeOrders([order.toObject()]))[0];
+    res.json({ order: shaped });
+  } catch (err) {
+    console.error('[Admin] updateOrderStatus error:', err);
+    res.status(500).json({ message: 'Failed to update order status' });
+  }
+}
+
 module.exports = {
   getOverview,
   listUsers,
@@ -633,4 +767,6 @@ module.exports = {
   listTransactions,
   listSubscriptions,
   notifyExpiringSubscriptions,
+  listOrders,
+  updateOrderStatus,
 };

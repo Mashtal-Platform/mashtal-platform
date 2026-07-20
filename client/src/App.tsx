@@ -267,6 +267,7 @@ function AppContent() {
             onDeleteRead={actions.deleteReadNotifications}
             onNavigate={actions.navigateWithParams}
             currentUserId={user?.id}
+            userRole={user?.role}
           />
         );
 
@@ -351,6 +352,7 @@ function AppContent() {
           <AdminDashboardPage
             initialTab={state.adminTargetTab}
             highlightPaymentId={state.highlightPaymentId}
+            highlightOrderId={state.highlightOrderId}
             onClearHighlight={() => actions.navigateWithParams('admin', {})}
           />
         );
@@ -451,6 +453,8 @@ function AppContent() {
             onNavigateToBusiness={actions.navigateToBusiness}
             onNavigate={actions.navigate}
             onAddToCart={actions.addToCart}
+            highlightOrderId={state.highlightOrderId}
+            onClearHighlight={() => actions.navigateWithParams('purchase-history', {})}
           />
         );
 

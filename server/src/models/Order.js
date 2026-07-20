@@ -24,13 +24,22 @@ const OrderSchema = new mongoose.Schema(
     items: [OrderItemSchema],
     status: {
       type: String,
-      enum: ['processing', 'shipped', 'delivered', 'cancelled'],
-      default: 'processing',
+      enum: [
+        'pending',
+        'processing',
+        'ready',
+        'completed',
+        'cancelled',
+        // legacy (normalized on read/update)
+        'shipped',
+        'delivered',
+        'canceled',
+      ],
+      default: 'pending',
+      index: true,
     },
     total: { type: Number, required: true },
 
-    // Checkout shipping details captured at payment time.
-    // Optional so existing legacy order creation endpoints don't break.
     shipping: {
       fullName: { type: String },
       email: { type: String },
@@ -39,6 +48,21 @@ const OrderSchema = new mongoose.Schema(
       city: { type: String },
       postalCode: { type: String },
     },
+
+    /** Who cancelled: buyer | admin | system */
+    cancelledBy: {
+      type: String,
+      enum: ['buyer', 'admin', 'system', null],
+      default: null,
+    },
+    cancelledAt: { type: Date },
+    cancelFeePercent: { type: Number, default: null },
+    cancelRefundPercent: { type: Number, default: null },
+    statusUpdatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    statusUpdatedAt: { type: Date },
   },
   {
     timestamps: true,
@@ -56,4 +80,3 @@ OrderSchema.set('toJSON', {
 });
 
 module.exports = mongoose.model('Order', OrderSchema);
-

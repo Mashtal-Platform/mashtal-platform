@@ -21,7 +21,9 @@ import {
   type BusinessDashboardDto,
   type BusinessOrderDto,
 } from '../shared/api/dashboard';
+import { markOrderReady } from '../shared/api/orders';
 import { getImageUrl } from '../shared/api/client';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -57,6 +59,7 @@ export function DashboardPage({
   const [productsLoading, setProductsLoading] = useState(false);
   const [orders, setOrders] = useState<BusinessOrderDto[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [markingReadyId, setMarkingReadyId] = useState<string | null>(null);
   const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
 
   const loadProducts = async () => {
@@ -113,6 +116,21 @@ export function DashboardPage({
       setOrders([]);
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const handleMarkReady = async (orderId: string) => {
+    setMarkingReadyId(orderId);
+    try {
+      await markOrderReady(orderId);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: 'ready' } : o))
+      );
+      toast.success(t('dashboard.markedReady'));
+    } catch (err: any) {
+      toast.error(err?.message || t('dashboard.markReadyFailed'));
+    } finally {
+      setMarkingReadyId(null);
     }
   };
 
@@ -920,10 +938,24 @@ export function DashboardPage({
                         <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('dashboard.products')}</th>
                         <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('dashboard.revenue')}</th>
                         <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('common.status')}</th>
+                        <th className="px-2 py-2 sm:px-4 sm:py-3 font-semibold text-neutral-700">{t('common.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.map((order) => (
+                      {orders.map((order) => {
+                        const status = (order.status || 'processing').toLowerCase();
+                        const canMarkReady = status === 'pending' || status === 'processing';
+                        const statusClass =
+                          status === 'ready'
+                            ? 'bg-blue-50 text-blue-800'
+                            : status === 'completed'
+                              ? 'bg-green-50 text-green-800'
+                              : status === 'cancelled'
+                                ? 'bg-red-50 text-red-800'
+                                : status === 'pending'
+                                  ? 'bg-amber-50 text-amber-800'
+                                  : 'bg-yellow-50 text-yellow-800';
+                        return (
                         <tr
                           key={order.id}
                           data-order-id={order.id}
@@ -962,12 +994,30 @@ export function DashboardPage({
                             ${Number(order.sellerRevenue).toFixed(2)}
                           </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-3">
-                            <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 capitalize">
-                              {order.status || 'processing'}
+                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusClass}`}>
+                              {status}
                             </span>
                           </td>
+                          <td className="px-2 py-2 sm:px-4 sm:py-3">
+                            {canMarkReady ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={markingReadyId === order.id}
+                                onClick={() => void handleMarkReady(order.id)}
+                                className="whitespace-nowrap"
+                              >
+                                {markingReadyId === order.id
+                                  ? '…'
+                                  : t('dashboard.markReady')}
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-neutral-400">—</span>
+                            )}
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

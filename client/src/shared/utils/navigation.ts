@@ -15,7 +15,7 @@ export interface NavigationState {
   highlightOrderId: string | null;
   highlightPaymentId: string | null;
   dashboardTargetSection: 'analytics' | 'products' | 'orders' | null;
-  adminTargetTab: 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'reports' | null;
+  adminTargetTab: 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'orders' | 'reports' | null;
 }
 
 export const initialNavigationState: NavigationState = {

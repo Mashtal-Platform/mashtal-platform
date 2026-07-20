@@ -10,6 +10,8 @@ const {
   listTransactions,
   listSubscriptions,
   notifyExpiringSubscriptions,
+  listOrders,
+  updateOrderStatus,
 } = require('../controllers/adminController');
 
 const router = express.Router();
@@ -23,6 +25,8 @@ router.patch('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.get('/businesses', listBusinesses);
 router.get('/transactions', listTransactions);
+router.get('/orders', listOrders);
+router.patch('/orders/:id/status', updateOrderStatus);
 router.get('/subscriptions', listSubscriptions);
 router.post('/subscriptions/notify-expiring', notifyExpiringSubscriptions);
 

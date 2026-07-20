@@ -460,21 +460,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       if (page === 'admin') {
         const focusingPayment = !!(params.highlightPaymentId || params.paymentId);
+        const focusingOrder = !!(params.highlightOrderId || params.orderId);
         const section = params.section as
           | 'overview'
           | 'users'
           | 'businesses'
           | 'subscriptions'
           | 'transactions'
+          | 'orders'
           | 'reports'
           | undefined;
         setState((prev) => ({
           ...prev,
           currentPage: 'admin',
           highlightPaymentId: params.highlightPaymentId ?? params.paymentId ?? null,
-          adminTargetTab: section || (focusingPayment ? 'transactions' : null),
+          highlightOrderId: params.highlightOrderId ?? params.orderId ?? null,
+          adminTargetTab:
+            section ||
+            (focusingOrder ? 'orders' : focusingPayment ? 'transactions' : null),
         }));
-        // No scroll jump when focusing a transaction or clearing highlight
+        return;
+      }
+      if (page === 'purchase-history') {
+        setState((prev) => ({
+          ...prev,
+          currentPage: 'purchase-history',
+          highlightOrderId: params.highlightOrderId ?? params.orderId ?? null,
+        }));
         return;
       }
     }
