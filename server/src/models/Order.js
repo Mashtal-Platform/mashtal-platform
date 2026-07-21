@@ -35,7 +35,7 @@ const OrderSchema = new mongoose.Schema(
         'delivered',
         'canceled',
       ],
-      default: 'pending',
+      default: 'processing',
       index: true,
     },
     total: { type: Number, required: true },

@@ -1,7 +1,6 @@
 import { apiGet, apiPost, apiPatch } from './client';
 
 export type OrderStatus =
-  | 'pending'
   | 'processing'
   | 'ready'
   | 'completed'
@@ -47,7 +46,7 @@ export async function cancelOrder(orderId: string): Promise<{
   return apiPost(`/orders/${orderId}/cancel`, {});
 }
 
-/** Business: mark order ready (from pending/processing). */
+/** Business: mark order ready (from processing). */
 export async function markOrderReady(orderId: string): Promise<{
   order: OrderDto;
   status: 'ready';

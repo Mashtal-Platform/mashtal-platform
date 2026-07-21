@@ -11,6 +11,14 @@ function getSubscriptionPeriodMs() {
   return getSubscriptionPeriodDays() * 24 * 60 * 60 * 1000;
 }
 
+/** Add one subscription period on top of remaining time (or from now if expired). */
+function computeRenewedExpiryDate(currentExpiresAt, now = new Date()) {
+  const periodMs = getSubscriptionPeriodMs();
+  const current = currentExpiresAt ? new Date(currentExpiresAt).getTime() : 0;
+  const base = current > now.getTime() ? current : now.getTime();
+  return new Date(base + periodMs);
+}
+
 /** Mark expired active subscriptions as inactive. */
 async function expireDueSubscriptions() {
   const now = new Date();
@@ -51,17 +59,18 @@ async function expireDueSubscriptions() {
 }
 
 /**
- * Notify businesses whose subscription expires within the next ~24 hours.
+ * Notify businesses whose subscription expires in about 3 days.
  */
-async function notifyExpiringTomorrow() {
+async function notifyExpiringSoon() {
   const now = new Date();
-  const inAboutOneDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const windowEnd = new Date(now.getTime() + 36 * 60 * 60 * 1000);
+  const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+  const windowStart = new Date(now.getTime() + threeDaysMs - 12 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + threeDaysMs + 12 * 60 * 60 * 1000);
 
   const businesses = await User.find({
     role: 'business',
     subscriptionStatus: 'active',
-    subscriptionExpiresAt: { $gte: now, $lte: windowEnd },
+    subscriptionExpiresAt: { $gte: windowStart, $lte: windowEnd },
   }).lean();
 
   let sent = 0;
@@ -83,14 +92,14 @@ async function notifyExpiringTomorrow() {
     sent += 1;
   }
 
-  return { candidates: businesses.length, sent, windowEnds: inAboutOneDay };
+  return { candidates: businesses.length, sent };
 }
 
 function startSubscriptionMaintenance() {
   const run = async () => {
     try {
       const expired = await expireDueSubscriptions();
-      const notify = await notifyExpiringTomorrow();
+      const notify = await notifyExpiringSoon();
       if (expired || notify.sent) {
         console.log(
           `[Subscription] expired=${expired}, expiryRemindersSent=${notify.sent}`
@@ -176,7 +185,7 @@ async function activatePaidBusinessAccount(userId, session = null) {
   const $set = {
     subscriptionStatus: 'active',
     subscriptionStartedAt: doc.subscriptionStartedAt || now,
-    subscriptionExpiresAt: new Date(now.getTime() + getSubscriptionPeriodMs()),
+    subscriptionExpiresAt: computeRenewedExpiryDate(doc.subscriptionExpiresAt, now),
     subscriptionExpiryReminderSentAt: null,
   };
   const $unset = {};
@@ -207,8 +216,9 @@ async function activatePaidBusinessAccount(userId, session = null) {
 module.exports = {
   getSubscriptionPeriodDays,
   getSubscriptionPeriodMs,
+  computeRenewedExpiryDate,
   expireDueSubscriptions,
-  notifyExpiringTomorrow,
+  notifyExpiringSoon,
   startSubscriptionMaintenance,
   assertBusinessSubscriptionActive,
   isBusinessSubscriptionActive,

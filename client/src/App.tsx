@@ -354,6 +354,7 @@ function AppContent() {
             highlightPaymentId={state.highlightPaymentId}
             highlightOrderId={state.highlightOrderId}
             onClearHighlight={() => actions.navigateWithParams('admin', {})}
+            onNavigate={(page, params) => actions.navigateWithParams(page, params || {})}
           />
         );
 
@@ -364,11 +365,12 @@ function AppContent() {
             highlightProductId={state.highlightProductId}
             highlightOrderId={state.highlightOrderId}
             onClearHighlight={() => actions.navigateWithParams('dashboard', {})}
+            onNavigate={(page, params) => actions.navigateWithParams(page, params || {})}
           />
         );
 
       case 'create-post':
-        if (!isAuthenticated || user?.role !== 'business') {
+        if (!isAuthenticated || (user?.role !== 'business' && user?.role !== 'admin')) {
           return (
             <PostsPage
               onSavePost={actions.addSavedItem}
@@ -395,7 +397,7 @@ function AppContent() {
         );
 
       case 'create-thread':
-        if (!isAuthenticated || user?.role !== 'business') {
+        if (!isAuthenticated || (user?.role !== 'business' && user?.role !== 'admin')) {
           return (
             <ThreadsPage
               onSaveThread={actions.addSavedItem}

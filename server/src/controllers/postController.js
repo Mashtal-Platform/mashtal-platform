@@ -4,9 +4,15 @@ const Notification = require('../models/Notification');
 const SavedItem = require('../models/SavedItem');
 const { Types } = require('mongoose');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
+const {
+  MASHTAL_SUPPORT_NAME,
+  MASHTAL_SUPPORT_AVATAR,
+  getCanonicalAdminId,
+} = require('../utils/publicAdminIdentity');
 
 function getAuthorDisplayName(author) {
   if (!author) return 'Unknown User';
+  if (author.role === 'admin') return MASHTAL_SUPPORT_NAME;
   if (author.role === 'business') {
     const bp = author.businessProfile || {};
     return (bp.companyName || author.fullName || author.name || 'Business').trim();
@@ -14,10 +20,20 @@ function getAuthorDisplayName(author) {
   return (author.fullName || author.name || 'Unknown User').trim();
 }
 
-function shapeAuthor(author) {
+function shapeAuthor(author, canonicalAdminId) {
   const a = author || {};
   const id = a._id ? a._id.toString() : a.id || '';
   const isBusiness = a.role === 'business';
+  if (a.role === 'admin') {
+    return {
+      id: canonicalAdminId || id,
+      name: MASHTAL_SUPPORT_NAME,
+      avatar: MASHTAL_SUPPORT_AVATAR,
+      verified: true,
+      type: 'admin',
+      businessId: undefined,
+    };
+  }
   return {
     id,
     name: getAuthorDisplayName(a),
@@ -28,7 +44,7 @@ function shapeAuthor(author) {
   };
 }
 
-function shapePost(doc, userId) {
+function shapePost(doc, userId, canonicalAdminId) {
   const likesArr = Array.isArray(doc.likes) ? doc.likes : [];
   const isLiked = userId
     ? likesArr.some((uid) => (uid && uid.toString()) === userId)
@@ -46,7 +62,7 @@ function shapePost(doc, userId) {
     isLiked,
     isSaved: !!doc.isSaved,
     timestamp: (doc.createdAt || doc.updatedAt || new Date()).toISOString(),
-    author: shapeAuthor(doc.author),
+    author: shapeAuthor(doc.author, canonicalAdminId),
   };
 }
 
@@ -113,7 +129,8 @@ async function getPosts(req, res) {
         .lean();
     }
 
-    const shaped = posts.map((p) => shapePost(p, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    const shaped = posts.map((p) => shapePost(p, userId, canonicalAdminId));
     res.json(shaped);
   } catch (err) {
     console.error('[Posts] getPosts error:', err);
@@ -133,7 +150,8 @@ async function getPostById(req, res) {
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     const userId = req.user?.id ? String(req.user.id) : null;
-    res.json(shapePost(post, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapePost(post, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Posts] getPostById error:', err);
     res.status(500).json({ message: 'Failed to fetch post' });
@@ -178,8 +196,8 @@ async function createPost(req, res) {
     if (!user) {
       return res.status(400).json({ message: 'Invalid author id' });
     }
-    if (user.role !== 'business') {
-      return res.status(403).json({ message: 'Only business accounts can create posts' });
+    if (user.role !== 'business' && user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only business or admin accounts can create posts' });
     }
 
     const post = await Post.create({
@@ -198,7 +216,8 @@ async function createPost(req, res) {
     const populated = await Post.findById(post._id).populate('author').lean();
 
     const authorIdStr = user._id ? user._id.toString() : null;
-    res.status(201).json(shapePost(populated, authorIdStr));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.status(201).json(shapePost(populated, authorIdStr, canonicalAdminId));
   } catch (err) {
     console.error('[Posts] createPost error:', err);
     res.status(500).json({ message: 'Failed to create post' });
@@ -243,7 +262,8 @@ async function toggleLikePost(req, res) {
 
     await post.save();
 
-    const shaped = shapePost(post.toObject({ virtuals: false }), userId);
+    const canonicalAdminId = await getCanonicalAdminId();
+    const shaped = shapePost(post.toObject({ virtuals: false }), userId, canonicalAdminId);
     res.json(shaped);
   } catch (err) {
     console.error('[Posts] toggleLikePost error:', err);
@@ -261,7 +281,8 @@ async function incrementSharePost(req, res) {
     await Post.updateOne({ _id: id }, { $inc: { shares: 1 } });
     const updated = await Post.findById(id).populate('author').lean();
     const userId = req.user?.id ? String(req.user.id) : null;
-    res.json(shapePost(updated, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapePost(updated, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Posts] incrementSharePost error:', err);
     res.status(500).json({ message: 'Failed to record share' });
@@ -313,7 +334,8 @@ async function updatePost(req, res) {
     post.tags = tags;
     await post.save();
     const populated = await Post.findById(post._id).populate('author').lean();
-    res.json(shapePost(populated, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapePost(populated, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Posts] updatePost error:', err);
     res.status(500).json({ message: 'Failed to update post' });

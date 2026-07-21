@@ -35,7 +35,7 @@ import { SwitchUserModal } from "../components/SwitchUserModal";
 import { ShareModal } from "../components/ShareModal";
 import { fetchUser } from "../shared/api/users";
 import { getImageUrl } from "../shared/api/client";
-import { DEFAULT_BANNER_URL } from "../shared/constants/branding";
+import { DEFAULT_BANNER_URL, MASHTAL_SUPPORT_AVATAR, MASHTAL_SUPPORT_NAME } from "../shared/constants/branding";
 import { fetchComments, createComment, deleteComment, type CommentDto } from "../shared/api/comments";
 import { toggleLikePost, sharePost } from "../shared/api/posts";
 import { toggleLikeThread, shareThread } from "../shared/api/threads";
@@ -159,26 +159,20 @@ export function UserProfilePage({
     }
   };
 
-  // Fetch viewed user when userId is set and different from current user
+  // Fetch profile details (including followersCount) for any profile, including own
   useEffect(() => {
     if (!userId) {
       setProfileLoading(false);
       setViewedUser(null);
       return;
     }
-    if (currentUser && userId === currentUser.id) {
-      setProfileLoading(false);
-      setViewedUser(null);
-      return;
-    }
     let cancelled = false;
     setProfileLoading(true);
-    setViewedUser(null);
     fetchUser(userId)
       .then((data: any) => {
         if (cancelled) return;
         const u = { ...data, id: data.id || (data._id && data._id.toString()) || userId };
-        if (data.role === 'business' && onNavigateToBusiness) {
+        if (data.role === 'business' && onNavigateToBusiness && (!currentUser || userId !== currentUser.id)) {
           onNavigateToBusiness(u.id);
           return;
         }
@@ -206,12 +200,24 @@ export function UserProfilePage({
     return countReplies(post.comments);
   };
 
-  const user = (userId && currentUser && userId === currentUser.id) ? currentUser : viewedUser;
-
-  // Check if viewing own profile
-  const isOwnProfile = currentUser?.id === userId;
+  const isOwnProfile = !!(currentUser?.id && userId && currentUser.id === userId);
+  const user = isOwnProfile
+    ? { ...(currentUser as any), ...(viewedUser || {}), id: currentUser!.id }
+    : viewedUser;
 
   const uid = user?.id || (user as any)?._id?.toString?.();
+  const isAdminProfile = user?.role === 'admin';
+  const profileDisplayName = isAdminProfile
+    ? MASHTAL_SUPPORT_NAME
+    : (user?.fullName || user?.name || 'User');
+  const profileAvatar = isAdminProfile
+    ? MASHTAL_SUPPORT_AVATAR
+    : (user?.avatar || '');
+  const followersCount = Number(
+    user?.followersCount ??
+    (Array.isArray((user as any)?.followers) ? (user as any).followers.length : 0)
+  );
+
   const isFollowing = !!uid && (followedEntities || []).some(
     (e) => (e?.id || (e as any)?._id?.toString?.()) === uid,
   );
@@ -219,8 +225,17 @@ export function UserProfilePage({
   const authorIdMatch = (author: any, id: string | null) =>
     id && (author?.id || author?._id?.toString?.()) === id;
 
-  const userPosts = (allPosts || []).filter((p) => authorIdMatch(p.author, userId)).map((p) => ({ ...p, comments: [] }));
-  const filteredUserThreads = (allThreads || []).filter((thread: any) => authorIdMatch(thread.author, userId));
+  const userPosts = (allPosts || [])
+    .filter((p) =>
+      authorIdMatch(p.author, uid) ||
+      (isAdminProfile && (p.author?.type === 'admin' || p.author?.role === 'admin'))
+    )
+    .map((p) => ({ ...p, comments: [] }));
+  const filteredUserThreads = (allThreads || []).filter(
+    (thread: any) =>
+      authorIdMatch(thread.author, uid) ||
+      (isAdminProfile && (thread.author?.type === 'admin' || thread.author?.role === 'admin'))
+  );
 
   // Sync liked/saved state from API data
   useEffect(() => {
@@ -517,7 +532,7 @@ export function UserProfilePage({
       <div className="relative h-80 bg-gradient-to-r from-green-600 to-green-700">
         <img
           src={getImageUrl((user as any)?.coverImage) || (user as any)?.coverImage || DEFAULT_BANNER_URL}
-          alt={`${user?.fullName || user?.name || 'Profile'} cover`}
+          alt={`${profileDisplayName} cover`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -531,8 +546,8 @@ export function UserProfilePage({
               {/* Profile Image */}
               <div className="relative">
                 <img
-                  src={getImageUrl(user?.avatar) || user?.avatar || ''}
-                  alt={user?.fullName || user?.name || 'Profile'}
+                  src={getImageUrl(profileAvatar) || profileAvatar || ''}
+                  alt={profileDisplayName}
                   className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
                 />
               </div>
@@ -542,7 +557,7 @@ export function UserProfilePage({
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">
-                      {user?.fullName || user?.name || 'User'}
+                      {profileDisplayName}
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 text-neutral-600 mb-3">
                       <div className="flex items-center gap-1.5">
@@ -569,7 +584,7 @@ export function UserProfilePage({
                         <Edit className="w-5 h-5" />
                         <span>{t('profile.editProfile')}</span>
                       </Button>
-                    ) : !isOwnProfile && (onFollow || onUnfollow) && user?.role === 'business' ? (
+                    ) : !isOwnProfile && (onFollow || onUnfollow) && (user?.role === 'business' || user?.role === 'admin') ? (
                       isFollowing ? (
                         <Button
                           onClick={() => user?.id && onUnfollow(user.id)}
@@ -581,7 +596,16 @@ export function UserProfilePage({
                         </Button>
                       ) : (
                         <Button
-                          onClick={() => user && onFollow(user)}
+                          onClick={() =>
+                            user &&
+                            onFollow({
+                              ...user,
+                              id: uid,
+                              fullName: profileDisplayName,
+                              name: profileDisplayName,
+                              avatar: profileAvatar,
+                            })
+                          }
                           className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg"
                         >
                           <User className="w-5 h-5" />
@@ -592,8 +616,29 @@ export function UserProfilePage({
                   </div>
                 </div>
 
-                {/* Stats - user profile: only Posts and Threads (no followers/following) */}
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-8 pt-6 border-t border-neutral-100">
+                {/* Stats */}
+                <div className={`grid gap-4 sm:gap-6 mt-8 pt-6 border-t border-neutral-100 ${
+                  isAdminProfile ? 'grid-cols-3' : 'grid-cols-2'
+                }`}>
+                  {isAdminProfile && (
+                    <button
+                      type="button"
+                      className={`text-center md:text-left ${
+                        isOwnProfile && onNavigate ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
+                      }`}
+                      onClick={() => {
+                        if (isOwnProfile && onNavigate) onNavigate('followers');
+                      }}
+                      disabled={!isOwnProfile || !onNavigate}
+                    >
+                      <div className="text-2xl font-bold text-neutral-900">
+                        {followersCount.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">
+                        {t('common.followers', { defaultValue: 'Followers' })}
+                      </div>
+                    </button>
+                  )}
                   <div className="text-center md:text-left">
                     <div className="text-2xl font-bold text-neutral-900">
                       {userPosts.length}
@@ -771,14 +816,14 @@ export function UserProfilePage({
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center overflow-hidden border border-neutral-100">
                                 <img
-                                  src={getImageUrl(user?.avatar) || user?.avatar || ''}
+                                  src={getImageUrl(profileAvatar) || profileAvatar || ''}
                                   alt=""
                                   className="w-full h-full object-cover"
                                 />
                               </div>
                               <div>
                                 <h4 className="font-bold text-neutral-900 text-sm leading-tight">
-                                  {user.fullName || user.name}
+                                  {profileDisplayName}
                                 </h4>
                                 <p className="text-[10px] text-neutral-400 font-medium uppercase tracking-tight">
                                   {thread.timeAgo || (thread.timestamp ? new Date(thread.timestamp).toLocaleDateString() : '')}

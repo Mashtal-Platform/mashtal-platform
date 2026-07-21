@@ -10,6 +10,7 @@ export interface ChatConversation {
   lastMessageTime: string;
   unread: number;
   online: boolean;
+  isSupport?: boolean;
 }
 
 /** Shared post/thread preview payload (post owner = uploader, NOT chat sender). */
@@ -37,8 +38,16 @@ export interface ChatMessageDto {
   senderAvatar?: string;
   /** Set by server on real-time messages; client derives sender from this. */
   senderId?: string;
+  senderRole?: string;
+  isSupport?: boolean;
   /** When present, show a link preview (image, title, url) in the chat bubble. */
   sharedPost?: SharedPostPreview;
+}
+
+export interface SupportLockState {
+  by: string;
+  name: string;
+  until: string;
 }
 
 export async function getConversations(): Promise<ChatConversation[]> {
@@ -51,11 +60,21 @@ export async function createOrGetConversation(participantId: string): Promise<Ch
   return data;
 }
 
-export async function getMessages(conversationId: string, skip = 0, limit = 50): Promise<ChatMessageDto[]> {
-  const data = await apiGet<ChatMessageDto[]>(
-    `/chat/conversations/${conversationId}/messages?skip=${skip}&limit=${limit}`
-  );
-  return Array.isArray(data) ? data : [];
+export async function getMessages(
+  conversationId: string,
+  skip = 0,
+  limit = 50
+): Promise<{ messages: ChatMessageDto[]; isSupport?: boolean; supportLock?: SupportLockState | null }> {
+  const data = await apiGet<
+    ChatMessageDto[] | { messages: ChatMessageDto[]; isSupport?: boolean; supportLock?: SupportLockState | null }
+  >(`/chat/conversations/${conversationId}/messages?skip=${skip}&limit=${limit}`);
+  // Backward compatible if server still returns a bare array
+  if (Array.isArray(data)) return { messages: data, isSupport: false, supportLock: null };
+  return {
+    messages: Array.isArray(data?.messages) ? data.messages : [],
+    isSupport: !!data?.isSupport,
+    supportLock: data?.supportLock ?? null,
+  };
 }
 
 /** Send a message to a conversation (e.g. when sharing a post/thread to a contact). */
@@ -99,4 +118,25 @@ export async function deleteMessage(
   messageId: string
 ): Promise<{ success: boolean; messageId: string }> {
   return apiDelete(`/chat/conversations/${conversationId}/messages/${messageId}`) as Promise<{ success: boolean; messageId: string }>;
+}
+
+export async function getSupportAdmin(): Promise<{ id: string; fullName: string; avatar?: string; role: string }> {
+  return apiGet('/chat/support-admin');
+}
+
+/** Open or create the shared Mashtal support conversation (visible to all admins). */
+export async function getOrCreateSupportConversation(): Promise<ChatConversation> {
+  return apiPost('/chat/support', {});
+}
+
+export async function getBlockStatus(participantId: string): Promise<{ blocked: boolean; blockedByMe: boolean; canBlock?: boolean }> {
+  return apiGet(`/chat/block-status/${participantId}`);
+}
+
+export async function blockUser(participantId: string): Promise<{ success: boolean; blocked: boolean }> {
+  return apiPost(`/chat/block/${participantId}`, {});
+}
+
+export async function unblockUser(participantId: string): Promise<{ success: boolean; blocked: boolean }> {
+  return apiDelete(`/chat/block/${participantId}`) as Promise<{ success: boolean; blocked: boolean }>;
 }

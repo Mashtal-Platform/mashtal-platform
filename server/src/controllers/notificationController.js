@@ -32,12 +32,10 @@ async function getMyNotifications(req, res) {
       else if (n.type === 'like_post' || n.type === 'like_thread') uiType = 'like';
       else if (n.type === 'comment_post' || n.type === 'comment_thread')
         uiType = 'comment';
-      else if (
-        n.type === 'order_created' ||
-        n.type === 'order_cancelled' ||
-        n.type === 'order_status_updated'
-      )
-        uiType = 'order';
+      else if (n.type === 'order_created' || n.type === 'order_cancelled')
+        uiType = 'order_seller';
+      else if (n.type === 'order_status_updated')
+        uiType = 'order_buyer';
       else if (n.type === 'order_cancelled_admin' || n.type === 'order_ready_admin')
         uiType = 'admin_order';
       else if (n.type === 'payment_received') uiType = 'transaction';
@@ -57,6 +55,13 @@ async function getMyNotifications(req, res) {
         'order_status_updated',
         'order_ready_admin',
       ].includes(n.type);
+
+      if (
+        n.type === 'subscription_expiring' ||
+        n.type === 'subscription_expired' ||
+        n.type === 'subscription_suspended'
+      )
+        uiType = 'subscription';
 
       return {
         id: n._id.toString(),

@@ -351,8 +351,50 @@ async function getBusinessOrders(req, res) {
   }
 }
 
+async function getProductSoldCounts(req, res) {
+  try {
+    const { businessId } = req.params;
+    if (!Types.ObjectId.isValid(businessId)) {
+      return res.status(400).json({ message: 'Invalid business id' });
+    }
+    const businessObjectId = new Types.ObjectId(businessId);
+
+    const rows = await Order.aggregate([
+      { $match: { status: { $nin: ['cancelled', 'canceled'] } } },
+      { $unwind: '$items' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: '$product' },
+      { $match: { 'product.business': businessObjectId } },
+      {
+        $group: {
+          _id: '$product._id',
+          sold: { $sum: '$items.quantity' },
+        },
+      },
+    ]);
+
+    const counts = {};
+    for (const row of rows) {
+      counts[String(row._id)] = Number(row.sold) || 0;
+    }
+
+    res.json({ counts });
+  } catch (err) {
+    console.error('[Dashboard] getProductSoldCounts error:', err);
+    res.status(500).json({ message: 'Failed to fetch product sold counts' });
+  }
+}
+
 module.exports = {
   getBusinessDashboard,
   getBusinessOrders,
+  getProductSoldCounts,
 };
 

@@ -37,6 +37,12 @@ const ChatMessageSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    /** Denormalized role so support inbox can align all admin messages together. */
+    senderRole: {
+      type: String,
+      enum: ['visitor', 'business', 'admin'],
+      default: 'visitor',
+    },
     text: {
       type: String,
       required: true,

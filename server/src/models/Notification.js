@@ -27,6 +27,7 @@ const NotificationSchema = new mongoose.Schema(
         'chat_message',
         'subscription_expiring',
         'subscription_expired',
+        'subscription_suspended',
         'payment_received',
         'business_report',
         'admin_warning',

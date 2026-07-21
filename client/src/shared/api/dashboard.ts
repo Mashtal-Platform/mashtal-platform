@@ -91,3 +91,10 @@ export async function fetchBusinessOrders(params: {
   return Array.isArray(data?.orders) ? data.orders : [];
 }
 
+export async function fetchProductSoldCounts(businessId: string): Promise<Record<string, number>> {
+  const data = await apiGet<{ counts: Record<string, number> }>(
+    `/dashboard/business/${businessId}/product-sold`
+  );
+  return data?.counts || {};
+}
+

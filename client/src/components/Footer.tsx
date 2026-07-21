@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAppState } from '../shared/store/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
+import { getOrCreateSupportConversation } from '../shared/api/chat';
 import type { Page } from '../shared/types';
 
 const SUPPORT_EMAIL = 'support@mashtal.com';
@@ -47,7 +48,7 @@ function FooterLinkButton({
 
 export function Footer() {
   const { t } = useTranslation();
-  const { state, navigate } = useAppState();
+  const { state, navigate, navigateWithParams } = useAppState();
   const { isAuthenticated, user } = useAuth();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
@@ -80,8 +81,21 @@ export function Footer() {
     navigate('register-business');
   };
 
-  const handleSupport = () => {
-    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Mashtal support')}`;
+  const handleSupport = async () => {
+    if (!isAuthenticated) {
+      navigate('signin');
+      return;
+    }
+    try {
+      if (user?.role === 'admin') {
+        navigate('chats');
+        return;
+      }
+      const conv = await getOrCreateSupportConversation();
+      navigateWithParams('chats', { profileId: conv.profileId });
+    } catch {
+      toast.error(t('footer.supportUnavailable', { defaultValue: 'Support chat is unavailable right now' }));
+    }
   };
 
   const handleNewsletter = (e: React.FormEvent) => {

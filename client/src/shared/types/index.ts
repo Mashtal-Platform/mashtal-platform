@@ -17,6 +17,7 @@ export interface User {
   businessType?: string;
   verified?: boolean;
   subscriptionStatus?: 'active' | 'inactive';
+  subscriptionExpiresAt?: string | null;
   businessId?: string;
 }
 
@@ -91,6 +92,7 @@ export type Page =
 export interface CartItem {
   id: string;
   productId: string;
+  stock?: number;
   productName: string;
   price: number;
   quantity: number;

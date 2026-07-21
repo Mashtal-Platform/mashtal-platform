@@ -344,7 +344,7 @@ export function PostsPage({
           </div>
           
           {/* Create Post - business accounts only */}
-          {isAuthenticated && user?.role === 'business' && (
+          {isAuthenticated && (user?.role === 'business' || user?.role === 'admin') && (
             <div className="relative">
               <Button
                 onClick={onCreatePost}

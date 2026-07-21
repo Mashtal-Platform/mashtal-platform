@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchMentionableProfiles } from '../shared/api/users';
 import { getAvatarUrl } from '../shared/api/client';
 import { useTranslation } from 'react-i18next';
+import { MASHTAL_SUPPORT_AVATAR, MASHTAL_SUPPORT_NAME } from '../shared/constants/branding';
 
 interface CreateThreadPageProps {
   onCreateThread: (thread: { title: string; content: string; tags?: string[] }) => void;
@@ -26,7 +27,11 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
   const displayName =
     user?.role === 'business'
       ? (user.companyName || user.fullName || t('common.business'))
-      : (user?.fullName || t('common.you'));
+      : user?.role === 'admin'
+        ? MASHTAL_SUPPORT_NAME
+        : (user?.fullName || t('common.you'));
+  const displayAvatar =
+    user?.role === 'admin' ? MASHTAL_SUPPORT_AVATAR : (user?.avatar ?? '');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -352,7 +357,7 @@ export function CreateThreadPage({ onCreateThread, onBack }: CreateThreadPagePro
               {/* Author Info */}
               <div className="flex items-center gap-3 mb-4">
                 <img
-                  src={getAvatarUrl(user?.avatar, displayName)}
+                  src={getAvatarUrl(displayAvatar, displayName)}
                   alt={displayName}
                   className="w-12 h-12 rounded-full object-cover"
                 />

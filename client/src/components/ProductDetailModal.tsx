@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Send, User, Pencil, Trash2 } from 'lucide-react';
+import { X, Star, Send, User, Pencil, Trash2, Share2 } from 'lucide-react';
+import { ShareModal } from './ShareModal';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { getImageUrl } from '../shared/api/client';
@@ -36,6 +37,7 @@ export function ProductDetailModal({
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const myReview = currentUser?.id && reviews.find((r) => r.user === currentUser.id);
 
@@ -197,15 +199,33 @@ export function ProductDetailModal({
                     <span className="text-neutral-400">({displayReviewsCount})</span>
                   </div>
                   <p className="text-base font-bold text-green-600">${displayProduct.price}</p>
-                  {isAuthenticated && displayProduct.inStock && onAddToCart && (
-                    <Button
-                      size="sm"
-                      className="mt-1.5 h-8 text-xs"
-                      onClick={() => onAddToCart(displayProduct)}
-                    >
-                      {t('shopping.addToCart')}
-                    </Button>
-                  )}
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {displayProduct.inStock
+                      ? t('shopping.inStockCount', { count: displayProduct.stock })
+                      : t('shopping.outOfStock')}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {isAuthenticated && displayProduct.inStock && onAddToCart && (
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => onAddToCart(displayProduct)}
+                      >
+                        {t('shopping.addToCart')}
+                      </Button>
+                    )}
+                    {isAuthenticated && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => setShowShareModal(true)}
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        {t('common.share', { defaultValue: 'Share' })}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -339,6 +359,18 @@ export function ProductDetailModal({
           )}
         </div>
       </div>
+
+      {displayProduct && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          postId={displayProduct.id}
+          postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/product/${displayProduct.id}`}
+          postTitle={displayProduct.name}
+          postImage={displayProduct.image}
+          postOwnerName={displayProduct.businessName}
+        />
+      )}
     </div>
   );
 }

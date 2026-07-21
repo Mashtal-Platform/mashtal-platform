@@ -3,6 +3,38 @@ const Post = require('../models/Post');
 const Thread = require('../models/Thread');
 const { Types } = require('mongoose');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
+const {
+  MASHTAL_SUPPORT_NAME,
+  MASHTAL_SUPPORT_AVATAR,
+  getCanonicalAdminId,
+} = require('../utils/publicAdminIdentity');
+
+function shapeCommentAuthor(author, canonicalAdminId) {
+  const a = author || {};
+  const id = a._id ? a._id.toString() : '';
+  if (a.role === 'admin') {
+    return {
+      id: canonicalAdminId || id,
+      name: MASHTAL_SUPPORT_NAME,
+      avatar: MASHTAL_SUPPORT_AVATAR,
+      verified: true,
+      type: 'admin',
+      businessId: undefined,
+    };
+  }
+  const isBusiness = a.role === 'business';
+  const bp = a.businessProfile || {};
+  return {
+    id,
+    name: isBusiness
+      ? (bp.companyName || a.fullName || 'Business').trim()
+      : (a.fullName || 'Unknown').trim(),
+    avatar: a.avatar || '',
+    verified: !!a.verified,
+    type: a.role || 'user',
+    businessId: isBusiness ? id : undefined,
+  };
+}
 
 async function getComments(req, res) {
   try {
@@ -25,14 +57,7 @@ async function getComments(req, res) {
       .populate('author', 'fullName avatar verified role businessProfile.companyName')
       .lean();
 
-    function getAuthorDisplayName(author) {
-      if (!author) return 'Unknown';
-      if (author.role === 'business') {
-        const bp = author.businessProfile || {};
-        return (bp.companyName || author.fullName || 'Business').trim();
-      }
-      return (author.fullName || 'Unknown').trim();
-    }
+    const canonicalAdminId = await getCanonicalAdminId();
 
     function shapeComment(c) {
       const author = c.author || {};
@@ -40,22 +65,13 @@ async function getComments(req, res) {
       const isLiked = userId
         ? likesArr.some((uid) => uid && String(uid) === userId)
         : false;
-      const id = author._id ? author._id.toString() : '';
-      const isBusiness = author.role === 'business';
       return {
         id: c._id.toString(),
         content: c.content,
         createdAt: c.createdAt,
         likes: likesArr.length,
         isLiked,
-        author: {
-          id,
-          name: getAuthorDisplayName(author),
-          avatar: author.avatar || '',
-          verified: !!author.verified,
-          type: author.role || 'user',
-          businessId: isBusiness ? id : undefined,
-        },
+        author: shapeCommentAuthor(author, canonicalAdminId),
         replies: [],
       };
     }
@@ -126,25 +142,13 @@ async function createComment(req, res) {
       .populate('author', 'fullName avatar verified role businessProfile.companyName')
       .lean();
     const author = populated?.author || {};
-    const authorId = author._id ? author._id.toString() : '';
-    const isBusiness = author.role === 'business';
-    const bp = author.businessProfile || {};
-    const displayName = isBusiness
-      ? (bp.companyName || author.fullName || 'Business').trim()
-      : (author.fullName || 'Unknown').trim();
+    const canonicalAdminId = await getCanonicalAdminId();
     res.status(201).json({
       id: comment._id.toString(),
       content: comment.content,
       createdAt: comment.createdAt,
       likes: 0,
-      author: {
-        id: authorId,
-        name: displayName,
-        avatar: author.avatar || '',
-        verified: !!author.verified,
-        type: author.role || 'user',
-        businessId: isBusiness ? authorId : undefined,
-      },
+      author: shapeCommentAuthor(author, canonicalAdminId),
       replies: [],
     });
   } catch (err) {

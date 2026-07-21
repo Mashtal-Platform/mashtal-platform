@@ -80,14 +80,20 @@ function buildNotificationMessage(n, senderName, lang) {
     case 'subscription_expiring':
       return pick(
         L,
-        'Your Mashtal business subscription ends tomorrow. Renew payment to keep selling.',
-        'ينتهي اشتراك نشاطك التجاري في مشتل غداً. جدّد الدفع للاستمرار في البيع.'
+        'Your Mashtal business subscription expires in 3 days. Renew now to add 60 more days and keep selling.',
+        'ينتهي اشتراك نشاطك التجاري في مشتل خلال 3 أيام. جدّد الآن لإضافة 60 يوماً والاستمرار في البيع.'
       );
     case 'subscription_expired':
       return pick(
         L,
         'Your Mashtal business subscription has ended. Renew payment to list products again.',
         'انتهى اشتراك نشاطك التجاري في مشتل. جدّد الدفع لإدراج المنتجات مجدداً.'
+      );
+    case 'subscription_suspended':
+      return pick(
+        L,
+        'Your Mashtal business account has been suspended by an administrator. Renew payment to reactivate your subscription.',
+        'تم تعليق حساب نشاطك التجاري في مشتل من قبل المسؤول. جدّد الدفع لإعادة تفعيل اشتراكك.'
       );
     case 'chat_message': {
       const count = n.messageCount && n.messageCount > 0 ? n.messageCount : 1;
