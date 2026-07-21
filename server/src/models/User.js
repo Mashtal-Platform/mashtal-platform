@@ -121,6 +121,8 @@ const UserSchema = new mongoose.Schema(
 
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    /** Users this account has blocked (mutual messaging is prevented). */
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     businessProfile: BusinessProfileSchema,
     /** Filled on convert/signup-as-business; applied to businessProfile only after fee payment */

@@ -11,6 +11,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { assertBusinessSubscriptionActive } = require('../utils/subscription');
+const { getAdminRecipientIds } = require('../utils/publicAdminIdentity');
 
 function toMoneyNumber(n) {
   const num = Number(n);
@@ -191,7 +192,7 @@ async function finalizeCartPaymentIfComplete(paymentDoc, session) {
           quantity: l.quantity,
           priceAtPurchase: l.priceAtPurchase,
         })),
-        status: 'pending',
+        status: 'processing',
         total: payment.amountTotal,
         shipping: payment.shipping || undefined,
       },
@@ -271,14 +272,12 @@ async function finalizeCartPaymentIfComplete(paymentDoc, session) {
     );
   }
 
-  // Notify all admins about the new payment / transaction group
-  const admins = session
-    ? await User.find({ role: 'admin' }).select('_id').session(session).lean()
-    : await User.find({ role: 'admin' }).select('_id').lean();
-  if (admins.length) {
+  // Notify shared admin account about the new payment / transaction group
+  const adminIds = await getAdminRecipientIds();
+  if (adminIds.length) {
     await Notification.insertMany(
-      admins.map((a) => ({
-        recipient: a._id,
+      adminIds.map((id) => ({
+        recipient: id,
         sender: payment.user,
         type: 'payment_received',
         entityId: payment._id,
@@ -742,11 +741,11 @@ async function handleStripeWebhook(req, res) {
             { upsert: true, session, new: true }
           );
 
-          const admins = await User.find({ role: 'admin' }).select('_id').session(session).lean();
-          if (admins.length) {
+          const adminIds = await getAdminRecipientIds();
+          if (adminIds.length) {
             await Notification.insertMany(
-              admins.map((a) => ({
-                recipient: a._id,
+              adminIds.map((id) => ({
+                recipient: id,
                 sender: latestPayment.user,
                 type: 'payment_received',
                 entityId: latestPayment._id,
@@ -814,7 +813,7 @@ async function handleStripeWebhook(req, res) {
                 quantity: l.quantity,
                 priceAtPurchase: l.priceAtPurchase,
               })),
-              status: 'pending',
+              status: 'processing',
               total: latestPayment.amountTotal,
             },
           ],

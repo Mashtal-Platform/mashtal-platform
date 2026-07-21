@@ -5,7 +5,9 @@ const MoneyTransaction = require('../models/MoneyTransaction');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
+const Notification = require('../models/Notification');
 const { BusinessReport } = require('../models/BusinessReport');
+const { invalidateCanonicalAdminCache } = require('../utils/publicAdminIdentity');
 
 function shapeUser(u) {
   if (!u) return null;
@@ -284,6 +286,7 @@ async function createUser(req, res) {
       subscriptionStatus: role === 'business' ? 'inactive' : undefined,
       verified: true,
     });
+    if (role === 'admin') invalidateCanonicalAdminCache();
     res.status(201).json(shapeUser(user.toJSON ? user.toJSON() : user));
   } catch (err) {
     console.error('[Admin] createUser error:', err);
@@ -295,6 +298,9 @@ async function updateUser(req, res) {
   try {
     const { id } = req.params;
     const body = req.body || {};
+    const existing = await User.findById(id).lean();
+    if (!existing) return res.status(404).json({ message: 'User not found' });
+
     const updates = {};
     if (body.fullName != null) updates.fullName = String(body.fullName);
     if (body.role != null && ['visitor', 'business', 'admin'].includes(body.role)) {
@@ -304,9 +310,8 @@ async function updateUser(req, res) {
       updates.subscriptionStatus = body.subscriptionStatus;
       if (body.subscriptionStatus === 'active') {
         const { getSubscriptionPeriodMs } = require('../utils/subscription');
-        const existing = await User.findById(id).select('subscriptionStartedAt').lean();
         updates.subscriptionStartedAt =
-          existing?.subscriptionStartedAt || new Date();
+          existing.subscriptionStartedAt || new Date();
         updates.subscriptionExpiresAt = new Date(Date.now() + getSubscriptionPeriodMs());
         updates.subscriptionExpiryReminderSentAt = null;
       }
@@ -326,6 +331,24 @@ async function updateUser(req, res) {
 
     const user = await User.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (updates.role === 'admin' || existing.role === 'admin') {
+      invalidateCanonicalAdminCache();
+    }
+
+    const suspendedByAdmin =
+      existing.role === 'business' &&
+      existing.subscriptionStatus === 'active' &&
+      body.subscriptionStatus === 'inactive';
+
+    if (suspendedByAdmin) {
+      await Notification.create({
+        recipient: existing._id,
+        type: 'subscription_suspended',
+        entityId: existing._id,
+      });
+    }
+
     res.json(shapeUser(user));
   } catch (err) {
     console.error('[Admin] updateUser error:', err);
@@ -611,10 +634,10 @@ async function listSubscriptions(req, res) {
 
 async function notifyExpiringSubscriptions(req, res) {
   try {
-    const { notifyExpiringTomorrow } = require('../utils/subscription');
-    const result = await notifyExpiringTomorrow();
+    const { notifyExpiringSoon } = require('../utils/subscription');
+    const result = await notifyExpiringSoon();
     res.json({
-      message: `Sent ${result.sent} renewal reminder(s) to businesses expiring within ~24h`,
+      message: `Sent ${result.sent} renewal reminder(s) to businesses expiring in ~3 days`,
       ...result,
     });
   } catch (err) {
@@ -694,6 +717,7 @@ async function updateOrderStatus(req, res) {
       CANCEL_FEE_PERCENT,
       CANCEL_REFUND_PERCENT,
       isCancellableStatus,
+      canSetCompleted,
     } = require('../utils/orderStatus');
 
     const { status } = req.body || {};
@@ -702,6 +726,9 @@ async function updateOrderStatus(req, res) {
       return res.status(400).json({
         message: `status must be one of: ${ORDER_STATUSES.join(', ')}`,
       });
+    }
+    if (next === 'completed' && !canSetCompleted(req.user?.role)) {
+      return res.status(403).json({ message: 'Only admins can mark orders as completed' });
     }
 
     const order = await Order.findById(req.params.id).populate('items.product');

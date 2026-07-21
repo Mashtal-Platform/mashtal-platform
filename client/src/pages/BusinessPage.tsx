@@ -299,6 +299,7 @@ export function BusinessPage({ businessId, onAddToCart, onOpenChat, followedBusi
       price: product.priceNum ?? product.price,
       image: product.image,
       businessName: displayName,
+      stock: product.stock,
     });
   };
 

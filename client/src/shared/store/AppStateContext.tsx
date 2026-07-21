@@ -37,6 +37,7 @@ import {
 import { fetchFollowers, fetchFollowing, fetchUser, followUser as apiFollowUser, unfollowUser as apiUnfollowUser, removeFollower as apiRemoveFollower } from '../api/users';
 import { saveItem as apiSaveItem, deleteSavedItem as apiDeleteSavedItem, fetchSavedItems } from '../api/saved';
 import { filterOutOrphanSavedItems } from '../utils/saved';
+import { MASHTAL_SUPPORT_AVATAR, MASHTAL_SUPPORT_NAME } from '../constants/branding';
 
 interface AppState extends NavigationState {
   // Cart
@@ -524,7 +525,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // Cart handlers
   const addToCart = useCallback((item: Omit<CartItem, 'id' | 'quantity'>) => {
-    setState(prev => ({ ...prev, cartItems: addItemToCart(prev.cartItems, item) }));
+    setState((prev) => {
+      const result = addItemToCart(prev.cartItems, item);
+      if (!result.added) {
+        if (result.reason === 'max') {
+          import('sonner').then(({ toast }) =>
+            toast.error('Maximum available quantity reached for this product')
+          );
+        } else if (result.reason === 'out_of_stock') {
+          import('sonner').then(({ toast }) => toast.error('This product is out of stock'));
+        }
+        return prev;
+      }
+      return { ...prev, cartItems: result.cart };
+    });
   }, []);
 
   const updateCartItemQuantity = useCallback((itemId: string, quantity: number) => {
@@ -599,8 +613,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             name:
               user.role === 'business'
                 ? (user.companyName || user.fullName || 'Business')
-                : (user.fullName || 'User'),
-            avatar: user.avatar ?? '',
+                : user.role === 'admin'
+                  ? MASHTAL_SUPPORT_NAME
+                  : (user.fullName || 'User'),
+            avatar: user.role === 'admin' ? MASHTAL_SUPPORT_AVATAR : (user.avatar ?? ''),
             verified: user.verified ?? false,
             type: (user.role as any) ?? 'user',
             businessId: user.role === 'business' ? user.id : (user as any)?.businessId,
@@ -654,8 +670,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             name:
               user.role === 'business'
                 ? (user.companyName || user.fullName || 'Business')
-                : (user.fullName || 'User'),
-            avatar: user.avatar ?? '',
+                : user.role === 'admin'
+                  ? MASHTAL_SUPPORT_NAME
+                  : (user.fullName || 'User'),
+            avatar: user.role === 'admin' ? MASHTAL_SUPPORT_AVATAR : (user.avatar ?? ''),
             verified: user.verified ?? false,
             type: (user.role as any) ?? 'user',
             businessId: user.role === 'business' ? user.id : (user as any)?.businessId,

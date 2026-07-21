@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { getCanonicalAdminId } = require('../utils/publicAdminIdentity');
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -16,38 +17,63 @@ function extractBearerToken(req) {
   return token || null;
 }
 
-function optionalAuth(req, _res, next) {
-  try {
-    const token = extractBearerToken(req);
-    if (!token) return next();
-    const payload = jwt.verify(token, getJwtSecret());
-    req.user = {
-      id: payload.sub,
-      role: payload.role,
-      email: payload.email,
-      fullName: payload.fullName,
-    };
-    next();
-  } catch (_err) {
-    next();
+async function attachUserFromPayload(payload) {
+  let id = payload.sub;
+  let operatorId = payload.operatorId || null;
+  let operatorEmail = payload.operatorEmail || null;
+  let operatorName = payload.operatorName || null;
+  let fullName = payload.fullName;
+  let email = payload.email;
+
+  // Every admin session acts as the shared canonical account
+  if (payload.role === 'admin') {
+    const canonicalId = await getCanonicalAdminId();
+    if (canonicalId) {
+      operatorId = payload.operatorId || payload.sub;
+      operatorEmail = payload.operatorEmail || payload.email || null;
+      operatorName = payload.operatorName || payload.fullName || 'Admin';
+      id = canonicalId;
+      fullName = 'Mashtal Support';
+    }
   }
+
+  return {
+    id,
+    role: payload.role,
+    email,
+    fullName,
+    operatorId,
+    operatorEmail,
+    operatorName,
+  };
+}
+
+function optionalAuth(req, _res, next) {
+  (async () => {
+    try {
+      const token = extractBearerToken(req);
+      if (!token) return next();
+      const payload = jwt.verify(token, getJwtSecret());
+      req.user = await attachUserFromPayload(payload);
+      next();
+    } catch (_err) {
+      next();
+    }
+  })();
 }
 
 function requireAuth(req, res, next) {
-  try {
-    const token = extractBearerToken(req);
-    if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    const payload = jwt.verify(token, getJwtSecret());
-    req.user = {
-      id: payload.sub,
-      role: payload.role,
-      email: payload.email,
-      fullName: payload.fullName,
-    };
-    next();
-  } catch (_err) {
-    res.status(401).json({ message: 'Unauthorized' });
-  }
+  (async () => {
+    try {
+      const token = extractBearerToken(req);
+      if (!token) return res.status(401).json({ message: 'Unauthorized' });
+      const payload = jwt.verify(token, getJwtSecret());
+      req.user = await attachUserFromPayload(payload);
+      next();
+    } catch (_err) {
+      res.status(401).json({ message: 'Unauthorized' });
+    }
+  })();
 }
 
 function requireRole(roles) {
@@ -66,4 +92,3 @@ module.exports = {
   requireAuth,
   requireRole,
 };
-

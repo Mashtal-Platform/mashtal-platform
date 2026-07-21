@@ -3,6 +3,7 @@ const { BusinessReport, REPORT_REASONS } = require('../models/BusinessReport');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
+const { getAdminRecipientIds } = require('../utils/publicAdminIdentity');
 
 const REASON_LABELS = {
   spam: 'Spam or unwanted promotion',
@@ -96,12 +97,12 @@ async function createBusinessReport(req, res) {
       status: 'pending',
     });
 
-    // Notify all admins
-    const admins = await User.find({ role: 'admin' }).select('_id').lean();
-    if (admins.length) {
+    // Notify shared admin account
+    const adminIds = await getAdminRecipientIds();
+    if (adminIds.length) {
       await Notification.insertMany(
-        admins.map((a) => ({
-          recipient: a._id,
+        adminIds.map((id) => ({
+          recipient: id,
           sender: reporterId,
           type: 'business_report',
           entityId: report._id,

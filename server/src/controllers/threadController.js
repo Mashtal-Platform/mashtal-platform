@@ -4,9 +4,15 @@ const Notification = require('../models/Notification');
 const SavedItem = require('../models/SavedItem');
 const { Types } = require('mongoose');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
+const {
+  MASHTAL_SUPPORT_NAME,
+  MASHTAL_SUPPORT_AVATAR,
+  getCanonicalAdminId,
+} = require('../utils/publicAdminIdentity');
 
 function getAuthorDisplayName(author) {
   if (!author) return 'Unknown User';
+  if (author.role === 'admin') return MASHTAL_SUPPORT_NAME;
   if (author.role === 'business') {
     const bp = author.businessProfile || {};
     return (bp.companyName || author.fullName || author.name || 'Business').trim();
@@ -14,10 +20,20 @@ function getAuthorDisplayName(author) {
   return (author.fullName || author.name || 'Unknown User').trim();
 }
 
-function shapeAuthor(author) {
+function shapeAuthor(author, canonicalAdminId) {
   const a = author || {};
   const id = a._id ? a._id.toString() : a.id || '';
   const isBusiness = a.role === 'business';
+  if (a.role === 'admin') {
+    return {
+      id: canonicalAdminId || id,
+      name: MASHTAL_SUPPORT_NAME,
+      avatar: MASHTAL_SUPPORT_AVATAR,
+      verified: true,
+      type: 'admin',
+      businessId: undefined,
+    };
+  }
   return {
     id,
     name: getAuthorDisplayName(a),
@@ -28,7 +44,7 @@ function shapeAuthor(author) {
   };
 }
 
-function shapeThread(doc, userId) {
+function shapeThread(doc, userId, canonicalAdminId) {
   const likesArr = Array.isArray(doc.likes) ? doc.likes : [];
   const isLiked = userId
     ? likesArr.some((uid) => (uid && uid.toString()) === userId)
@@ -45,7 +61,7 @@ function shapeThread(doc, userId) {
     isLiked,
     isSaved: !!doc.isSaved,
     timestamp: (doc.createdAt || doc.updatedAt || new Date()).toISOString(),
-    author: shapeAuthor(doc.author),
+    author: shapeAuthor(doc.author, canonicalAdminId),
   };
 }
 
@@ -112,7 +128,8 @@ async function getThreads(req, res) {
         .lean();
     }
 
-    const shaped = threads.map((t) => shapeThread(t, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    const shaped = threads.map((t) => shapeThread(t, userId, canonicalAdminId));
     res.json(shaped);
   } catch (err) {
     console.error('[Threads] getThreads error:', err);
@@ -132,7 +149,8 @@ async function getThreadById(req, res) {
     if (!thread) return res.status(404).json({ message: 'Thread not found' });
 
     const userId = req.user?.id ? String(req.user.id) : null;
-    res.json(shapeThread(thread, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapeThread(thread, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Threads] getThreadById error:', err);
     res.status(500).json({ message: 'Failed to fetch thread' });
@@ -158,8 +176,8 @@ async function createThread(req, res) {
     if (!user) {
       return res.status(400).json({ message: 'Invalid author id' });
     }
-    if (user.role !== 'business') {
-      return res.status(403).json({ message: 'Only business accounts can create threads' });
+    if (user.role !== 'business' && user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only business or admin accounts can create threads' });
     }
 
     const thread = await Thread.create({
@@ -177,7 +195,8 @@ async function createThread(req, res) {
     const populated = await Thread.findById(thread._id).populate('author').lean();
 
     const authorIdStr = user._id ? user._id.toString() : null;
-    res.status(201).json(shapeThread(populated, authorIdStr));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.status(201).json(shapeThread(populated, authorIdStr, canonicalAdminId));
   } catch (err) {
     console.error('[Threads] createThread error:', err);
     res.status(500).json({ message: 'Failed to create thread' });
@@ -226,7 +245,8 @@ async function toggleLikeThread(req, res) {
     await thread.save();
 
     const plain = thread.toObject ? thread.toObject({ virtuals: false }) : thread;
-    const shaped = shapeThread(plain, userId);
+    const canonicalAdminId = await getCanonicalAdminId();
+    const shaped = shapeThread(plain, userId, canonicalAdminId);
     res.json(shaped);
   } catch (err) {
     console.error('[Threads] toggleLikeThread error:', err);
@@ -244,7 +264,8 @@ async function incrementShareThread(req, res) {
     await Thread.updateOne({ _id: id }, { $inc: { shares: 1 } });
     const updated = await Thread.findById(id).populate('author').lean();
     const userId = req.user?.id ? String(req.user.id) : null;
-    res.json(shapeThread(updated, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapeThread(updated, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Threads] incrementShareThread error:', err);
     res.status(500).json({ message: 'Failed to record share' });
@@ -280,7 +301,8 @@ async function updateThread(req, res) {
     if (Array.isArray(tags)) thread.tags = tags;
     await thread.save();
     const populated = await Thread.findById(thread._id).populate('author').lean();
-    res.json(shapeThread(populated, userId));
+    const canonicalAdminId = await getCanonicalAdminId();
+    res.json(shapeThread(populated, userId, canonicalAdminId));
   } catch (err) {
     console.error('[Threads] updateThread error:', err);
     res.status(500).json({ message: 'Failed to update thread' });

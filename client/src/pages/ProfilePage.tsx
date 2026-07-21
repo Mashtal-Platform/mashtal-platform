@@ -859,10 +859,23 @@ export function ProfilePage({
                     <div className="text-2xl font-bold text-neutral-900">{userThreads.length}</div>
                     <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Threads</div>
                   </div>
-                  <div className="text-center md:text-left">
-                    <div className="text-2xl font-bold text-neutral-900">{followingCount}</div>
-                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('profile.following')}</div>
-                  </div>
+                  {userRole === 'admin' ? (
+                    <button
+                      type="button"
+                      className="text-center md:text-left cursor-pointer hover:opacity-80"
+                      onClick={() => onNavigate('followers')}
+                    >
+                      <div className="text-2xl font-bold text-neutral-900">{followersCount}</div>
+                      <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">
+                        {t('profile.followers')}
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="text-center md:text-left">
+                      <div className="text-2xl font-bold text-neutral-900">{followingCount}</div>
+                      <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest">{t('profile.following')}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1014,8 +1027,8 @@ export function ProfilePage({
             )}
           </div>
 
-          {/* Followers Card - Only for Business */}
-          {userRole === 'business' && (
+          {/* Followers Card - Business & Admin (Mashtal Support) */}
+          {(userRole === 'business' || userRole === 'admin') && (
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                  onClick={() => onNavigate('followers')}
             >

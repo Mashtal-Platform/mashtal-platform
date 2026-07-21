@@ -287,6 +287,7 @@ export function ShoppingPage({
         price: product.price,
         image: product.image,
         businessName: product.businessName,
+        stock: product.stock,
       });
     }
   };

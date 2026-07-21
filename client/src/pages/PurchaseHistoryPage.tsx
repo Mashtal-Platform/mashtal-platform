@@ -66,7 +66,7 @@ type Purchase = {
   cancelRefundPercent?: number | null;
 };
 
-const CANCELLABLE: OrderStatus[] = ['pending', 'processing'];
+const CANCELLABLE: OrderStatus[] = ['processing'];
 
 function statusLabel(status: string, t: (k: string) => string) {
   switch (status) {

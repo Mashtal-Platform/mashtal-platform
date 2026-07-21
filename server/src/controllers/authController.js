@@ -9,6 +9,10 @@ const {
   normalizeBusinessProfile,
   validateBusinessProfile,
 } = require('../utils/businessProfile');
+const {
+  buildAdminAuthSession,
+  shapeAdminMeResponse,
+} = require('../utils/publicAdminIdentity');
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -16,14 +20,34 @@ function getJwtSecret() {
   return secret;
 }
 
-function signToken(user) {
-  const payload = {
-    sub: user._id.toString(),
-    role: user.role,
-    email: user.email,
-    fullName: user.fullName,
-  };
+function signToken(payloadOrUser) {
+  const payload = payloadOrUser.sub
+    ? payloadOrUser
+    : {
+        sub: payloadOrUser._id.toString(),
+        role: payloadOrUser.role,
+        email: payloadOrUser.email,
+        fullName: payloadOrUser.fullName,
+      };
   return jwt.sign(payload, getJwtSecret(), { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+}
+
+/** Issue JWT + user JSON; admins always open the shared canonical account. */
+async function issueAuthResponse(userDoc) {
+  const plain = userDoc.toJSON ? userDoc.toJSON() : userDoc;
+  if (plain.role === 'admin') {
+    const session = await buildAdminAuthSession(userDoc);
+    if (session) {
+      return {
+        token: signToken(session.tokenPayload),
+        user: session.user,
+      };
+    }
+  }
+  return {
+    token: signToken(userDoc),
+    user: toUserResponse(userDoc),
+  };
 }
 
 function toUserResponse(userDoc) {
@@ -162,8 +186,8 @@ async function login(req, res) {
       await user.save({ validateBeforeSave: false });
     }
 
-    const token = signToken(user);
-    res.json({ token, user: toUserResponse(user) });
+    const { token, user: sessionUser } = await issueAuthResponse(user);
+    res.json({ token, user: sessionUser });
   } catch (err) {
     console.error('[Auth] login error:', err);
     res.status(500).json({ message: 'Failed to login' });
@@ -237,12 +261,12 @@ async function googleLogin(req, res) {
       });
     }
 
-    const json = toUserResponse(user);
+    const { token, user: sessionUser } = await issueAuthResponse(user);
     const pendingUpgrade = !!(user.pendingBusinessProfile && user.role !== 'business');
     res.json({
-      token: signToken(user),
+      token,
       user: {
-        ...json,
+        ...sessionUser,
         needsPayment: pendingUpgrade || (user.role === 'business' && user.subscriptionStatus !== 'active'),
         pendingBusinessUpgrade: pendingUpgrade,
       },
@@ -261,6 +285,9 @@ async function me(req, res) {
   try {
     const user = await User.findById(req.user.id).lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role === 'admin') {
+      return res.json(shapeAdminMeResponse(user, req.user));
+    }
     res.json(user);
   } catch (err) {
     console.error('[Auth] me error:', err);
@@ -293,13 +320,12 @@ async function verifyEmail(req, res) {
     user.emailVerificationExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
-    const jwtToken = signToken(user);
-    const json = toUserResponse(user);
+    const { token: jwtToken, user: sessionUser } = await issueAuthResponse(user);
     const pendingUpgrade = !!(user.pendingBusinessProfile && user.role !== 'business');
     res.json({
       token: jwtToken,
       user: {
-        ...json,
+        ...sessionUser,
         needsPayment: pendingUpgrade || (user.role === 'business' && user.subscriptionStatus !== 'active'),
         pendingBusinessUpgrade: pendingUpgrade,
       },

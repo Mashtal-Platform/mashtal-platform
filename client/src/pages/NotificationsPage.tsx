@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Notification {
   id: string;
-  type: 'order' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report' | 'admin_order';
+  type: 'order' | 'order_seller' | 'order_buyer' | 'subscription' | 'message' | 'follow' | 'alert' | 'mention' | 'like' | 'comment' | 'transaction' | 'report' | 'admin_order';
   message: string;
   read: boolean;
   time: string;
@@ -47,7 +47,11 @@ export function NotificationsPage({
   const getIcon = (type: string) => {
     switch (type) {
       case 'order':
+      case 'order_seller':
+      case 'order_buyer':
         return <Package className="w-5 h-5 text-green-600" />;
+      case 'subscription':
+        return <AlertCircle className="w-5 h-5 text-orange-600" />;
       case 'admin_order':
         return <Package className="w-5 h-5 text-emerald-700" />;
       case 'transaction':
@@ -140,18 +144,20 @@ export function NotificationsPage({
         } else {
           onNavigate('user-profile', { userId: notification.relatedUserId });
         }
-      } else if (notification.type === 'order') {
-        // Buyers → purchase history; businesses → dashboard orders
-        if (userRole === 'business') {
-          onNavigate('dashboard', {
-            section: 'orders',
-            highlightOrderId: notification.orderId,
-          });
-        } else {
-          onNavigate('purchase-history', {
-            highlightOrderId: notification.orderId,
-          });
-        }
+      } else if (notification.type === 'order_seller' || notification.type === 'order') {
+        // Seller notifications (order_created, order_cancelled) → dashboard orders
+        onNavigate('dashboard', {
+          section: 'orders',
+          highlightOrderId: notification.orderId,
+        });
+      } else if (notification.type === 'order_buyer') {
+        // Buyer notifications (order_status_updated) → purchase history
+        onNavigate('purchase-history', {
+          highlightOrderId: notification.orderId,
+        });
+      } else if (notification.type === 'subscription') {
+        // Subscription expiring/expired → payment page for renewal
+        onNavigate('payment', { role: 'business' });
       } else if (notification.type === 'admin_order') {
         onNavigate('admin', {
           section: 'orders',

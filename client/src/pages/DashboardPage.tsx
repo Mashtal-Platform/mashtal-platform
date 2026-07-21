@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   TrendingUp, Users, ShoppingBag, Package, 
@@ -17,6 +17,7 @@ import { notifyError, isContentBlockedError, CONTENT_BLOCKED_DESCRIPTION } from 
 import {
   fetchBusinessDashboardAnalytics,
   fetchBusinessOrders,
+  fetchProductSoldCounts,
   type DashboardPeriod,
   type BusinessDashboardDto,
   type BusinessOrderDto,
@@ -30,6 +31,7 @@ interface Product {
   name: string;
   price: number;
   stock: number;
+  sold?: number;
   image: string;
   description: string;
   category: string;
@@ -42,6 +44,7 @@ interface DashboardPageProps {
   highlightProductId?: string | null;
   highlightOrderId?: string | null;
   onClearHighlight?: () => void;
+  onNavigate?: (page: string, params?: any) => void;
 }
 
 export function DashboardPage({
@@ -49,6 +52,7 @@ export function DashboardPage({
   highlightProductId,
   highlightOrderId,
   onClearHighlight,
+  onNavigate,
 }: DashboardPageProps = {}) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -71,7 +75,10 @@ export function DashboardPage({
     }
     setProductsLoading(true);
     try {
-      const apiProducts = await fetchProducts({ businessId });
+      const [apiProducts, soldCounts] = await Promise.all([
+        fetchProducts({ businessId }),
+        fetchProductSoldCounts(businessId).catch(() => ({} as Record<string, number>)),
+      ]);
       if (!Array.isArray(apiProducts)) {
         setProducts([]);
         return;
@@ -81,6 +88,7 @@ export function DashboardPage({
         name: p.name ?? '',
         price: Number(p.price) ?? 0,
         stock: Number(p.stock) ?? 0,
+        sold: soldCounts[p.id ?? ''] ?? 0,
         image: p.image ?? '',
         description: p.description ?? '',
         category: (p.category ?? '').charAt(0).toUpperCase() + (p.category ?? '').slice(1),
@@ -529,6 +537,64 @@ export function DashboardPage({
     return null;
   };
 
+  const renewBanner = useMemo(() => {
+    if (user?.role !== 'business') return null;
+
+    const now = Date.now();
+    const expiresAt = user.subscriptionExpiresAt
+      ? new Date(user.subscriptionExpiresAt).getTime()
+      : null;
+    const daysRemaining =
+      expiresAt != null
+        ? Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000))
+        : null;
+
+    const isInactive = user.subscriptionStatus !== 'active';
+    const isExpiringSoon =
+      user.subscriptionStatus === 'active' &&
+      daysRemaining != null &&
+      daysRemaining <= 3 &&
+      daysRemaining > 0;
+
+    if (!isInactive && !isExpiringSoon) return null;
+
+    if (isExpiringSoon) {
+      return {
+        tone: 'warning' as const,
+        title: t('dashboard.subscriptionExpiringSoon', {
+          defaultValue: `Your subscription expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+          days: daysRemaining,
+        }),
+        description: t('dashboard.renewAddsDays', {
+          defaultValue: 'Renew now to add 60 more days to your remaining time and keep selling.',
+        }),
+      };
+    }
+
+    const isSuspended = isInactive && expiresAt != null && expiresAt > now;
+    if (isSuspended) {
+      return {
+        tone: 'danger' as const,
+        title: t('dashboard.subscriptionSuspended', {
+          defaultValue: 'Your account has been suspended',
+        }),
+        description: t('dashboard.renewToReactivate', {
+          defaultValue: 'Renew your subscription to reactivate your business and continue selling.',
+        }),
+      };
+    }
+
+    return {
+      tone: 'danger' as const,
+      title: t('dashboard.subscriptionExpired', {
+        defaultValue: 'Your subscription has expired',
+      }),
+      description: t('dashboard.renewToSell', {
+        defaultValue: 'Renew your subscription to continue listing and selling products.',
+      }),
+    };
+  }, [user, t]);
+
   // Helper for Stats Cards
   const StatsCard = ({ title, value, growth, icon: Icon, colorClass, bgClass, trend }: any) => (
     <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-neutral-100 hover:shadow-lg transition-all duration-300 group">
@@ -574,6 +640,49 @@ export function DashboardPage({
             </div>
           </div>
         </div>
+
+        {/* Subscription Renewal Banner */}
+        {renewBanner && (
+          <div
+            className={`mb-6 sm:mb-8 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border ${
+              renewBanner.tone === 'warning'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-red-50 border-red-200'
+            }`}
+          >
+            <AlertTriangle
+              className={`w-6 h-6 shrink-0 ${
+                renewBanner.tone === 'warning' ? 'text-amber-600' : 'text-red-600'
+              }`}
+            />
+            <div className="flex-1">
+              <h3
+                className={`font-semibold text-sm sm:text-base ${
+                  renewBanner.tone === 'warning' ? 'text-amber-900' : 'text-red-900'
+                }`}
+              >
+                {renewBanner.title}
+              </h3>
+              <p
+                className={`text-xs sm:text-sm mt-0.5 ${
+                  renewBanner.tone === 'warning' ? 'text-amber-700' : 'text-red-700'
+                }`}
+              >
+                {renewBanner.description}
+              </p>
+            </div>
+            <Button
+              onClick={() => onNavigate?.('payment', { role: 'business' })}
+              className={`text-white shrink-0 ${
+                renewBanner.tone === 'warning'
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {t('dashboard.renewNow', { defaultValue: 'Renew Now' })}
+            </Button>
+          </div>
+        )}
 
         {/* Period Selector */}
         <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
@@ -944,7 +1053,7 @@ export function DashboardPage({
                     <tbody>
                       {orders.map((order) => {
                         const status = (order.status || 'processing').toLowerCase();
-                        const canMarkReady = status === 'pending' || status === 'processing';
+                        const canMarkReady = status === 'processing';
                         const statusClass =
                           status === 'ready'
                             ? 'bg-blue-50 text-blue-800'
@@ -952,9 +1061,7 @@ export function DashboardPage({
                               ? 'bg-green-50 text-green-800'
                               : status === 'cancelled'
                                 ? 'bg-red-50 text-red-800'
-                                : status === 'pending'
-                                  ? 'bg-amber-50 text-amber-800'
-                                  : 'bg-yellow-50 text-yellow-800';
+                                : 'bg-yellow-50 text-yellow-800';
                         return (
                         <tr
                           key={order.id}
@@ -971,7 +1078,21 @@ export function DashboardPage({
                               : '—'}
                           </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-3">
-                            <div className="font-medium text-neutral-900">{order.buyer?.fullName || t('dashboard.customer')}</div>
+                            <div className="font-medium text-neutral-900">
+                              {order.buyer?.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onNavigate?.('chats', { profileId: order.buyer!.id })
+                                  }
+                                  className="text-green-700 hover:text-green-800 hover:underline text-left"
+                                >
+                                  {order.buyer.fullName || t('dashboard.customer')}
+                                </button>
+                              ) : (
+                                order.buyer?.fullName || t('dashboard.customer')
+                              )}
+                            </div>
                             {order.buyer?.email ? (
                               <div className="text-xs text-neutral-500">{order.buyer.email}</div>
                             ) : null}
@@ -1119,7 +1240,7 @@ export function DashboardPage({
                         </div>
                         <div className="text-center p-3 bg-neutral-50 rounded-xl">
                           <p className="text-xs text-neutral-600 mb-1">{t('dashboard.sold')}</p>
-                          <p className="font-bold text-green-600">{product.sold}</p>
+                          <p className="font-bold text-green-600">{product.sold ?? 0}</p>
                         </div>
                       </div>
                     </div>

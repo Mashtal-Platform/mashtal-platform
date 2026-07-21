@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchMentionableProfiles } from '../shared/api/users';
 import { getAvatarUrl } from '../shared/api/client';
 import { useTranslation } from 'react-i18next';
+import { MASHTAL_SUPPORT_AVATAR, MASHTAL_SUPPORT_NAME } from '../shared/constants/branding';
 
 interface CreatePostPageProps {
   onCreatePost: (post: { title: string; content: string; image: string; tags?: string[] }, imageFile?: File) => void;
@@ -26,7 +27,11 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
   const displayName =
     user?.role === 'business'
       ? (user.companyName || user.fullName || t('common.business'))
-      : (user?.fullName || t('common.you'));
+      : user?.role === 'admin'
+        ? MASHTAL_SUPPORT_NAME
+        : (user?.fullName || t('common.you'));
+  const displayAvatar =
+    user?.role === 'admin' ? MASHTAL_SUPPORT_AVATAR : (user?.avatar ?? '');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -426,7 +431,7 @@ export function CreatePostPage({ onCreatePost, onBack }: CreatePostPageProps) {
                 <div className="p-4 pb-3">
                   <div className="flex items-center gap-3 mb-4">
                     <img
-                      src={getAvatarUrl(user?.avatar, displayName)}
+                      src={getAvatarUrl(displayAvatar, displayName)}
                       alt={displayName}
                       className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                     />

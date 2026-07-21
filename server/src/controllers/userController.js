@@ -8,6 +8,13 @@ const {
   validateBusinessProfile,
 } = require('../utils/businessProfile');
 const { respondIfUnsafe } = require('../utils/assertContentSafe');
+const {
+  MASHTAL_SUPPORT_NAME,
+  MASHTAL_SUPPORT_AVATAR,
+  getCanonicalAdmin,
+  resolveFollowTargetId,
+  shapeAdminMeResponse,
+} = require('../utils/publicAdminIdentity');
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
@@ -18,6 +25,10 @@ async function getMe(req, res) {
     const user = await User.findById(req.user.id).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.role === 'admin') {
+      return res.json(shapeAdminMeResponse(user, req.user));
     }
 
     res.json(user);
@@ -151,6 +162,34 @@ async function getUserById(req, res) {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    // Any admin profile URL resolves to the shared Mashtal Support identity
+    if (user.role === 'admin') {
+      const canonical = await getCanonicalAdmin();
+      if (!canonical) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      const followers = canonical.followers || [];
+      const following = canonical.following || [];
+      return res.json({
+        id: String(canonical._id),
+        _id: canonical._id,
+        fullName: MASHTAL_SUPPORT_NAME,
+        email: '',
+        avatar: MASHTAL_SUPPORT_AVATAR,
+        coverImage: '',
+        bio: '',
+        location: '',
+        role: 'admin',
+        followersCount: Array.isArray(followers) ? followers.length : 0,
+        followingCount: Array.isArray(following) ? following.length : 0,
+        createdAt: canonical.createdAt,
+        joinDate: canonical.createdAt
+          ? new Date(canonical.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+          : '',
+      });
+    }
+
     const followers = user.followers || [];
     const following = user.following || [];
     const followersCount = Array.isArray(followers) ? followers.length : 0;
@@ -192,11 +231,36 @@ async function getBusinesses(req, res) {
       ];
     }
     const businesses = await User.find(filter).lean();
-    const shaped = businesses.map((b) => {
+    const canonical = roleList.includes('admin') ? await getCanonicalAdmin() : null;
+    const canonicalAdminId = canonical ? String(canonical._id) : null;
+    const shaped = [];
+    let includedSupport = false;
+    for (const b of businesses) {
+      if (b.role === 'admin') {
+        if (includedSupport || !canonicalAdminId) continue;
+        includedSupport = true;
+        const followers = canonical.followers || [];
+        shaped.push({
+          id: canonicalAdminId,
+          fullName: MASHTAL_SUPPORT_NAME,
+          companyName: MASHTAL_SUPPORT_NAME,
+          email: '',
+          avatar: MASHTAL_SUPPORT_AVATAR,
+          role: 'admin',
+          location: '',
+          bio: '',
+          verified: true,
+          rating: 0,
+          reviewsCount: 0,
+          followersCount: Array.isArray(followers) ? followers.length : 0,
+          specialties: [],
+        });
+        continue;
+      }
       const bp = b.businessProfile || {};
       const followers = b.followers || [];
       const followersCount = Array.isArray(followers) ? followers.length : 0;
-      return {
+      shaped.push({
         id: b._id.toString(),
         fullName: b.fullName || '',
         companyName: bp.companyName || b.fullName || '',
@@ -210,8 +274,8 @@ async function getBusinesses(req, res) {
         reviewsCount: typeof bp.reviewsCount === 'number' ? bp.reviewsCount : 0,
         followersCount,
         specialties: Array.isArray(bp.specialties) ? bp.specialties : [],
-      };
-    });
+      });
+    }
     res.json(shaped);
   } catch (err) {
     console.error('[Users] getBusinesses error:', err);
@@ -471,8 +535,21 @@ async function toggleReviewHelpful(req, res) {
   }
 }
 
-function shapeUserForList(u) {
+function shapeUserForList(u, canonicalAdminId) {
   if (!u) return null;
+  if (u.role === 'admin') {
+    return {
+      id: canonicalAdminId || (u._id ? u._id.toString() : u.id),
+      fullName: MASHTAL_SUPPORT_NAME,
+      name: MASHTAL_SUPPORT_NAME,
+      avatar: MASHTAL_SUPPORT_AVATAR,
+      role: 'admin',
+      location: '',
+      rating: 0,
+      reviews: 0,
+      followers: Array.isArray(u.followers) ? u.followers.length : 0,
+    };
+  }
   const id = u._id ? u._id.toString() : u.id;
   const bp = u.businessProfile || {};
   return {
@@ -488,13 +565,24 @@ function shapeUserForList(u) {
   };
 }
 
+async function resolveProfileUserId(id) {
+  const user = await User.findById(id).select('role').lean();
+  if (!user) return null;
+  if (user.role !== 'admin') return String(id);
+  return resolveFollowTargetId(id);
+}
+
 async function getFollowers(req, res) {
   try {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
-    const user = await User.findById(id).lean();
+    const resolvedId = await resolveProfileUserId(id);
+    if (!resolvedId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const user = await User.findById(resolvedId).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -502,7 +590,9 @@ async function getFollowers(req, res) {
     const followers = followerIds.length
       ? await User.find({ _id: { $in: followerIds } }).lean()
       : [];
-    const list = followers.map(shapeUserForList).filter(Boolean);
+    const canonical = await getCanonicalAdmin();
+    const canonicalAdminId = canonical ? String(canonical._id) : null;
+    const list = followers.map((u) => shapeUserForList(u, canonicalAdminId)).filter(Boolean);
     res.json(list);
   } catch (err) {
     console.error('[Users] getFollowers error:', err);
@@ -516,7 +606,11 @@ async function getFollowing(req, res) {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid user id' });
     }
-    const user = await User.findById(id).lean();
+    const resolvedId = await resolveProfileUserId(id);
+    if (!resolvedId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const user = await User.findById(resolvedId).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -524,7 +618,18 @@ async function getFollowing(req, res) {
     const following = followingIds.length
       ? await User.find({ _id: { $in: followingIds } }).lean()
       : [];
-    const list = following.map(shapeUserForList).filter(Boolean);
+    const canonical = await getCanonicalAdmin();
+    const canonicalAdminId = canonical ? String(canonical._id) : null;
+    // Dedupe multiple admin entries into one Mashtal Support
+    const seen = new Set();
+    const list = [];
+    for (const u of following) {
+      const shaped = shapeUserForList(u, canonicalAdminId);
+      if (!shaped) continue;
+      if (seen.has(shaped.id)) continue;
+      seen.add(shaped.id);
+      list.push(shaped);
+    }
     res.json(list);
   } catch (err) {
     console.error('[Users] getFollowing error:', err);
@@ -535,25 +640,29 @@ async function getFollowing(req, res) {
 async function followUser(req, res) {
   try {
     const currentUserId = req.user.id;
-    const targetUserId = req.params.id;
+    const resolvedId = await resolveFollowTargetId(req.params.id);
 
-    if (currentUserId === targetUserId) {
+    if (!resolvedId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (currentUserId === resolvedId) {
       return res.status(400).json({ message: 'You cannot follow yourself' });
     }
 
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
-      User.findById(targetUserId),
+      User.findById(resolvedId),
     ]);
 
     if (!currentUser || !targetUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const followableRoles = ['business'];
+    const followableRoles = ['business', 'admin'];
     if (!followableRoles.includes(targetUser.role)) {
       return res.status(400).json({
-        message: 'You can only follow businesses. This account cannot be followed.',
+        message: 'You can only follow businesses and Mashtal Support. This account cannot be followed.',
       });
     }
 
@@ -585,7 +694,7 @@ async function followUser(req, res) {
       }
     }
 
-    res.json({ success: true });
+    res.json({ success: true, followedId: String(targetUser._id) });
   } catch (err) {
     console.error('[Users] followUser error:', err);
     res.status(500).json({ message: 'Failed to follow user' });
@@ -595,11 +704,15 @@ async function followUser(req, res) {
 async function unfollowUser(req, res) {
   try {
     const currentUserId = req.user.id;
-    const targetUserId = req.params.id;
+    const resolvedId = await resolveFollowTargetId(req.params.id);
+
+    if (!resolvedId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
-      User.findById(targetUserId),
+      User.findById(resolvedId),
     ]);
 
     if (!currentUser || !targetUser) {

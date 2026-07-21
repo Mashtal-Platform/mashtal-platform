@@ -60,7 +60,6 @@ import { getImageUrl } from '../shared/api/client';
 type Tab = 'overview' | 'users' | 'businesses' | 'subscriptions' | 'transactions' | 'orders' | 'reports';
 
 const ORDER_STATUSES: AdminOrderStatus[] = [
-  'pending',
   'processing',
   'ready',
   'completed',
@@ -69,8 +68,6 @@ const ORDER_STATUSES: AdminOrderStatus[] = [
 
 function orderStatusClass(status: string) {
   switch (status) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-800 border-amber-200';
     case 'processing':
       return 'bg-yellow-50 text-yellow-800 border-yellow-200';
     case 'ready':
@@ -101,11 +98,13 @@ export function AdminDashboardPage({
   highlightPaymentId = null,
   highlightOrderId = null,
   onClearHighlight,
+  onNavigate,
 }: {
   initialTab?: Tab | null;
   highlightPaymentId?: string | null;
   highlightOrderId?: string | null;
   onClearHighlight?: () => void;
+  onNavigate?: (page: string, params?: any) => void;
 } = {}) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>(initialTab || 'overview');
@@ -765,7 +764,7 @@ export function AdminDashboardPage({
                 }}
               >
                 <Bell className="w-4 h-4 mr-2" />
-                Notify expiring tomorrow
+                Notify expiring in 3 days
               </Button>
             </div>
 
@@ -1022,9 +1021,19 @@ export function AdminDashboardPage({
                         </div>
                         <div>
                           <span className="text-neutral-500">Buyer </span>
-                          <span className="font-medium">
-                            {order.buyer?.fullName || '—'}
-                          </span>
+                          {order.buyer?.id ? (
+                            <button
+                              type="button"
+                              onClick={() => onNavigate?.('chats', { profileId: order.buyer!.id })}
+                              className="font-medium text-green-700 hover:text-green-800 hover:underline"
+                            >
+                              {order.buyer.fullName || '—'}
+                            </button>
+                          ) : (
+                            <span className="font-medium">
+                              {order.buyer?.fullName || '—'}
+                            </span>
+                          )}
                           <div className="text-xs text-neutral-600">
                             {order.buyer?.phone || order.buyer?.email || t('admin.noPhoneOnFile')}
                           </div>

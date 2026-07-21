@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getMaxCartQuantity } from '../shared/utils/cart';
 import { CartItem } from '../App';
 import { getImageUrl } from '../shared/api/client';
 
@@ -69,20 +70,28 @@ export function CartPage({ cartItems, onUpdateQuantity, onRemove, onCheckout }: 
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                          className="p-1 hover:bg-neutral-100 rounded transition-colors"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 hover:bg-neutral-100 rounded transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                            className="p-1 hover:bg-neutral-100 rounded transition-colors"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                            disabled={item.quantity >= getMaxCartQuantity(item.stock)}
+                            className="p-1 hover:bg-neutral-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        {item.stock != null && (
+                          <p className="text-xs text-neutral-500 mt-1">
+                            {t('shopping.inStockCount', { count: item.stock })}
+                          </p>
+                        )}
                       </div>
                       <div className="text-lg text-green-600">
                         ${(item.price * item.quantity).toFixed(2)}

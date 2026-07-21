@@ -371,7 +371,7 @@ export function ThreadsPage({
           }`}
         >
           <div className={`${isSticky ? 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4' : ''}`}>
-            {isAuthenticated && user?.role === 'business' ? (
+            {isAuthenticated && (user?.role === 'business' || user?.role === 'admin') ? (
               <Button
                 onClick={onCreateThread}
                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12 flex items-center justify-center gap-2"

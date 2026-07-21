@@ -154,7 +154,6 @@ export async function notifyExpiringSubscriptions(): Promise<{
 }
 
 export type AdminOrderStatus =
-  | 'pending'
   | 'processing'
   | 'ready'
   | 'completed'

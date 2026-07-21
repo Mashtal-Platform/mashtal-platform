@@ -12,6 +12,23 @@ const Conversation = require('./models/Conversation');
 const ChatMessage = require('./models/ChatMessage');
 const Notification = require('./models/Notification');
 const User = require('./models/User');
+const { markOnline, markOffline } = require('./utils/presence');
+const { areUsersBlocked } = require('./utils/chatBlock');
+const {
+  canAccessConversation,
+  getMessageNotificationRecipients,
+  resolveMessageSide,
+} = require('./utils/conversationAccess');
+const {
+  acquireSupportLock,
+  releaseSupportLock,
+  assertCanSendAsAdmin,
+} = require('./utils/supportLock');
+const {
+  MASHTAL_SUPPORT_NAME,
+  MASHTAL_SUPPORT_AVATAR,
+  getCanonicalAdminId,
+} = require('./utils/publicAdminIdentity');
 
 async function upsertMessageNotification(recipientId, senderId, conversationId) {
   const recipient = Types.ObjectId.isValid(recipientId) ? recipientId : new Types.ObjectId(recipientId);
@@ -158,12 +175,24 @@ connectDB().then(() => {
   });
 
   const jwtSecret = process.env.JWT_SECRET;
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.replace('Bearer ', '');
     if (!token) return next(new Error('Authentication required'));
     try {
       const payload = jwt.verify(token, jwtSecret);
-      socket.userId = payload.sub;
+      let userId = payload.sub;
+      let operatorId = payload.operatorId || null;
+      if (payload.role === 'admin') {
+        const canonicalId = await getCanonicalAdminId();
+        if (canonicalId) {
+          operatorId = payload.operatorId || payload.sub;
+          userId = canonicalId;
+        }
+      }
+      socket.userId = userId;
+      socket.operatorId = operatorId || userId;
+      socket.userRole = payload.role;
+      socket.lockDisplayName = payload.operatorName || payload.fullName || 'Admin';
       next();
     } catch (err) {
       next(new Error('Invalid token'));
@@ -172,16 +201,29 @@ connectDB().then(() => {
 
   io.on('connection', (socket) => {
     socket.join(`user:${socket.userId}`);
+    markOnline(socket.userId);
+    io.emit('presence_update', { userId: String(socket.userId), online: true });
 
     // Preload sender display info once per connection so send_message needs no extra DB read.
     // Fire-and-forget: does not block connection; first message may still use fallback if slow.
     User.findById(socket.userId)
-      .select('fullName avatar')
+      .select('fullName avatar role')
       .lean()
       .then((u) => {
         if (u) {
-          socket.senderName = u.fullName || 'User';
-          socket.senderAvatar = u.avatar || '';
+          socket.userRole = u.role || socket.userRole;
+          if (u.role === 'admin') {
+            socket.senderName = MASHTAL_SUPPORT_NAME;
+            socket.senderAvatar = MASHTAL_SUPPORT_AVATAR;
+            // Keep lockDisplayName from JWT operator (set at auth)
+            if (!socket.lockDisplayName) {
+              socket.lockDisplayName = 'Admin';
+            }
+          } else {
+            socket.senderName = u.fullName || 'User';
+            socket.senderAvatar = u.avatar || '';
+            socket.lockDisplayName = u.fullName || 'User';
+          }
         }
       })
       .catch(() => {});
@@ -218,19 +260,53 @@ connectDB().then(() => {
 
         // Single lean query: conversation membership check only (no populate).
         const conv = await Conversation.findById(conversationId).lean();
-        if (!conv || !conv.participants.some((p) => p.toString() === socket.userId)) {
+        if (!canAccessConversation(conv, socket.userId, socket.userRole)) {
           return callback && callback({ error: 'Conversation not found' });
+        }
+
+        const otherId = conv.participants.find((p) => p.toString() !== socket.userId);
+        if (otherId && (await areUsersBlocked(socket.userId, otherId))) {
+          return callback && callback({ error: 'Messaging is blocked between these accounts', code: 'BLOCKED' });
         }
 
         // Use preloaded sender info from connection; fallback to one lightweight read if not set yet.
         let senderName = socket.senderName;
         let senderAvatar = socket.senderAvatar;
-        if (senderName === undefined || senderAvatar === undefined) {
-          const u = await User.findById(socket.userId).select('fullName avatar').lean();
-          senderName = u?.fullName || 'User';
-          senderAvatar = u?.avatar || '';
+        let senderRole = socket.userRole || 'visitor';
+        if (senderName === undefined || senderAvatar === undefined || !socket.userRole) {
+          const u = await User.findById(socket.userId).select('fullName avatar role').lean();
+          senderRole = u?.role || 'visitor';
+          if (senderRole === 'admin') {
+            senderName = MASHTAL_SUPPORT_NAME;
+            senderAvatar = MASHTAL_SUPPORT_AVATAR;
+            if (!socket.lockDisplayName) socket.lockDisplayName = 'Admin';
+          } else {
+            senderName = u?.fullName || 'User';
+            senderAvatar = u?.avatar || '';
+            socket.lockDisplayName = u?.fullName || 'User';
+          }
           socket.senderName = senderName;
           socket.senderAvatar = senderAvatar;
+          socket.userRole = senderRole;
+        }
+
+        if (conv.isSupport && senderRole === 'admin') {
+          const lockResult = await assertCanSendAsAdmin(
+            conversationId,
+            socket.operatorId || socket.userId,
+            socket.lockDisplayName || senderName
+          );
+          if (!lockResult.ok) {
+            return callback && callback({
+              error: lockResult.message,
+              code: lockResult.code || 'SUPPORT_LOCKED',
+              supportLock: lockResult.lock,
+            });
+          }
+          io.to(`conv:${conversationId}`).emit('support_lock', {
+            conversationId,
+            lock: lockResult.lock,
+          });
         }
 
         // One write: save with denormalized sender info so we never populate on read or broadcast.
@@ -239,31 +315,38 @@ connectDB().then(() => {
           sender: socket.userId,
           senderName: senderName || 'User',
           senderAvatar: senderAvatar || '',
+          senderRole,
           text: text.trim(),
         });
 
         // Build payload from saved doc – no second query, no populate.
-        // Frontend derives sender label: sender = (payload.senderId === currentUser.id) ? 'user' : 'other'
+        // Clients derive side from senderId + senderRole (support: all admin msgs are "mine" for admins)
         const payload = {
           id: msg._id.toString(),
           chatId: conversationId,
           text: msg.text,
           senderId: socket.userId,
+          senderRole,
           sender: 'user',
           timestamp: msg.createdAt,
           senderName: msg.senderName || 'User',
           senderAvatar: msg.senderAvatar || '',
+          isSupport: !!conv.isSupport,
         };
         io.to(`conv:${conversationId}`).emit('message', payload);
 
-        // Notifications: one per sender, increment messageCount so list shows "X has sent you n messages".
-        const recipients = conv.participants.filter((p) => p.toString() !== socket.userId);
-        setImmediate(() => {
-          recipients.forEach((recipientId) => {
-            upsertMessageNotification(recipientId, socket.userId, conversationId).catch((notifErr) =>
-              console.error('[Socket] notification create error:', notifErr)
+        // Notifications: support messages go to all admins; otherwise to other participants.
+        setImmediate(async () => {
+          try {
+            const recipients = await getMessageNotificationRecipients(conv, socket.userId);
+            await Promise.all(
+              recipients.map((recipientId) =>
+                upsertMessageNotification(recipientId, socket.userId, conversationId)
+              )
             );
-          });
+          } catch (notifErr) {
+            console.error('[Socket] notification create error:', notifErr);
+          }
         });
 
         if (callback) callback({ ok: true, message: payload });
@@ -271,6 +354,56 @@ connectDB().then(() => {
         console.error('[Socket] send_message error:', err);
         if (callback) callback({ error: err.message || 'Failed to send message' });
       }
+    });
+
+    socket.on('support_lock_acquire', async (data, callback) => {
+      try {
+        const conversationId = data?.conversationId;
+        if (!conversationId) return callback && callback({ error: 'conversationId required' });
+        if (socket.userRole !== 'admin') {
+          return callback && callback({ error: 'Only admins can lock support chats' });
+        }
+        const name = socket.lockDisplayName || socket.senderName || 'Admin';
+        const result = await acquireSupportLock(
+          conversationId,
+          socket.operatorId || socket.userId,
+          name
+        );
+        if (result.ok && result.lock) {
+          io.to(`conv:${conversationId}`).emit('support_lock', {
+            conversationId,
+            lock: result.lock,
+          });
+        }
+        if (callback) callback(result);
+      } catch (err) {
+        if (callback) callback({ error: err.message || 'Failed to acquire lock' });
+      }
+    });
+
+    socket.on('support_lock_release', async (data, callback) => {
+      try {
+        const conversationId = data?.conversationId;
+        if (!conversationId) return callback && callback({ error: 'conversationId required' });
+        const result = await releaseSupportLock(
+          conversationId,
+          socket.operatorId || socket.userId
+        );
+        if (result.ok) {
+          io.to(`conv:${conversationId}`).emit('support_lock', {
+            conversationId,
+            lock: null,
+          });
+        }
+        if (callback) callback(result);
+      } catch (err) {
+        if (callback) callback({ error: err.message || 'Failed to release lock' });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      markOffline(socket.userId);
+      io.emit('presence_update', { userId: String(socket.userId), online: false });
     });
   });
 

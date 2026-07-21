@@ -12,6 +12,7 @@ const {
   CANCEL_FEE_PERCENT,
   CANCEL_REFUND_PERCENT,
 } = require('../utils/orderStatus');
+const { getAdminRecipientIds } = require('../utils/publicAdminIdentity');
 
 function shapeProduct(product, businessMap) {
   if (!product) {
@@ -119,10 +120,10 @@ async function getSellerIdsForOrder(order) {
 
 async function notifyOrderCancelled({ order, buyerId, buyerName }) {
   const sellerIds = await getSellerIdsForOrder(order);
-  const admins = await User.find({ role: 'admin' }).select('_id').lean();
+  const adminIds = await getAdminRecipientIds();
   const recipients = [
     ...sellerIds.map((id) => ({ id, type: 'order_cancelled' })),
-    ...admins.map((a) => ({ id: String(a._id), type: 'order_cancelled_admin' })),
+    ...adminIds.map((id) => ({ id, type: 'order_cancelled_admin' })),
   ];
 
   const docs = [];
@@ -137,7 +138,7 @@ async function notifyOrderCancelled({ order, buyerId, buyerName }) {
     });
   }
   if (docs.length) await Notification.insertMany(docs);
-  return { sellers: sellerIds.length, admins: admins.length };
+  return { sellers: sellerIds.length, admins: adminIds.length };
 }
 
 async function getMyOrders(req, res) {
@@ -249,7 +250,8 @@ async function cancelMyOrder(req, res) {
 
 /**
  * Business marks order as ready (waiting for delivery).
- * Allowed from pending or processing → ready.
+ * Allowed from pending (legacy) or processing → ready only.
+ * Businesses cannot set completed; that is admin-only.
  */
 async function markOrderReady(req, res) {
   try {
@@ -269,7 +271,7 @@ async function markOrderReady(req, res) {
     const current = normalizeOrderStatus(order.status);
     if (!canBusinessMarkReady(current)) {
       return res.status(400).json({
-        message: `Cannot mark as ready from status "${current}". Only pending or processing orders can be marked ready.`,
+        message: `Cannot mark as ready from status "${current}". Only processing orders can be marked ready.`,
       });
     }
 
@@ -288,12 +290,12 @@ async function markOrderReady(req, res) {
       });
     }
 
-    // Notify admins so they can arrange / track delivery
-    const admins = await User.find({ role: 'admin' }).select('_id').lean();
-    if (admins.length) {
+    // Notify shared admin account so they can arrange / track delivery
+    const adminIds = await getAdminRecipientIds();
+    if (adminIds.length) {
       await Notification.insertMany(
-        admins.map((a) => ({
-          recipient: a._id,
+        adminIds.map((id) => ({
+          recipient: new Types.ObjectId(id),
           sender: new Types.ObjectId(businessId),
           type: 'order_ready_admin',
           entityId: order._id,

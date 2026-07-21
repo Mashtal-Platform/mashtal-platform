@@ -27,6 +27,7 @@ function normalizeUser(apiUser: any): User {
     companyName: businessProfile.companyName || apiUser.companyName,
     businessType: apiUser.businessType,
     subscriptionStatus: apiUser.subscriptionStatus,
+    subscriptionExpiresAt: apiUser.subscriptionExpiresAt || null,
     businessId: apiUser.businessId,
     hours: businessProfile.hours,
     about: businessProfile.about && typeof businessProfile.about === 'object' && !Array.isArray(businessProfile.about)
@@ -37,6 +38,9 @@ function normalizeUser(apiUser: any): User {
       apiUser.preferredLanguage === 'ar' || apiUser.preferredLanguage === 'en'
         ? apiUser.preferredLanguage
         : 'en',
+    operatorId: apiUser.operatorId || undefined,
+    operatorEmail: apiUser.operatorEmail || undefined,
+    operatorName: apiUser.operatorName || undefined,
   };
 }
 
@@ -61,11 +65,16 @@ export interface User {
   businessType?: string;
   verified?: boolean;
   subscriptionStatus?: 'active' | 'inactive';
+  subscriptionExpiresAt?: string | null;
   businessId?: string;
   hours?: Array<{ day?: string; closed?: boolean; open?: Array<{ from?: string; to?: string }> }>;
   about?: Record<string, string>;
   businessProfile?: Record<string, unknown>;
   preferredLanguage?: 'en' | 'ar';
+  /** Real admin who signed in (for support-lock); session id is the shared account. */
+  operatorId?: string;
+  operatorEmail?: string;
+  operatorName?: string;
 }
 
 interface AuthContextType {
