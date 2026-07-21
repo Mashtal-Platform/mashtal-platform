@@ -5,7 +5,11 @@ import { SavedItem } from '../App';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-
+import {
+  PostsFilterSidebar,
+  PostsRightSidebar,
+  type PostsFeedFilter,
+} from '../components/PostsFeedSidePanel';
 interface PostsPageProps {
   onSavePost: (item: SavedItem) => void;
   onRemoveSavedItem?: (savedItemId: string) => void;
@@ -56,6 +60,7 @@ export function PostsPage({
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullVelocity, setPullVelocity] = useState(0);
+  const [feedFilter, setFeedFilter] = useState<PostsFeedFilter>('all');
   
   const successMessageRef = useRef<HTMLDivElement>(null);
   const firstPostRef = useRef<HTMLDivElement>(null);
@@ -327,13 +332,13 @@ export function PostsPage({
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8"
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         style={{
           transform: isPulling || isRefreshing ? `translateY(${pullDistance * 0.3}px)` : 'none',
           transition: isRefreshing || !isPulling ? 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
         }}
       >
-        <div className="mb-6 sm:mb-12 flex items-start justify-between gap-4">
+        <div className="mb-6 sm:mb-10 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
               {t('posts.title')}
@@ -401,22 +406,61 @@ export function PostsPage({
             <span className="text-sm font-medium">{t('posts.newPostsAvailable')}</span>
           </button>
         )}
-        
-        {/* Posts Feed with ref to first post */}
-        <div ref={firstPostRef}>
-          <PostsFeed
-            onSavePost={onSavePost}
-            onRemoveSavedItem={onRemoveSavedItem}
-            savedItems={savedItems}
-            onNavigateToBusiness={onNavigateToBusiness}
-            onNavigateToUserProfile={onNavigateToUserProfile}
+
+        <div className="lg:hidden mb-5 space-y-4">
+          <PostsFilterSidebar value={feedFilter} onChange={setFeedFilter} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)_280px] gap-5 xl:gap-6 items-start">
+          <div className="hidden lg:block sticky top-24 self-start">
+            <PostsFilterSidebar value={feedFilter} onChange={setFeedFilter} />
+          </div>
+
+          <div ref={firstPostRef} className="min-w-0 max-w-2xl w-full mx-auto lg:mx-0">
+            <PostsFeed
+              embedded
+              feedFilter={feedFilter}
+              onSavePost={onSavePost}
+              onRemoveSavedItem={onRemoveSavedItem}
+              savedItems={savedItems}
+              onNavigateToBusiness={onNavigateToBusiness}
+              onNavigateToUserProfile={onNavigateToUserProfile}
+              followedBusinesses={followedBusinesses}
+              onFollowBusiness={onFollowBusiness}
+              userPosts={userPosts}
+              highlightPostId={highlightPostId}
+              onClearHighlight={onClearHighlight}
+              feedVersion={feedVersion}
+              lastCreatedPost={lastCreatedPost}
+            />
+          </div>
+
+          <div className="hidden lg:block sticky top-24 self-start">
+            <PostsRightSidebar
+              followedBusinesses={followedBusinesses}
+              onFollowBusiness={onFollowBusiness}
+              onNavigateToBusiness={onNavigateToBusiness}
+              onSelectPost={(postId) => {
+                const el = document.getElementById(`post-${postId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="lg:hidden mt-8">
+          <PostsRightSidebar
             followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
-            userPosts={userPosts}
-            highlightPostId={highlightPostId}
-            onClearHighlight={onClearHighlight}
-            feedVersion={feedVersion}
-            lastCreatedPost={lastCreatedPost}
+            onNavigateToBusiness={onNavigateToBusiness}
+            onSelectPost={(postId) => {
+              const el = document.getElementById(`post-${postId}`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }}
           />
         </div>
 

@@ -36,6 +36,7 @@ import { PostInteractionsProvider } from './contexts/PostInteractionsContext';
 import { AppStateProvider, useAppState } from './shared/store/AppStateContext';
 import { shouldShowLayout, shouldShowFooter } from './shared/utils/navigation';
 import { Toaster } from './components/ui/sonner';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { useTranslation } from 'react-i18next';
 
 // Re-export types for backward compatibility
@@ -484,6 +485,10 @@ function AppContent() {
     }
   };
 
+  const showScrollTop =
+    showLayout &&
+    ['home', 'posts', 'threads', 'shopping', 'search'].includes(state.currentPage);
+
   return (
     <div className="min-h-screen bg-neutral-50">
       {showLayout && (
@@ -500,6 +505,7 @@ function AppContent() {
         {renderPage()}
       </PageTransition>
       {showFooter && <Footer />}
+      {showScrollTop && <ScrollToTopButton />}
       {showLayout && (
         <AIAssistant
           isOpen={state.showAIChat}

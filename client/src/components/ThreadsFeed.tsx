@@ -26,6 +26,8 @@ interface ThreadsFeedProps {
   onClearHighlight?: () => void;
   feedVersion?: number;
   lastCreatedThread?: any | null;
+  embedded?: boolean;
+  feedFilter?: 'all' | 'following' | 'businesses';
 }
 
 interface MentionUser {
@@ -43,7 +45,7 @@ const getTotalCommentCount = (comments: any[]): number => {
   }, 0);
 };
 
-export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight, feedVersion = 0, lastCreatedThread = null }: ThreadsFeedProps) {
+export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], onNavigateToBusiness, onNavigateToUserProfile, followedBusinesses, onFollowBusiness, userThreads = [], highlightThreadId, onClearHighlight, feedVersion = 0, lastCreatedThread = null, embedded = false, feedFilter = 'all' }: ThreadsFeedProps) {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [mentionableUsers, setMentionableUsers] = useState<MentionUser[]>([]);
@@ -62,16 +64,14 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
       try {
         const profiles = await fetchMentionableProfiles().catch(() => []);
         const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .filter((u) => u.role === 'business')
           .map((u) => {
-            const isBusiness = u.role === 'business';
-            const name = (
-              isBusiness ? (u.companyName || u.fullName) : (u.fullName || u.companyName) || ''
-            ).trim();
+            const name = (u.companyName || u.fullName || '').trim();
             return {
               id: u.id,
               name,
               avatar: getAvatarUrl(u.avatar, name),
-              type: u.role || 'business',
+              type: 'business' as const,
               verified: !!u.verified,
             };
           })
@@ -342,10 +342,13 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
   // Auto-remove highlight after 3 seconds
   useEffect(() => {
     if (showHighlight && highlightThreadId) {
-      const timer = setTimeout(() => setShowHighlight(false), 3000);
+      const timer = setTimeout(() => {
+        setShowHighlight(false);
+        onClearHighlight?.();
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showHighlight, highlightThreadId]);
+  }, [showHighlight, highlightThreadId, onClearHighlight]);
 
   const [likingThreadId, setLikingThreadId] = useState<string | null>(null);
   const handleLike = async (threadId: string) => {
@@ -928,15 +931,29 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
   };
 
   const displayedThreads = React.useMemo(() => {
+    const followedIds = new Set(
+      (followedBusinesses || []).map((b: any) => String(b.id))
+    );
+    let list = displayThreads;
+    if (feedFilter === 'following') {
+      list = displayThreads.filter((th) => {
+        const authorId = String(th.author?.id || '');
+        const businessId = String(th.author?.businessId || '');
+        return followedIds.has(authorId) || (businessId && followedIds.has(businessId));
+      });
+    } else if (feedFilter === 'businesses') {
+      list = displayThreads.filter((th) => th.author?.type === 'business');
+    }
+
     if (highlightThreadId) {
-      const highlightedThread = displayThreads.find(t => t.id === highlightThreadId);
+      const highlightedThread = list.find((th) => th.id === highlightThreadId);
       if (highlightedThread) {
-        const rest = displayThreads.filter(t => t.id !== highlightThreadId);
+        const rest = list.filter((th) => th.id !== highlightThreadId);
         return [highlightedThread, ...rest];
       }
     }
-    return displayThreads;
-  }, [displayThreads, highlightThreadId]);
+    return list;
+  }, [displayThreads, highlightThreadId, feedFilter, followedBusinesses]);
   
   const currentModalThread = threads.find(t => t.id === commentsModalThread);
   const threadComments = comments[commentsModalThread || ''] || [];
@@ -951,6 +968,15 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
             {threadsError}
           </div>
         )}
+        {displayedThreads.length === 0 && (
+          <div className="rounded-xl border border-dashed border-neutral-200 bg-white px-4 py-10 text-center text-sm text-neutral-500">
+            {feedFilter === 'following'
+              ? 'No threads from businesses you follow yet.'
+              : feedFilter === 'businesses'
+                ? 'No business threads in this feed yet.'
+                : 'No threads yet.'}
+          </div>
+        )}
         {displayedThreads.map((thread) => {
           const totalComments = comments[thread.id]
             ? getTotalCommentCount(comments[thread.id])
@@ -962,7 +988,7 @@ export function ThreadsFeed({ onSaveThread, onRemoveSavedItem, savedItems = [], 
               key={thread.id} 
               id={`thread-${thread.id}`} 
               ref={isHighlighted ? highlightedThreadRef : null}
-              className={`rounded-xl border overflow-hidden hover:shadow-lg transition-colors duration-500 ${
+              className={`rounded-xl border overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 ${
                 isHighlighted 
                   ? 'bg-green-100 border-green-300 shadow-lg' 
                   : 'bg-white border-neutral-200'

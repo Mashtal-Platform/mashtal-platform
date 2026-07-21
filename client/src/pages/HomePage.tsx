@@ -42,7 +42,7 @@ export function HomePage({
       
       {/* Latest Updates Section - Combined Posts & Threads */}
       <section className="py-8 sm:py-16 bg-white scroll-mt-20" id="latest-updates">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
             <div>
               <h2 className="text-2xl sm:text-3xl text-neutral-900 mb-2">
@@ -82,20 +82,10 @@ export function HomePage({
             onNavigateToThreads={() => onNavigate('threads')}
             followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
-            maxPosts={4}
-            maxThreads={4}
+            maxPosts={3}
+            maxThreads={3}
             feedVersion={feedVersion}
           />
-          
-          <div className="text-center mt-8">
-            <Button
-              onClick={() => onNavigate('posts')}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {t('home.latestUpdates')}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
         </div>
       </section>
       

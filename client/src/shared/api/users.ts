@@ -26,9 +26,9 @@ export async function fetchBusinesses(): Promise<UserDto[]> {
   return apiGet('/businesses');
 }
 
-/** Fetch all mentionable profiles (businesses and visitors). */
+/** Fetch mentionable businesses only (for @mentions in comments/posts). */
 export async function fetchMentionableProfiles(): Promise<UserDto[]> {
-  return apiGet('/businesses?roles=business,visitor,admin,agronomist,engineer');
+  return apiGet('/businesses?roles=business');
 }
 
 /** Search for businesses (e.g. for Share modal "Send to Mashtal users"). */

@@ -7,7 +7,7 @@ import { fetchProducts, ShoppingProductDto } from '../shared/api/products';
 import { fetchPosts, PostDto } from '../shared/api/posts';
 import { fetchThreads, ThreadDto } from '../shared/api/threads';
 import { getImageUrl } from '../shared/api/client';
-
+import { LebanonLocationPicker } from '../components/LebanonLocationPicker';
 // Unified search result type
 interface SearchResult {
   id: string;
@@ -166,8 +166,19 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
       // Verified filter
       const matchesVerified = !verifiedOnly || result.verified;
 
-      // Location filter
-      const matchesLocation = location === 'all' || result.location?.includes(location);
+      // Location filter (Lebanese signup locations)
+      const matchesLocation =
+        location === 'all' ||
+        !location ||
+        (() => {
+          const loc = (result.location || '').toLowerCase();
+          if (!loc) return false;
+          const parts = location
+            .split('/')
+            .map((p) => p.trim().toLowerCase())
+            .filter(Boolean);
+          return parts.some((p) => loc.includes(p)) || loc.includes(location.toLowerCase());
+        })();
 
       return matchesSearch && matchesCategory && matchesRating && matchesVerified && matchesLocation;
     });
@@ -321,20 +332,23 @@ export function SearchPage({ onViewBusiness, onNavigateToUserProfile, onNavigate
                   </select>
                 </div>
 
-                {/* Location Filter */}
+                {/* Location Filter — same Lebanese list as signup */}
                 <div>
-                  <label className="block text-sm text-neutral-700 mb-2">{t('common.location')}</label>
-                  <select
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-2 border border-neutral-200 rounded-lg outline-none focus:border-green-600"
-                  >
-                    <option value="all">{t('search.allLocations')}</option>
-                    <option value="Riyadh">Riyadh</option>
-                    <option value="Jeddah">Jeddah</option>
-                    <option value="Dammam">Dammam</option>
-                    <option value="Mecca">Mecca</option>
-                  </select>
+                  <LebanonLocationPicker
+                    label={t('common.location')}
+                    value={location === 'all' ? '' : location}
+                    placeholder={t('search.allLocations')}
+                    onChange={(value) => setLocation(value?.trim() ? value : 'all')}
+                  />
+                  {location !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setLocation('all')}
+                      className="mt-2 text-xs text-green-700 hover:underline"
+                    >
+                      {t('search.allLocations')}
+                    </button>
+                  )}
                 </div>
 
                 {/* Verified Filter */}
