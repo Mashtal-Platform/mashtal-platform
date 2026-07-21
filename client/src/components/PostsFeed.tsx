@@ -26,6 +26,10 @@ interface PostsFeedProps {
   onClearHighlight?: () => void;
   feedVersion?: number;
   lastCreatedPost?: any | null;
+  /** When true, omit outer page chrome so parent can own the layout (e.g. sidebars). */
+  embedded?: boolean;
+  /** Client-side filter for the loaded feed. */
+  feedFilter?: 'all' | 'following' | 'businesses';
 }
 
 interface MentionUser {
@@ -49,6 +53,8 @@ export function PostsFeed({
   onClearHighlight,
   feedVersion = 0,
   lastCreatedPost = null,
+  embedded = false,
+  feedFilter = 'all',
 }: PostsFeedProps) {
   const { user, isAuthenticated } = useAuth();
   const { t } = useTranslation();
@@ -67,16 +73,14 @@ export function PostsFeed({
       try {
         const profiles = await fetchMentionableProfiles().catch(() => []);
         const mapped: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .filter((u) => u.role === 'business')
           .map((u) => {
-            const isBusiness = u.role === 'business';
-            const name = (
-              isBusiness ? (u.companyName || u.fullName) : (u.fullName || u.companyName) || ''
-            ).trim();
+            const name = (u.companyName || u.fullName || '').trim();
             return {
               id: u.id,
               name,
               avatar: getAvatarUrl(u.avatar, name),
-              type: u.role || 'business',
+              type: 'business' as const,
               verified: !!u.verified,
             };
           })
@@ -432,10 +436,13 @@ export function PostsFeed({
   // Auto-remove highlight after 3 seconds
   useEffect(() => {
     if (showHighlight && highlightPostId) {
-      const timer = setTimeout(() => setShowHighlight(false), 3000);
+      const timer = setTimeout(() => {
+        setShowHighlight(false);
+        onClearHighlight?.();
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showHighlight, highlightPostId]);
+  }, [showHighlight, highlightPostId, onClearHighlight]);
 
   const handleFollow = (post: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -985,19 +992,32 @@ export function PostsFeed({
 
   // Display all accumulated posts; move highlighted to top if present; use displayPosts for correct isSaved
   const displayedPosts = React.useMemo(() => {
+    const followedIds = new Set(
+      (followedBusinesses || []).map((b: any) => String(b.id))
+    );
+    let list = displayPosts;
+    if (feedFilter === 'following') {
+      list = displayPosts.filter((p) => {
+        const authorId = String(p.author?.id || '');
+        const businessId = String(p.author?.businessId || '');
+        return followedIds.has(authorId) || (businessId && followedIds.has(businessId));
+      });
+    } else if (feedFilter === 'businesses') {
+      list = displayPosts.filter((p) => p.author?.type === 'business');
+    }
+
     if (highlightPostId) {
-      const highlightedPost = displayPosts.find((p) => p.id === highlightPostId);
+      const highlightedPost = list.find((p) => p.id === highlightPostId);
       if (highlightedPost) {
-        const rest = displayPosts.filter((p) => p.id !== highlightPostId);
+        const rest = list.filter((p) => p.id !== highlightPostId);
         return [highlightedPost, ...rest];
       }
     }
-    return displayPosts;
-  }, [displayPosts, highlightPostId]);
+    return list;
+  }, [displayPosts, highlightPostId, feedFilter, followedBusinesses]);
 
-  return (
-    <section id="posts" className="py-16 bg-neutral-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+  const feedBody = (
+        <>
         {/* Optional API error banner */}
         {postsError && (
           <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
@@ -1007,6 +1027,15 @@ export function PostsFeed({
 
         {/* Posts List */}
         <div className="space-y-6">
+          {displayedPosts.length === 0 && !isLoadingPosts && (
+            <div className="rounded-xl border border-dashed border-neutral-200 bg-white px-4 py-10 text-center text-sm text-neutral-500">
+              {feedFilter === 'following'
+                ? 'No posts from businesses you follow yet.'
+                : feedFilter === 'businesses'
+                  ? 'No business posts in this feed yet.'
+                  : 'No posts yet.'}
+            </div>
+          )}
           {displayedPosts.map((post) => {
             const { text: displayText, isTruncated } = truncateText(post.content, 200);
             const showFullText = expandedFullTextIds.has(post.id);
@@ -1036,15 +1065,15 @@ export function PostsFeed({
                 key={post.id} 
                 id={`post-${post.id}`} 
                 ref={isHighlighted ? highlightedPostRef : null}
-                className={`rounded-xl border overflow-hidden hover:shadow-lg transition-colors duration-500 ${
+                className={`rounded-xl border overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 ${
                   isHighlighted 
                     ? 'bg-green-100 border-green-300 shadow-lg' 
                     : 'bg-white border-neutral-200'
                 }`}
               >
                 {/* Post Header */}
-                <div className="p-4 pb-3 sm:p-6 sm:pb-4">
-                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="p-3 pb-2 sm:p-4 sm:pb-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3 mb-2 sm:mb-3">
                     {/* Profile picture with role icon at bottom-right */}
                     <div className="relative flex-shrink-0">
                       <img
@@ -1052,7 +1081,7 @@ export function PostsFeed({
                         alt={post.author.name}
                         onClick={() => handlePostAuthorClick(post)}
                         draggable="false"
-                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
+                        className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
                       />
                       <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
                         {getRoleIcon(post.author.type)}
@@ -1134,7 +1163,7 @@ export function PostsFeed({
 
                 {/* Post Image */}
                 {post.image && (
-                  <div className="relative h-52 sm:h-80 overflow-hidden">
+                  <div className="relative h-40 sm:h-56 overflow-hidden">
                     <img
                       src={getImageUrl(post.image)}
                       alt={post.title}
@@ -1153,8 +1182,8 @@ export function PostsFeed({
                 )}
 
                 {/* Post Actions */}
-                <div className="p-4 pt-3 sm:p-6 sm:pt-4 border-t border-neutral-100">
-                  <div className="flex items-center gap-4 sm:gap-6">
+                <div className="p-3 pt-2 sm:p-4 sm:pt-3 border-t border-neutral-100">
+                  <div className="flex items-center gap-4 sm:gap-5">
                     <button
                       onClick={() => handleLike(post.id)}
                       disabled={!isAuthenticated}
@@ -1226,7 +1255,18 @@ export function PostsFeed({
         {!hasMorePosts && posts.length > 0 && (
           <p className="text-center py-6 text-neutral-500 text-sm">{t('posts.seenAll')}</p>
         )}
-      </div>
+        </>
+  );
+
+  return (
+    <section id="posts" className={embedded ? 'py-0 bg-transparent' : 'py-16 bg-neutral-50'}>
+      {embedded ? (
+        feedBody
+      ) : (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {feedBody}
+        </div>
+      )}
 
       {/* Comments Modal */}
       {commentsModalPost && (

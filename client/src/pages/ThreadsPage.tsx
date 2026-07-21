@@ -5,7 +5,11 @@ import { SavedItem } from '../App';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-
+import {
+  PostsFilterSidebar,
+  PostsRightSidebar,
+  type PostsFeedFilter,
+} from '../components/PostsFeedSidePanel';
 interface ThreadsPageProps {
   onSaveThread: (item: SavedItem) => void;
   onRemoveSavedItem?: (savedItemId: string) => void;
@@ -56,6 +60,7 @@ export function ThreadsPage({
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullVelocity, setPullVelocity] = useState(0);
+  const [feedFilter, setFeedFilter] = useState<PostsFeedFilter>('all');
   
   const successMessageRef = useRef<HTMLDivElement>(null);
   const firstThreadRef = useRef<HTMLDivElement>(null);
@@ -350,66 +355,91 @@ export function ThreadsPage({
       )}
 
       <div 
-        className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8"
         style={{
           transform: isPulling || isRefreshing ? `translateY(${pullDistance * 0.3}px)` : 'none',
           transition: isRefreshing || !isPulling ? 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
         }}
       >
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-neutral-900 mb-2">{t('threads.title')}</h1>
-          <p className="text-neutral-600">{t('threads.subtitle')}</p>
-        </div>
+        <div className="mb-6 sm:mb-10 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl text-neutral-900 mb-2">{t('threads.title')}</h1>
+            <p className="text-neutral-600">{t('threads.subtitle')}</p>
+          </div>
 
-        {/* Create Thread Button */}
-        <div 
-          className={`mb-6 transition-all duration-300 ${
-            isSticky 
-              ? 'fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-neutral-200 shadow-sm' 
-              : ''
-          }`}
-        >
-          <div className={`${isSticky ? 'max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4' : ''}`}>
-            {isAuthenticated && (user?.role === 'business' || user?.role === 'admin') ? (
+          {/* Create Thread - business accounts only (same style as Create Post) */}
+          {isAuthenticated && (user?.role === 'business' || user?.role === 'admin') && (
+            <div className="relative">
               <Button
                 onClick={onCreateThread}
-                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12 flex items-center justify-center gap-2"
+                className={`bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 flex-shrink-0 transition-all ${
+                  isSticky ? 'fixed top-20 right-8 z-50 shadow-xl' : ''
+                }`}
               >
                 <Plus className="w-5 h-5" />
                 {t('threads.createThread')}
               </Button>
-            ) : isAuthenticated ? (
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-center">
-                <p className="text-neutral-700">
-                  {t('threads.signInToCreate')}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                <p className="text-green-800">
-                  {t('common.signInRequired')}
-                </p>
-              </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        <div className="lg:hidden mb-5 space-y-4">
+          <PostsFilterSidebar value={feedFilter} onChange={setFeedFilter} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_minmax(0,1fr)_280px] gap-5 xl:gap-6 items-start">
+          <div className="hidden lg:block sticky top-24 self-start">
+            <PostsFilterSidebar value={feedFilter} onChange={setFeedFilter} />
+          </div>
+
+          <div ref={firstThreadRef} className="min-w-0 max-w-2xl w-full mx-auto lg:mx-0">
+            <ThreadsFeed
+              embedded
+              feedFilter={feedFilter}
+              onSaveThread={onSaveThread}
+              onRemoveSavedItem={onRemoveSavedItem}
+              savedItems={savedItems}
+              onNavigateToBusiness={onNavigateToBusiness}
+              onNavigateToUserProfile={onNavigateToUserProfile}
+              followedBusinesses={followedBusinesses}
+              onFollowBusiness={onFollowBusiness}
+              userThreads={userThreads}
+              highlightThreadId={highlightThreadId}
+              onClearHighlight={onClearHighlight}
+              feedVersion={feedVersion}
+              lastCreatedThread={lastCreatedThread}
+            />
+          </div>
+
+          <div className="hidden lg:block sticky top-24 self-start">
+            <PostsRightSidebar
+              kind="threads"
+              followedBusinesses={followedBusinesses}
+              onFollowBusiness={onFollowBusiness}
+              onNavigateToBusiness={onNavigateToBusiness}
+              onSelectThread={(threadId) => {
+                const el = document.getElementById(`thread-${threadId}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }}
+            />
           </div>
         </div>
 
-        {/* Threads Feed */}
-        <div ref={firstThreadRef}>
-          <ThreadsFeed
-            onSaveThread={onSaveThread}
-            onRemoveSavedItem={onRemoveSavedItem}
-            savedItems={savedItems}
-            onNavigateToBusiness={onNavigateToBusiness}
-            onNavigateToUserProfile={onNavigateToUserProfile}
+        <div className="lg:hidden mt-8">
+          <PostsRightSidebar
+            kind="threads"
             followedBusinesses={followedBusinesses}
             onFollowBusiness={onFollowBusiness}
-            userThreads={userThreads}
-            highlightThreadId={highlightThreadId}
-            onClearHighlight={onClearHighlight}
-            feedVersion={feedVersion}
-            lastCreatedThread={lastCreatedThread}
+            onNavigateToBusiness={onNavigateToBusiness}
+            onSelectThread={(threadId) => {
+              const el = document.getElementById(`thread-${threadId}`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }}
           />
         </div>
 

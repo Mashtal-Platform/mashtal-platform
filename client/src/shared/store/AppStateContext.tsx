@@ -431,9 +431,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }));
         return;
       }
-      if (page === 'shopping' && params.productId) {
-        setState(prev => ({ ...prev, currentPage: 'shopping', highlightShoppingProductId: params.productId }));
-        scrollToTop();
+      if (page === 'shopping') {
+        // Highlight a product from search: stay on product, do not jump to page top.
+        // Empty/clear params: only clear highlight, no scroll.
+        if (params.productId) {
+          setState((prev) => ({
+            ...prev,
+            currentPage: 'shopping',
+            highlightShoppingProductId: params.productId,
+          }));
+          return;
+        }
+        setState((prev) => ({
+          ...prev,
+          currentPage: 'shopping',
+          highlightShoppingProductId: null,
+        }));
         return;
       }
       if (page === 'user-profile' && params.userId) {

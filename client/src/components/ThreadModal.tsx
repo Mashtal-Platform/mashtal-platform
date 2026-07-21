@@ -126,43 +126,17 @@ export function ThreadModal({
       try {
         const profiles = await fetchMentionableProfiles().catch(() => []);
         const base: MentionUser[] = (Array.isArray(profiles) ? profiles : [])
+          .filter((u) => u.role === 'business')
           .map((u) => ({
             id: u.id,
-            name: (u.fullName || u.companyName || '').trim(),
+            name: (u.companyName || u.fullName || '').trim(),
             avatar: u.avatar || '',
-            type: u.role || 'business',
+            type: 'business',
             verified: !!u.verified,
           }))
           .filter((u) => u.name.length > 0);
 
-        const baseById = new Map<string, MentionUser>();
-        base.forEach((u) => baseById.set(u.id, u));
-
-        const fromComments: MentionUser[] = [];
-        const walk = (arr: ThreadModalComment[]) => {
-          for (const c of arr) {
-            if (c.userId) {
-              const existing = baseById.get(c.userId);
-              fromComments.push({
-                id: c.userId,
-                name: (c.userName || existing?.name || '').trim(),
-                avatar: c.userAvatar || existing?.avatar || '',
-                type: existing?.type || 'user',
-                verified: existing?.verified || false,
-              });
-            }
-            if (c.replies?.length) walk(c.replies);
-          }
-        };
-        walk(comments || []);
-
-        const merged = [...base, ...fromComments].reduce((acc, u) => {
-          if (!u.id || !u.name) return acc;
-          if (!acc.some((x) => x.id === u.id)) acc.push(u);
-          return acc;
-        }, [] as MentionUser[]);
-
-        if (isMounted) setMentionableUsers(merged);
+        if (isMounted) setMentionableUsers(base);
       } catch {
         // Non-fatal.
       }

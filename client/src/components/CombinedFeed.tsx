@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Clock, Bookmark, Send, CheckCircle2, UserPlus, Check, Building2, User, Shield } from 'lucide-react';
+import { Heart, MessageCircle, Building2, User, Shield, ArrowRight } from 'lucide-react';
 import { ShareModal } from './ShareModal';
 import { useAuth } from '../contexts/AuthContext';
 import { VerifiedBadge } from './VerifiedBadge';
@@ -7,6 +7,7 @@ import { SavedItem } from '../App';
 import { fetchPosts, toggleLikePost, sharePost, PostDto } from '../shared/api/posts';
 import { fetchThreads, toggleLikeThread, shareThread, ThreadDto } from '../shared/api/threads';
 import { getImageUrl, getAvatarUrl } from '../shared/api/client';
+import { useTranslation } from 'react-i18next';
 
 interface CombinedFeedProps {
   onSaveItem?: (item: any) => void;
@@ -65,6 +66,7 @@ export function CombinedFeed({
   maxItems = 10,
   feedVersion = 0,
 }: CombinedFeedProps) {
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [combinedItems, setCombinedItems] = useState<FeedItem[]>([]);
 
@@ -309,220 +311,260 @@ export function CombinedFeed({
     }
   };
 
+
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
   };
 
+  const postItems = displayItems.filter((i) => i.type === 'post');
+  const threadItems = displayItems.filter((i) => i.type === 'thread');
+  const useDiscoverLayout = typeof maxPosts === 'number' || typeof maxThreads === 'number';
+
+  const renderCompactCard = (item: FeedItem) => {
+    const isPost = item.type === 'post';
+    return (
+      <article
+        key={`${item.type}-${item.id}`}
+        onClick={() => handleItemClick(item)}
+        className={`group relative bg-white rounded-2xl border overflow-hidden cursor-pointer flex flex-col h-full transition-all duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.015] ${
+          isPost
+            ? 'border-neutral-100 shadow-sm hover:border-green-300 hover:shadow-xl hover:shadow-green-600/15'
+            : 'border-neutral-100 shadow-sm hover:border-purple-300 hover:shadow-xl hover:shadow-purple-600/15'
+        }`}
+      >
+        <div className="relative aspect-[16/11] bg-neutral-100 overflow-hidden">
+          {item.image ? (
+            <img
+              src={getImageUrl(item.image)}
+              alt={item.title}
+              draggable="false"
+              className="w-full h-full object-cover select-none transition-transform duration-700 ease-out group-hover:scale-110"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center transition-transform duration-700 group-hover:scale-105 ${
+                isPost
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-100'
+                  : 'bg-gradient-to-br from-violet-50 to-purple-100'
+              }`}
+            >
+              <MessageCircle
+                className={`w-12 h-12 transition-all duration-300 group-hover:scale-125 ${
+                  isPost
+                    ? 'text-green-300 group-hover:text-green-500'
+                    : 'text-purple-300 group-hover:text-purple-500'
+                }`}
+              />
+            </div>
+          )}
+          {/* Soft tint overlay on hover */}
+          <div
+            className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
+              isPost
+                ? 'bg-gradient-to-t from-green-900/25 via-transparent to-transparent'
+                : 'bg-gradient-to-t from-purple-900/25 via-transparent to-transparent'
+            }`}
+          />
+          <span
+            className={`absolute top-3.5 start-3.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md ${
+              isPost
+                ? 'bg-white/95 text-green-700 group-hover:bg-green-600 group-hover:text-white'
+                : 'bg-white/95 text-purple-700 group-hover:bg-purple-600 group-hover:text-white'
+            }`}
+          >
+            {isPost ? 'Post' : 'Thread'}
+          </span>
+        </div>
+
+        <div className="p-5 flex flex-col flex-1 gap-3.5">
+          <div className="flex items-center gap-3">
+            <img
+              src={getAvatarUrl(item.author.avatar, item.author.name)}
+              alt={item.author.name}
+              onClick={(e) => handleAuthorClick(item, e)}
+              draggable="false"
+              className={`w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm cursor-pointer select-none transition-all duration-300 group-hover:scale-105 ${
+                isPost ? 'group-hover:ring-green-400' : 'group-hover:ring-purple-400'
+              }`}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span
+                  onClick={(e) => handleAuthorClick(item, e)}
+                  className={`text-[15px] font-semibold text-neutral-900 truncate cursor-pointer transition-colors ${
+                    isPost ? 'group-hover:text-green-700' : 'group-hover:text-purple-700'
+                  }`}
+                >
+                  {item.author.name}
+                </span>
+                {item.author.verified && <VerifiedBadge />}
+              </div>
+              <p className="text-xs text-neutral-400">{item.timeAgo}</p>
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <h3
+              className={`text-base font-semibold text-neutral-900 leading-snug line-clamp-2 mb-2 transition-colors duration-300 ${
+                isPost ? 'group-hover:text-green-800' : 'group-hover:text-purple-800'
+              }`}
+            >
+              {item.title}
+            </h3>
+            <p className="text-[15px] text-neutral-500 leading-relaxed line-clamp-3 transition-colors duration-300 group-hover:text-neutral-600">
+              {truncateText(item.content, 140)}
+            </p>
+          </div>
+
+          <div
+            className={`pt-3.5 border-t border-neutral-100 flex items-center gap-5 text-neutral-500 text-sm transition-colors duration-300 ${
+              isPost ? 'group-hover:border-green-100 group-hover:text-green-700' : 'group-hover:border-purple-100 group-hover:text-purple-700'
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5 transition-transform duration-300 group-hover:scale-105">
+              <Heart className={`w-4 h-4 ${item.isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+              {item.likes}
+            </span>
+            <span className="inline-flex items-center gap-1.5 transition-transform duration-300 group-hover:scale-105">
+              <MessageCircle className="w-4 h-4" />
+              {item.comments}
+            </span>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const renderShowMoreCard = (
+    accent: 'green' | 'purple',
+    onClick?: () => void,
+    label: string,
+    subtitle: string
+  ) => {
+    if (!onClick) return null;
+    const isGreen = accent === 'green';
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`group relative flex h-full min-h-[300px] w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-300 ease-out hover:-translate-y-1.5 hover:scale-[1.015] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+          isGreen
+            ? 'border-green-200 bg-gradient-to-br from-green-50 via-white to-emerald-50 hover:border-green-400 hover:shadow-xl hover:shadow-green-600/15 focus-visible:ring-green-500'
+            : 'border-purple-200 bg-gradient-to-br from-violet-50 via-white to-purple-50 hover:border-purple-400 hover:shadow-xl hover:shadow-purple-600/15 focus-visible:ring-purple-500'
+        }`}
+      >
+        <div
+          className={`flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg transition-transform duration-300 group-hover:scale-125 group-hover:-translate-x-0.5 ${
+            isGreen
+              ? 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-600/25 group-hover:shadow-green-600/40'
+              : 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-purple-600/25 group-hover:shadow-purple-600/40'
+          }`}
+        >
+          <ArrowRight className="h-7 w-7 transition-transform duration-300 group-hover:translate-x-0.5" />
+        </div>
+        <div>
+          <p
+            className={`text-lg font-semibold ${
+              isGreen ? 'text-green-800' : 'text-purple-800'
+            }`}
+          >
+            {label}
+          </p>
+          <p
+            className={`mt-1.5 text-[15px] ${
+              isGreen ? 'text-green-700/70' : 'text-purple-700/70'
+            }`}
+          >
+            {subtitle}
+          </p>
+        </div>
+      </button>
+    );
+  };
+
+  const renderDiscoverSection = (
+    title: string,
+    itemsForSection: FeedItem[],
+    emptyLabel: string,
+    accent: 'green' | 'purple',
+    onShowMore?: () => void,
+    showMoreLabel?: string,
+    showMoreSubtitle?: string
+  ) => (
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-semibold tracking-tight text-neutral-900">{title}</h3>
+          <div
+            className={`mt-1 h-1 w-10 rounded-full ${
+              accent === 'green' ? 'bg-green-500' : 'bg-purple-500'
+            }`}
+          />
+        </div>
+      </div>
+      {itemsForSection.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 py-1">
+          <p className="sm:col-span-2 lg:col-span-3 text-sm text-neutral-500 py-8 text-center rounded-2xl border border-dashed border-neutral-200 bg-neutral-50">
+            {emptyLabel}
+          </p>
+          {renderShowMoreCard(
+            accent,
+            onShowMore,
+            showMoreLabel || t('common.viewAll'),
+            showMoreSubtitle || ''
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 py-1">
+          {itemsForSection.map(renderCompactCard)}
+          {renderShowMoreCard(
+            accent,
+            onShowMore,
+            showMoreLabel || t('common.viewAll'),
+            showMoreSubtitle || ''
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {items.length === 0 ? (
         <div className="text-center py-12">
           <MessageCircle className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
           <h3 className="text-xl text-neutral-900 mb-2">No updates yet</h3>
           <p className="text-neutral-600">Be the first to share something with the community!</p>
         </div>
+      ) : useDiscoverLayout ? (
+        <>
+          {renderDiscoverSection(
+            t('posts.title', { defaultValue: 'Posts' }),
+            postItems,
+            t('posts.noPostsYet', { defaultValue: 'No posts yet' }),
+            'green',
+            onNavigateToPosts,
+            t('home.showMorePosts', { defaultValue: 'Show more' }),
+            t('home.viewAllPosts', { defaultValue: 'View all posts' })
+          )}
+          {renderDiscoverSection(
+            t('threads.title', { defaultValue: 'Threads' }),
+            threadItems,
+            t('threads.noThreadsYet', { defaultValue: 'No threads yet' }),
+            'purple',
+            onNavigateToThreads,
+            t('home.showMoreThreads', { defaultValue: 'Show more' }),
+            t('home.viewAllThreads', { defaultValue: 'View all threads' })
+          )}
+        </>
       ) : (
-        displayItems.map((item) => {
-          const isFollowing = isFollowingBusiness(item.author.id);
-          const currentBusinessId = user?.businessId || user?.id;
-          const authorBusinessId =
-            item.author.type === 'business'
-              ? item.author.businessId || item.author.id
-              : item.author.id || item.author.businessId;
-
-          const isOwnBusiness = Boolean(currentBusinessId) && authorBusinessId === currentBusinessId;
-
-          return (
-            <article 
-              key={`${item.type}-${item.id}`}
-              className="bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              {/* Item Header */}
-              <div className="p-4 pb-3 sm:p-6 sm:pb-4">
-                <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-                  {/* Profile picture with role icon at bottom-right */}
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={getAvatarUrl(item.author.avatar, item.author.name)}
-                      alt={item.author.name}
-                      onClick={(e) => handleAuthorClick(item, e)}
-                      draggable="false"
-                      className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-green-500 transition-all select-none"
-                    />
-                    <div className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-md">
-                      {getRoleIcon(item.author.type)}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex flex-col">
-                        <span 
-                          onClick={(e) => handleAuthorClick(item, e)}
-                          className="font-medium text-neutral-900 hover:text-green-600 cursor-pointer transition-colors"
-                        >
-                          {item.author.name}
-                        </span>
-                        {/* Role name under username */}
-                        <span className="text-xs text-neutral-500 capitalize">
-                          {item.author.type === 'business' ? 'Business' : 
-                           item.author.type === 'admin' ? 'Administrator' : 'Visitor'}
-                        </span>
-                      </div>
-                      {item.author.verified && (
-                        <VerifiedBadge />
-                      )}
-                      {/* Type Badge */}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        item.type === 'post' 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        {item.type === 'post' ? 'Post' : 'Thread'}
-                      </span>
-                      {/* Follow Button */}
-                      {item.author.type === 'business' && !isOwnBusiness && isAuthenticated && !isFollowing && (
-                        <button
-                          onClick={(e) => handleFollow(item, e)}
-                          className="ml-2 flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
-                        >
-                          <UserPlus className="w-3 h-3" />
-                          Follow
-                        </button>
-                      )}
-                      {item.author.type === 'business' && isFollowing && (
-                        <span className="ml-2 flex items-center gap-1 text-xs text-neutral-500">
-                          <Check className="w-3 h-3" />
-                          Following
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <Clock className="w-4 h-4" />
-                      <span>{item.timeAgo}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSave(item);
-                    }}
-                    disabled={!isAuthenticated}
-                    className={`transition-colors ${
-                      !isAuthenticated
-                        ? 'cursor-not-allowed opacity-50'
-                        : item.isSaved 
-                        ? 'text-green-600' 
-                        : 'text-neutral-400 hover:text-neutral-600'
-                    }`}
-                    title={!isAuthenticated ? 'Sign in to save' : ''}
-                  >
-                    <Bookmark className={`w-5 h-5 ${item.isSaved ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-
-                {/* Item Content */}
-                <div onClick={() => handleItemClick(item)}>
-                  <h3 className="text-lg sm:text-xl text-neutral-900 mb-2 sm:mb-3">{item.title}</h3>
-                  <p className="text-sm sm:text-base text-neutral-600 mb-3 sm:mb-4">
-                    {truncateText(item.content, 150)}
-                  </p>
-
-                  {/* Tags */}
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {item.tags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                      {item.tags.length > 3 && (
-                        <span className="text-neutral-500 text-sm">
-                          +{item.tags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Item Image */}
-              {item.image && (
-                <div 
-                  className="relative h-52 sm:h-80 overflow-hidden cursor-pointer bg-neutral-100"
-                  onClick={() => handleItemClick(item)}
-                >
-                  <img
-                    src={getImageUrl(item.image)}
-                    alt={item.title}
-                    draggable="false"
-                    className="w-full h-full object-cover select-none transition-transform hover:scale-105"
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      handleLike(item.id);
-                    }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Item Actions */}
-              <div className="p-4 pt-3 sm:p-6 sm:pt-4 border-t border-neutral-100">
-                <div className="flex items-center gap-4 sm:gap-6">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleLike(item);
-                    }}
-                    disabled={!isAuthenticated}
-                    className={`flex items-center gap-2 transition-colors ${
-                      !isAuthenticated
-                        ? 'cursor-not-allowed opacity-50'
-                        : item.isLiked 
-                        ? 'text-red-600' 
-                        : 'text-neutral-600 hover:text-red-600'
-                    }`}
-                    title={!isAuthenticated ? 'Sign in to like' : ''}
-                  >
-                    <Heart className={`w-5 h-5 ${item.isLiked ? 'fill-current' : ''}`} />
-                    <span className="font-medium">{item.likes}</span>
-                  </button>
-                  <button
-                    onClick={() => handleItemClick(item)}
-                    className="flex items-center gap-2 text-neutral-600 hover:text-green-600 transition-colors"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="font-medium">{item.comments}</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShareModalItem(item);
-                    }}
-                    disabled={!isAuthenticated}
-                    className={`flex items-center gap-2 transition-colors ${
-                      !isAuthenticated 
-                        ? 'text-neutral-400 cursor-not-allowed' 
-                        : 'text-neutral-600 hover:text-blue-600'
-                    }`}
-                    title={!isAuthenticated ? 'Sign in to share' : 'Share'}
-                  >
-                    <Send className="w-5 h-5" />
-                    <span className="font-medium">{item.shares}</span>
-                  </button>
-                </div>
-              </div>
-            </article>
-          );
-        })
+        <div className="space-y-6">{displayItems.map(renderCompactCard)}</div>
       )}
 
-      {/* Share Modal */}
       {shareModalItem && (
         <ShareModal
           isOpen={!!shareModalItem}
@@ -530,13 +572,13 @@ export function CombinedFeed({
           postId={shareModalItem.id}
           postUrl={`${window.location.origin}/${shareModalItem.type === 'post' ? 'post' : 'thread'}/${shareModalItem.id}`}
           postTitle={shareModalItem.title}
-          postImage={(shareModalItem?.image || shareModalItem?.images?.[0]) ? getImageUrl(shareModalItem?.image || shareModalItem?.images?.[0]) : undefined}
-          postOwnerName={shareModalItem.author?.name || shareModalItem.author?.fullName}
+          postImage={(shareModalItem?.image || (shareModalItem as any)?.images?.[0]) ? getImageUrl(shareModalItem?.image || (shareModalItem as any)?.images?.[0]) : undefined}
+          postOwnerName={shareModalItem.author?.name || (shareModalItem.author as any)?.fullName}
           postOwnerAvatar={
-          shareModalItem.author?.avatar
-            ? getAvatarUrl(shareModalItem.author.avatar, shareModalItem.author.name)
-            : getAvatarUrl(null, shareModalItem.author?.name)
-        }
+            shareModalItem.author?.avatar
+              ? getAvatarUrl(shareModalItem.author.avatar, shareModalItem.author.name)
+              : getAvatarUrl(null, shareModalItem.author?.name)
+          }
           onShare={handleShareAction}
         />
       )}

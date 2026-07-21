@@ -33,7 +33,7 @@ export function HeroSection({ onNavigate }: HeroSectionProps) {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
-                onClick={() => onNavigate('search')}
+                onClick={() => onNavigate('shopping')}
                 className="flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/30"
               >
                 <span>{t('hero.startShopping')}</span>

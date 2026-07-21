@@ -42,9 +42,11 @@ function toCard(b: any): BusinessCard {
 function BusinessCardButton({
   business,
   onViewBusiness,
+  compact = false,
 }: {
   business: BusinessCard;
   onViewBusiness: (id: string) => void;
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -54,31 +56,51 @@ function BusinessCardButton({
       onClick={() => onViewBusiness(business.id)}
       className="text-left bg-white rounded-xl overflow-hidden border border-neutral-200 hover:border-green-300 hover:shadow-md transition-all w-full"
     >
-      <div className="relative aspect-[4/3] bg-neutral-100">
+      <div className={`relative bg-neutral-100 ${compact ? 'aspect-[3/2]' : 'aspect-[4/3]'}`}>
         <img
           src={business.image}
           alt={business.name}
           className="w-full h-full object-cover"
         />
-        <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-md text-sm font-medium flex items-center gap-1">
-          <Star className="w-4 h-4 fill-current" />
+        <div
+          className={`absolute top-2 left-2 bg-amber-500 text-white rounded-md font-medium flex items-center gap-1 ${
+            compact ? 'px-2 py-0.5 text-xs' : 'px-2 py-1 text-sm'
+          }`}
+        >
+          <Star className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} fill-current`} />
           <span>{business.rating.toFixed(1)}</span>
         </div>
         {business.verified && (
-          <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium">
+          <div
+            className={`absolute top-2 right-2 bg-green-600 text-white rounded-md font-medium ${
+              compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-xs'
+            }`}
+          >
             {t('common.verified')}
           </div>
         )}
       </div>
-      <div className="p-3 sm:p-4">
-        <h3 className="text-base sm:text-lg font-semibold text-neutral-900 truncate">
+      <div className={compact ? 'p-3' : 'p-3 sm:p-4'}>
+        <h3
+          className={`font-semibold text-neutral-900 truncate ${
+            compact ? 'text-sm sm:text-[15px]' : 'text-base sm:text-lg'
+          }`}
+        >
           {business.name}
         </h3>
-        <div className="mt-1.5 flex items-center gap-1.5 text-sm text-neutral-500">
-          <MapPin className="w-4 h-4 flex-shrink-0" />
+        <div
+          className={`mt-1 flex items-center gap-1.5 text-neutral-500 ${
+            compact ? 'text-xs sm:text-sm' : 'mt-1.5 text-sm'
+          }`}
+        >
+          <MapPin className={`${compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} flex-shrink-0`} />
           <span className="truncate">{business.location}</span>
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-600">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 text-neutral-600 ${
+            compact ? 'mt-2 text-xs sm:text-sm' : 'mt-2.5 text-sm'
+          }`}
+        >
           <span>{t('shopping.reviews', { count: business.reviews })}</span>
           <span className="text-green-600 font-medium truncate">
             {t('common.followersCount', { count: business.followers.toLocaleString() })}
@@ -168,15 +190,15 @@ function TrustedGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl">
         {[1, 2].map((i) => (
           <div
             key={i}
             className="bg-white rounded-xl overflow-hidden border border-neutral-200 animate-pulse"
           >
-            <div className="aspect-[4/3] bg-neutral-100" />
-            <div className="p-4 space-y-2">
-              <div className="h-4 bg-neutral-100 rounded w-3/4" />
+            <div className="aspect-[3/2] bg-neutral-100" />
+            <div className="p-3 space-y-2">
+              <div className="h-3.5 bg-neutral-100 rounded w-3/4" />
               <div className="h-3 bg-neutral-100 rounded w-1/2" />
             </div>
           </div>
@@ -200,12 +222,13 @@ function TrustedGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl">
       {businesses.map((business) => (
         <BusinessCardButton
           key={business.id}
           business={business}
           onViewBusiness={onViewBusiness}
+          compact
         />
       ))}
     </div>
