@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mashtal — The Story</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #166534;
+      --green-deep: #0f3d24;
+      --leaf: #22c55e;
+      --cream: #f4f7f2;
+      --ink: #122018;
+      --muted: #4a5c50;
+      --white: #fff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: #0a1610; font-family: "Instrument Sans", system-ui, sans-serif; color: var(--ink); }
+    .deck { height: 100vh; width: 100vw; }
+    .slide {
+      display: none;
+      position: relative;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    .slide.active { display: block; animation: in .4s ease; }
+    @keyframes in { from { opacity: 0; } to { opacity: 1; } }
+
+    .bg {
+      position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.02);
+    }
+    .veil {
+      position: absolute; inset: 0;
+      background: linear-gradient(105deg, rgba(10,22,16,.88) 0%, rgba(10,22,16,.55) 48%, rgba(10,22,16,.25) 100%);
+    }
+    .veil-strong {
+      background: linear-gradient(105deg, rgba(10,22,16,.92) 0%, rgba(10,22,16,.75) 55%, rgba(10,22,16,.45) 100%);
+    }
+    .content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(2rem, 6vw, 4.5rem);
+      max-width: min(720px, 92vw);
+      color: #f3faf5;
+    }
+    .content.light {
+      color: var(--ink);
+      max-width: min(900px, 94vw);
+    }
+    .eyebrow {
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #86efac;
+      margin-bottom: 1rem;
+    }
+    .content.light .eyebrow { color: var(--green); }
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      line-height: 1.08;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      line-height: 1.12;
+      margin-bottom: .9rem;
+    }
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      line-height: 1.55;
+      color: rgba(243,250,245,.88);
+      max-width: 36rem;
+    }
+    .content.light .lead { color: var(--muted); }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      height: 100%;
+    }
+    @media (max-width: 860px) {
+      .split { grid-template-columns: 1fr; }
+      .split .panel-img { min-height: 38vh; }
+    }
+    .panel-text {
+      background: var(--cream);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(1.8rem, 5vw, 3.5rem);
+    }
+    .panel-img {
+      background-size: cover;
+      background-position: center;
+    }
+
+    ul.story {
+      list-style: none;
+      display: grid;
+      gap: .85rem;
+      margin-top: 1.2rem;
+    }
+    ul.story li {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      font-size: clamp(1rem, 1.5vw, 1.15rem);
+      line-height: 1.45;
+      color: var(--ink);
+    }
+    ul.story li::before {
+      content: "";
+      width: .55rem; height: .55rem;
+      margin-top: .45rem;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .quote {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      line-height: 1.35;
+      font-weight: 600;
+      max-width: 18ch;
+    }
+
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .9rem;
+      margin-top: 1.4rem;
+    }
+    @media (max-width: 800px) { .pillars { grid-template-columns: 1fr; } }
+    .pillar {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 1rem;
+      padding: 1rem 1.1rem;
+      backdrop-filter: blur(6px);
+    }
+    .pillar h3 { font-size: 1rem; margin-bottom: .35rem; color: #bbf7d0; }
+    .pillar p { font-size: .92rem; line-height: 1.4; color: rgba(243,250,245,.85); }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .85rem;
+      margin-top: 1.2rem;
+    }
+    .tech {
+      background: #fff;
+      border: 1px solid #d5e5da;
+      border-radius: .9rem;
+      padding: 1rem 1.1rem;
+    }
+    .tech h3 { color: var(--green-deep); font-size: .95rem; margin-bottom: .4rem; }
+    .tech p { color: var(--muted); font-size: .88rem; line-height: 1.4; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+    .tag {
+      background: #dcfce7;
+      color: var(--green-deep);
+      font-size: .78rem;
+      font-weight: 600;
+      padding: .35rem .65rem;
+      border-radius: 999px;
+    }
+
+    .footer-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .75rem 1.25rem;
+      background: rgba(8,18,12,.9);
+      color: #dff5e7;
+      font-size: .88rem;
+      backdrop-filter: blur(8px);
+    }
+    .footer-bar button {
+      background: var(--green); color: #fff; border: 0; border-radius: .5rem;
+      padding: .45rem .85rem; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .footer-bar button:disabled { opacity: .35; cursor: default; }
+    .progress {
+      position: fixed; top: 0; left: 0; height: 3px; background: var(--leaf); z-index: 50;
+      transition: width .25s ease;
+    }
+    .brand-mark {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      line-height: 1;
+      margin-bottom: .6rem;
+    }
+    .small { font-size: .9rem; opacity: .75; margin-top: 1.25rem; }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="deck" id="deck">
+
+    <!-- 1 TITLE -->
+    <section class="slide active">
+      <div class="bg" style="background-image:url('assets/slide-landscape.png')"></div>
+      <div class="veil"></div>
+      <div class="content">
+        <p class="eyebrow">A platform story</p>
+        <p class="brand-mark">Mashtal</p>
+        <p class="lead">Agriculture doesn’t fail from lack of effort. It fails when people, products, and knowledge stay disconnected.</p>
+        <p class="small">Applied Systems Development · Dr Ali Choumane · </p>
+        <p class="small">Presented by:  Mohammad Mantach · Hadi Hojeij · Hussein Hussein </p>
+        
+      </div>
+    </section>
+
+    <!-- 2 OPENING STORY -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">The real starting point</p>
+          <h2>Meet the everyday struggle</h2>
+          <p class="lead" style="color:var(--muted); margin-top:.5rem">A grower needs seedlings and advice. A nursery needs customers they can trust. A buyer wants quality without chasing five WhatsApp chats and a cousin’s recommendation.</p>
+          <ul class="story">
+            <li>Demand exists — but discovery is random</li>
+            <li>Trust is personal — not scalable</li>
+            <li>Knowledge is scattered — Google, neighbors, guesswork</li>
+          </ul>
+        </div>
+        <div class="panel-img" style="background-image:url('assets/slide-market.png')"></div>
+      </div>
+    </section>
+
+    <!-- 3 PROBLEM DEPTH -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-disease.png')"></div>
+      <div class="veil veil-strong"></div>
+      <div class="content">
+        <p class="eyebrow">The pain</p>
+        <p class="quote">“My plants are dying — and I don’t know who to ask, what to buy, or who to trust.”</p>
+        <p class="lead" style="margin-top:1.2rem">Plant disease, irrigation mistakes, and bad product choices cost real money. Waiting days for advice is not a strategy.</p>
+      </div>
+    </section>
+
+    <!-- 4 MARKET PROBLEM -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-img" style="background-image:url('assets/slide-harvest.png')"></div>
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">Market reality</p>
+          <h2>Three broken loops</h2>
+          <ul class="story">
+            <li><strong>Buyers</strong> can’t reliably find verified nurseries and products near them</li>
+            <li><strong>Businesses</strong> struggle to sell online, manage orders, and look professional</li>
+            <li><strong>Communities</strong> discuss farming in fragments — posts here, chats there, no storefront</li>
+          </ul>
+          <p class="lead" style="color:var(--muted); margin-top:1rem">The opportunity is not “another shop.” It’s a connected agricultural marketplace with trust and intelligence built in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 INSIGHT -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-trust.png')"></div>
+      <div class="veil"></div>
+      <div class="content">
+        <p class="eyebrow">Insight</p>
+        <h2>People don’t only need products.</h2>
+        <p class="lead">They need <strong>relationships</strong>, <strong>proof</strong>, and <strong>answers</strong> — in the same place they buy.</p>
+        <div class="pillars" style="max-width:34rem">
+          <div class="pillar"><h3>Trust</h3><p>Verified businesses, ratings, reviews</p></div>
+          <div class="pillar"><h3>Access</h3><p>Shop, chat, follow, save</p></div>
+          <div class="pillar"><h3>Guidance</h3><p>Community + AI plant help</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 INTRODUCING MASHTAL -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-digital.png')"></div>
+      <div class="veil veil-strong"></div>
+      <div class="content">
+        <p class="eyebrow">The solution</p>
+        <h1>Mashtal</h1>
+        <p class="lead">One digital nursery floor for Lebanon’s agriculture ecosystem — where visitors discover, buy, learn, and talk… and businesses grow beyond the roadside shop.</p>
+      </div>
+    </section>
+
+    <!-- 7 HOW WE SOLVE -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">How Mashtal solves it</p>
+          <h2>From chaos to one journey</h2>
+          <ul class="story">
+            <li><strong>Discover</strong> trusted providers and community updates</li>
+            <li><strong>Shop</strong> products with cart and secure checkout</li>
+            <li><strong>Connect</strong> through posts, threads, follow, and chat</li>
+            <li><strong>Decide faster</strong> with AI agronomy Q&amp;A and leaf-photo analysis</li>
+            <li><strong>Sell professionally</strong> with subscription, catalog, orders, analytics</li>
+          </ul>
+        </div>
+        <div class="panel-img" style="background-image:url('assets/slide-landscape.png')"></div>
+      </div>
+    </section>
+
+    <!-- 8 FOR BUYERS -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-market.png')"></div>
+      <div class="veil"></div>
+      <div class="content">
+        <p class="eyebrow">For visitors &amp; buyers</p>
+        <h2>Find it. Trust it. Buy it.</h2>
+        <div class="pillars">
+          <div class="pillar"><h3>Search &amp; shop</h3><p>Filters, categories, stock, ratings</p></div>
+          <div class="pillar"><h3>Social proof</h3><p>Follow businesses, reviews, verified badges</p></div>
+          <div class="pillar"><h3>Checkout</h3><p>Cart → Stripe payment → purchase history</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 FOR BUSINESSES -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-img" style="background-image:url('assets/slide-trust.png')"></div>
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">For agricultural businesses</p>
+          <h2>A digital storefront that works</h2>
+          <ul class="story">
+            <li>Pay a subscription → unlock selling</li>
+            <li>Publish products, manage stock, receive orders</li>
+            <li>Post updates &amp; join threads to stay visible</li>
+            <li>Chat with customers in realtime</li>
+            <li>See sales analytics that guide decisions</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 AI MOMENT -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-disease.png')"></div>
+      <div class="veil veil-strong"></div>
+      <div class="content">
+        <p class="eyebrow">Intelligence layer</p>
+        <h2>When the leaf looks wrong, Mashtal answers.</h2>
+        <p class="lead">Ask farming questions — or upload a plant photo. Local disease analysis + treatment guidance turns panic into a next step… and can lead buyers back to the right products.</p>
+      </div>
+    </section>
+
+    <!-- 11 PLATFORM PILLARS -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">Product system</p>
+          <h2>One brand. Four engines.</h2>
+          <ul class="story">
+            <li><strong>Marketplace</strong> — products, cart, payments</li>
+            <li><strong>Community</strong> — posts, threads, follows, saves</li>
+            <li><strong>Relationships</strong> — chat &amp; Mashtal Support</li>
+            <li><strong>Intelligence</strong> — AI assistant + disease model</li>
+          </ul>
+        </div>
+        <div class="panel-img" style="background-image:url('assets/slide-harvest.png')"></div>
+      </div>
+    </section>
+
+    <!-- 12 TECH AS ENABLERS -->
+    <section class="slide">
+      <div class="panel-text" style="height:100%; background:var(--cream)">
+        <p class="eyebrow" style="color:var(--green)">Built to be real, not a mockup</p>
+        <h2>Technology behind the promise</h2>
+        <p class="lead" style="color:var(--muted)">Every feature above is powered by a modern full-stack system — chosen for speed, trust, and realtime experience.</p>
+        <div class="tech-grid">
+          <div class="tech">
+            <h3>Experience layer</h3>
+            <p>React 18, Vite, TypeScript, Tailwind CSS, Radix UI, Lucide — fast, accessible interfaces in EN &amp; AR (RTL).</p>
+            <div class="tags"><span class="tag">i18next</span><span class="tag">Recharts</span><span class="tag">Axios</span><span class="tag">Motion</span></div>
+          </div>
+          <div class="tech">
+            <h3>Platform layer</h3>
+            <p>Node.js, Express, MongoDB, Mongoose, JWT auth, Google OAuth — secure accounts and business roles.</p>
+            <div class="tags"><span class="tag">Socket.IO</span><span class="tag">Multer</span><span class="tag">Nodemailer</span></div>
+          </div>
+          <div class="tech">
+            <h3>Commerce &amp; trust</h3>
+            <p>Stripe for checkout &amp; subscriptions, Whish Money option for local business fees, order ledger &amp; notifications.</p>
+            <div class="tags"><span class="tag">Stripe.js</span><span class="tag">Webhooks</span><span class="tag">Payments</span></div>
+          </div>
+          <div class="tech">
+            <h3>Intelligence</h3>
+            <p>AI assistant pipeline with @xenova/transformers; plant-disease sidecar in Python (PyTorch, Transformers, FastAPI).</p>
+            <div class="tags"><span class="tag">FastAPI</span><span class="tag">PyTorch</span><span class="tag">Uvicorn</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 FULL TECH LIST -->
+    <section class="slide">
+      <div class="split">
+        <div class="panel-text">
+          <p class="eyebrow" style="color:var(--green)">Full stack snapshot</p>
+          <h2>All technologies used</h2>
+          <ul class="story">
+            <li><strong>Frontend:</strong> React, Vite, TSX, Tailwind 4, Radix, Socket.io-client, Stripe.js, Google login, i18next, Recharts, React Hook Form, Sonner, Embla, Vaul…</li>
+            <li><strong>Backend:</strong> Express, MongoDB/Mongoose, Socket.io, JWT, bcrypt, Google Auth Library, Stripe SDK, Multer, Nodemailer, CORS, dotenv</li>
+            <li><strong>AI:</strong> Xenova Transformers · Python torch, transformers, Pillow, FastAPI, Uvicorn</li>
+            <li><strong>Services:</strong> Stripe, Google OAuth, SMTP email, Whish Money, translation, Lebanon location search</li>
+          </ul>
+        </div>
+        <div class="panel-img" style="background-image:url('assets/slide-digital.png')"></div>
+      </div>
+    </section>
+
+    <!-- 14 WHY IT MATTERS -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-landscape.png')"></div>
+      <div class="veil"></div>
+      <div class="content">
+        <p class="eyebrow">Business value</p>
+        <h2>What changes if Mashtal wins</h2>
+        <div class="pillars">
+          <div class="pillar"><h3>For buyers</h3><p>Less guessing. More trusted purchase paths.</p></div>
+          <div class="pillar"><h3>For sellers</h3><p>Online presence, orders, and visibility without building their own app.</p></div>
+          <div class="pillar"><h3>For the sector</h3><p>Knowledge and commerce finally live in one agricultural network.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 CLOSE -->
+    <section class="slide">
+      <div class="bg" style="background-image:url('assets/slide-harvest.png')"></div>
+      <div class="veil veil-strong"></div>
+      <div class="content">
+        <p class="eyebrow">Closing</p>
+        <h1>Mashtal grows with the people who grow food.</h1>
+        <p class="lead">Real problems. One platform. Modern technology with purpose.</p>
+        <p class="small">Thank you — demo &amp; questions next</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-bar">
+    <button type="button" id="prev">← Prev</button>
+    <span id="counter">1</span>
+    <button type="button" id="next">Next →</button>
+  </div>
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    const progress = document.getElementById('progress');
+    const counter = document.getElementById('counter');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    let i = 0;
+    function show(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+      counter.textContent = (i + 1) + ' / ' + slides.length;
+      progress.style.width = ((i + 1) / slides.length * 100) + '%';
+      prevBtn.disabled = i === 0;
+      nextBtn.disabled = i === slides.length - 1;
+    }
+    prevBtn.onclick = () => show(i - 1);
+    nextBtn.onclick = () => show(i + 1);
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+      if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+      if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+    show(0);
+  </script>
+</body>
+</html>
