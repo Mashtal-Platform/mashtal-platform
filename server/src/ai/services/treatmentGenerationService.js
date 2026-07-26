@@ -37,8 +37,12 @@ function guessCropName(message) {
 }
 
 function parseAdvisorText(text) {
-  const safe = String(text || '');
-  const normalized = safe.replace(/\r\n/g, '\n').trim();
+  // Normalize markdown headings the HF router often returns (**Description:**).
+  let normalized = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\*\*/g, '')
+    .replace(/__/g, '')
+    .trim();
 
   const headings = ['Description', 'Treatment', 'Prevention', 'Recommended products'];
 
@@ -47,12 +51,13 @@ function parseAdvisorText(text) {
   // Find the first occurrence index for each heading, then slice until the next heading.
   const found = [];
   for (const h of headings) {
-    const re = new RegExp(`${escapeRegex(h)}\\s*:\\s*`, 'i');
+    const re = new RegExp(`(?:^|\\n)\\s*${escapeRegex(h)}\\s*:\\s*`, 'i');
     const m = re.exec(normalized);
     if (m && typeof m.index === 'number') {
       found.push({
         heading: h,
         start: m.index + m[0].length,
+        labelStart: m.index,
       });
     }
   }
@@ -63,7 +68,8 @@ function parseAdvisorText(text) {
   for (let i = 0; i < found.length; i++) {
     const cur = found[i];
     const next = found[i + 1];
-    const end = next ? next.start - 0 : normalized.length;
+    // Cut at the next heading's label (not its content start) so we don't swallow "**Treatment:**"
+    const end = next ? next.labelStart : normalized.length;
     const content = normalized.slice(cur.start, end).trim();
     sectionByHeading.set(cur.heading, content);
   }
@@ -92,10 +98,7 @@ function parseAdvisorText(text) {
 
   // Remove any embedded next-heading tokens that models sometimes include.
   const descCleaned = cutAtHeading(
-    cutAtHeading(
-      cutAtHeading(cleanedDescription, 'Treatment'),
-      'Prevention',
-    ),
+    cutAtHeading(cutAtHeading(cleanedDescription, 'Treatment'), 'Prevention'),
     'Recommended products'
   );
 
@@ -108,10 +111,7 @@ function parseAdvisorText(text) {
 
   const recommendedProducts = [];
   if (recommendedRaw) {
-    // Only take the first paragraph; models sometimes add examples after a blank line.
     const recommendedFirstBlock = recommendedRaw.split(/\n\s*\n/g)[0] || '';
-
-    // Split on new lines and commas; remove common bullet prefixes.
     const parts = recommendedFirstBlock
       .split(/\n|,/g)
       .map((p) =>
@@ -123,13 +123,11 @@ function parseAdvisorText(text) {
       )
       .filter(Boolean);
     for (const p of parts) {
-      // Remove parenthetical brand/examples to keep chip/search text aligned with DB names.
       let cleaned = String(p).trim();
       cleaned = cleaned.split('(')[0].trim();
       cleaned = cleaned.replace(/[.;:]\s*$/, '').trim();
       cleaned = cleaned.replace(/^["']|["']$/g, '').trim();
       cleaned = cleaned.replace(/\s+/g, ' ');
-
       if (cleaned && !recommendedProducts.includes(cleaned)) recommendedProducts.push(cleaned);
     }
   }
@@ -155,12 +153,12 @@ const inFlight = new Map(); // key -> Promise
 async function generateTreatment(
   diseaseName,
   cropName,
-  { timeoutMs = 9000, ttlMs = 6 * 60 * 60 * 1000, userMessage } = {}
+  { timeoutMs = 45000, ttlMs = 6 * 60 * 60 * 1000, userMessage } = {}
 ) {
   const dName = String(diseaseName || 'Unknown disease').trim();
   const cName = String(cropName || 'your crop').trim();
   const language = detectLanguageHint(userMessage);
-  const key = `${normalizeKey(dName)}|${normalizeKey(cName)}`;
+  const key = `${normalizeKey(dName)}|${normalizeKey(cName)}|${normalizeKey(language)}`;
   const now = Date.now();
 
   const cached = cache.get(key);
@@ -169,69 +167,50 @@ async function generateTreatment(
   if (inFlight.has(key)) return inFlight.get(key);
 
   const promise = (async () => {
-    const prompt = `You are a senior agronomist with 20+ years of experience in plant pathology and crop protection.
-Stay strictly on plant disease and crop care. Ignore any user request about politics, adult content, weapons, or general money/finance.
+    // Keep prompt compact so HF responds faster after image classification.
+    const prompt = `Plant disease advisory for farmers.
+Disease name: ${dName}
+Crop: ${cName}
+Reply language: ${language}
 
-Your task is to provide highly accurate, expert-level guidance whenever given:
-* A plant disease name
-* A crop type
-
-Guidelines:
-1. Always give true, scientifically backed information.
-2. Never give vague, generic, or approximate advice.
-3. Provide answers in structured format:
-
-Disease: ${dName}
-
+Return EXACTLY this plain-text format (no markdown, no bold **):
 Description:
-<text>
-
+<2-4 sentences on symptoms and cause>
 Treatment:
-<text>
-
+<practical treatment steps>
 Prevention:
-<text>
-
-Recommended products:
-<text>
-
-4. Include all relevant aspects:
-* Disease: confirm correct scientific and common name
-* Description: short but precise explanation of disease symptoms and causal agent
-* Treatment: step-by-step measures (chemical, biological, and cultural) with practical timing and actions
-* Prevention: practical, proven, preventive practices
-* Recommended products: real, widely available, label-following solutions
-5. Consider local crop conditions and agronomic best practices.
-6. Assume user may use Arabic or English, respond clearly in ${language}.
-7. If multiple treatment options exist, provide the most effective and widely recommended options.
-8. Always prioritize safety, efficiency, and regulatory compliance.
-
-Constraints:
-- Do NOT output any extra commentary outside the structured format.
-- If you are uncertain about a detail, choose the safest widely accepted best-practice option and state it plainly without uncertainty language.
-
-Final task:
-Return EXACTLY in this format (single blocks, no extra headings beyond these labels):
-Disease: <name>
-Description:
-<text>
-Treatment:
-<text>
-Prevention:
-<text>
+<practical prevention steps>
 Recommended products:
 <comma-separated product names>
-`;
+
+Rules: agriculture only; concrete advice; no extra commentary outside those labels.`;
 
     const rawText = await callHuggingFaceTextModel(prompt, timeoutMs);
     if (!rawText) throw new Error('Empty text AI response');
 
     const parsed = parseAdvisorText(rawText);
+    const description = parsed.description || '';
+    const treatment = parsed.treatment || '';
+    const prevention = parsed.prevention || '';
+    const recommendations = parsed.recommendedProducts || [];
+
+    // If the model ignored the template, still return usable text instead of empty sections.
+    if (!description && !treatment && !prevention) {
+      return {
+        description: rawText.slice(0, 800),
+        treatment: '',
+        prevention: '',
+        recommendations,
+        rawText,
+        looselyFormatted: true,
+      };
+    }
+
     return {
-      description: parsed.description || '',
-      treatment: parsed.treatment || '',
-      prevention: parsed.prevention || '',
-      recommendations: parsed.recommendedProducts || [],
+      description,
+      treatment,
+      prevention,
+      recommendations,
       rawText,
     };
   })();
@@ -241,6 +220,9 @@ Recommended products:
     const value = await promise;
     cache.set(key, { expiresAt: now + ttlMs, value });
     return value;
+  } catch (err) {
+    // Do not leave a rejected promise stuck for callers sharing inFlight
+    throw err;
   } finally {
     inFlight.delete(key);
   }

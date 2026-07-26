@@ -51,15 +51,23 @@ async function runAIAssistant({ message, hasImage, imageBuffer, mimeType, histor
     let aiTreatment = null;
     let aiError = null;
     try {
+      // Image classification already used some time; give HF enough budget + retries in client.
       aiTreatment = await generateTreatment(diseaseName, cropName, {
-        timeoutMs: 20000,
+        timeoutMs: Number(process.env.HF_TREATMENT_TIMEOUT_MS) || 45000,
         userMessage: message,
       });
+      console.log(
+        '[AI] HF treatment OK for',
+        diseaseName,
+        '| desc chars:',
+        aiTreatment?.description?.length || 0
+      );
     } catch (err) {
       aiError = err?.message || String(err);
+      console.error('[AI] HF treatment failed, using knowledge base:', aiError);
     }
 
-    const hasAi =
+    const hasStructuredAi =
       aiTreatment &&
       typeof aiTreatment.description === 'string' &&
       aiTreatment.description.trim() &&
@@ -68,9 +76,22 @@ async function runAIAssistant({ message, hasImage, imageBuffer, mimeType, histor
       typeof aiTreatment.prevention === 'string' &&
       aiTreatment.prevention.trim();
 
-    const descriptionToUse = hasAi ? aiTreatment.description : enrichedDescription;
-    const treatmentToUse = hasAi ? aiTreatment.treatment : disease.treatment;
-    const preventionToUse = hasAi ? aiTreatment.prevention : disease.prevention;
+    // Accept loosely formatted HF text (description-only) rather than discarding HF entirely.
+    const hasLooseAi =
+      aiTreatment &&
+      aiTreatment.looselyFormatted &&
+      typeof aiTreatment.description === 'string' &&
+      aiTreatment.description.trim().length > 40;
+
+    const hasAi = Boolean(hasStructuredAi || hasLooseAi);
+
+    const descriptionToUse = hasStructuredAi
+      ? aiTreatment.description
+      : hasLooseAi
+        ? aiTreatment.description
+        : enrichedDescription;
+    const treatmentToUse = hasStructuredAi ? aiTreatment.treatment : disease.treatment;
+    const preventionToUse = hasStructuredAi ? aiTreatment.prevention : disease.prevention;
 
     const recommendationsToUse =
       hasAi && Array.isArray(aiTreatment.recommendations) && aiTreatment.recommendations.length
@@ -89,6 +110,7 @@ async function runAIAssistant({ message, hasImage, imageBuffer, mimeType, histor
         prevention: preventionToUse,
       },
       recommendations: recommendationsToUse,
+      source: hasAi ? 'huggingface+local-classifier' : 'local-knowledge+local-classifier',
       formattedText: [
         ...(language === 'ar' ? [`المرض: ${disease.name}`] : [`Disease: ${disease.name}`]),
         '',
