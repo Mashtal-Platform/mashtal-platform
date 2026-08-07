@@ -1,52 +1,63 @@
-# Plan de soutenance — Agonistes du GLP-1 & maladie de Parkinson
+# Plan de soutenance (~30 diapositives)
 
-**Format recommandé :** ~15–18 slides · 12–15 min d’exposé + questions  
-**Public :** jury de thèse (pharmacie / sciences du médicament)
-
----
-
-## Structure proposée
-
-| # | Diapositive | Contenu clé | Durée |
-|---|-------------|-------------|-------|
-| 1 | **Titre** | Agonistes du GLP-1 : mise au point et potentiel pour la Parkinson | 30 s |
-| 2 | **Plan** | 5 blocs : contexte → ch.1 → ch.2 → ch.3 → conclusion | 30 s |
-| 3 | **Parkinson** | Physiopathologie / clinique / limites (symptomatique) | 1 min |
-| 4 | **Pourquoi le GLP-1 ?** | Repositionnement, GLP-1R au SNC, hypothèse neuroprotectrice | 1 min |
-| 5 | **Objectifs** | 4 objectifs de la thèse | 45 s |
-| 6 | **Physiologie GLP-1** | Cellules L, formes actives, demi-vie DPP-4 (1–2 min) | 1 min |
-| 7 | **Récepteur GLP-1R** | Distribution + voies AMPc/PKA, PI3K/Akt, MAPK/ERK | 1 min |
-| 8 | **Panorama des agonistes** | Tableau courte vs longue durée (exénatide → tirzépatide) | 1 min |
-| 9 | **DT2 & obésité** | HbA1c, poids (SCALE, STEP), place ADA/EASD | 1 min |
-| 10 | **Cardio-rénal & tolérance** | LEADER, SUSTAIN-6, REWIND ; EI digestifs | 1 min |
-| 11 | **Mécanismes neuroprotecteurs** | Inflammation, oxydatif, apoptose, α-synucléine | 1 min |
-| 12 | **Préclinique** | MPTP / 6-OHDA ; signaux convergents | 45 s |
-| 13 | **Clinique** | Exénatide (échec ph. III) · **LIXIPARK** · sémaglutide | **2 min** |
-| 14 | **Limites & perspectives** | BHE, taille d’essais, biomarqueurs, stade précoce | 1 min |
-| 15 | **Rôle du pharmacien** | Éducation, vigilance, essais, coordination | 1 min |
-| 16 | **Conclusion** | 5 messages à retenir | 1 min |
-| 17 | **Remerciements** | Questions | — |
+**Public :** jury de thèse (pharmacie)  
+**Durée orale recommandée :** 18–22 min + questions  
+**Fichier :** `Soutenance_GLP1_Parkinson.pptx`
 
 ---
 
-## Fil rouge oral (pitch en 4 phrases)
+## Fil conducteur
 
-1. La Parkinson n’a **aucun traitement modificateur** validé.  
-2. Les agonistes du GLP-1 sont une classe **métabolique mature**, au bénéfice **cardio-rénal** démontré.  
-3. Leur **plausibilité neuroprotectrice** est forte en préclinique ; en clinique, les résultats sont **hétérogènes** (exénatide négatif en ph. III, **LIXIPARK encourageant**).  
-4. Il faut des essais **plus larges, plus précoces et mieux ciblés** — avec le pharmacien au cœur de la sécurisation.
+Besoin médical (Parkinson) → repositionnement → pharmacologie GLP-1 → preuves métaboliques → neuroprotection & essais → rôle du pharmacien → messages clés.
 
 ---
 
-## Conseils de présentation
+## Détail des 30 slides
 
-- **Insister** sur la slide clinique (n°13) : c’est le cœur de la discussion.  
-- **Ne pas survoler** le rôle du pharmacien : attendu en thèse de pharmacie.  
-- Prévoir 1–2 slides de **réserve** (détail LIXIPARK, tableau des molécules) si le jury questionne.  
-- Remplacer « [Ref] » à l’oral par les références majeures de votre bibliographie (LIXIPARK, LEADER, etc.).
+| # | Type | Titre | Idée à faire passer |
+|---|------|-------|---------------------|
+| 1 | Titre | Agonistes du GLP-1 & Parkinson | Cadre de la soutenance |
+| 2 | Plan | 5 parties | Feuille de route visuelle |
+| 3 | Objectifs | 4 objectifs | Ce que la thèse démontre |
+| 4 | Separateur | Partie A — Contexte | Transition |
+| 5 | Contenu | Enjeu de santé publique | Fardeau & urgence |
+| 6 | Contenu | Physiopathologie PD | Cibles multi-mécanismes |
+| 7 | Contenu | Traitements actuels | Symptomatique seulement |
+| 8 | Contenu | Repositionnement | Pourquoi le GLP-1 |
+| 9 | Separateur | Partie B — Chapitre 1 | Transition |
+| 10 | Contenu | Physiologie GLP-1 | DPP-4 / demi-vie 1–2 min |
+| 11 | Contenu | Récepteur GLP-1R | Distribution + voies |
+| 12 | Contenu | Courte vs longue durée | PK → profil clinique |
+| 13 | Contenu | Structures moléculaires | Tableau comparatif |
+| 14 | Contenu | Mécanismes métaboliques | 6 effets clés |
+| 15 | Separateur | Partie C — Chapitre 2 | Transition |
+| 16 | Contenu | DT2 | Place ADA/EASD |
+| 17 | Contenu | Poids / obésité | STEP, SCALE, tirzépatide |
+| 18 | Contenu | Cardio-rénal | LEADER, SUSTAIN-6, REWIND |
+| 19 | Contenu | Tolérance & sécurité | Vigilance pharmacienne |
+| 20 | Separateur | Partie D — Chapitre 3 | Transition |
+| 21 | Contenu | Justification PD | Tableau mécanismes |
+| 22 | Contenu | Neuroprotection | Cascades de survie |
+| 23 | Contenu | Préclinique | Signaux convergents |
+| 24 | Contenu | Exénatide | Espoir → échec ph. III |
+| 25 | Contenu | **LIXIPARK** | Signal le plus fort |
+| 26 | Contenu | Synthèse essais | Hétérogénéité de classe |
+| 27 | Contenu | Limites | BHE, design, durée |
+| 28 | Contenu | Perspectives | Précision & essais futurs |
+| 29 | Contenu | Rôle du pharmacien | 6 missions |
+| 30 | Conclusion | 5 messages + merci | Synthèse & ouverture |
 
 ---
 
-## Fichier généré
+## Pitch oral (30 secondes)
 
-`docs/presentation/Soutenance_GLP1_Parkinson.pptx`
+La Parkinson n’a **aucun modificateur de maladie**. Les agonistes du GLP-1 sont une classe **métabolique mature**, au bénéfice **cardio-rénal** prouvé. Leur **plausibilité neuroprotectrice** est forte en préclinique ; en clinique, les résultats sont **hétérogènes** — échec de l’exénatide en phase III, signal encourageant de **LIXIPARK**. Il faut des essais plus larges et mieux ciblés ; le **pharmacien** reste central pour sécuriser ces traitements.
+
+---
+
+## Conseils de design / oral
+
+- Les slides **24–26** (clinique) sont le cœur de la discussion : y consacrer le plus de temps.
+- Slide **29** (pharmacien) : attendue en thèse de pharmacie — ne pas bâcler.
+- Ajouter nom / affiliation / date sur la slide 1 avant la soutenance.
+- Insérer éventuellement les figures de thèse (1–5) en annexe de réserve.
