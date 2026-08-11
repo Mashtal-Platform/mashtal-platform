@@ -279,10 +279,10 @@ def build():
     s = prs.slides.add_slide(blank)
     header(s, "Objectifs", "Quatre objectifs de la thèse")
     objs = [
-        ("1", "Physiologie & pharmacologie", "GLP-1, GLP-1R, panorama des agonistes", CORAL),
-        ("2", "Indications validées", "DT2, obésité, protection cardio-rénale", TEAL),
-        ("3", "Repositionnement Parkinson", "Mécanismes, préclinique, LIXIPARK", GREEN),
-        ("4", "Rôle du pharmacien", "Éducation, vigilance, coordination", GOLD),
+        ("1", "Physiologie & pharmacologie", "GLP-1, GLP-1R, différences PK/PD — molécule par molécule", CORAL),
+        ("2", "Indications validées", "DT2, obésité, cardio-rénal (LEADER, SELECT, FLOW…)", TEAL),
+        ("3", "Repositionnement Parkinson", "Plausibilité ≠ preuve ; LIXIPARK vs Exenatide-PD3", GREEN),
+        ("4", "Rôle du pharmacien", "Sécurisation, tolérance, pas d’indication hors recherche", GOLD),
     ]
     for i, (n, t, d, col) in enumerate(objs):
         y = Inches(1.3) + Inches(i * 1.35)
@@ -308,12 +308,12 @@ def build():
         "Maladie de Parkinson — anatomie fonctionnelle",
         "med_01_brain_pd.png",
         ["2ᵉ neurodégénérescence",
-         "Atteinte substance noire",
-         "Déficit dopaminergique",
-         "Moteurs + non moteurs",
-         "Aucun modificateur validé",
-         "Besoin neuroprotecteur"],
-        "L’image montre la cible : préserver les neurones dopaminergiques, pas seulement masquer les symptômes.",
+         "Bradykinésie + tremblement/rigidité",
+         "Symptômes non moteurs majeurs",
+         "α-synucléine + inflammation",
+         "Traitements = symptomatiques",
+         "Aucun modificateur certain"],
+        "Besoin non couvert : freiner la neurodégénérescence — sans confondre MDS-UPDRS / score moteur et neuroprotection.",
         p, CORAL
     )
 
@@ -354,8 +354,8 @@ def build():
     txt(s, Inches(0.55), Inches(5.25), Inches(12.2), Inches(0.35),
         "MESSAGE CLÉ", size=15, bold=True, color=GOLD)
     txt(s, Inches(0.55), Inches(5.7), Inches(12.2), Inches(0.9),
-        "Améliorer les symptômes ≠ freiner la neurodégénérescence.\nLe repositionnement des agonistes du GLP-1 répond à ce besoin.",
-        size=19, color=WHITE)
+        "Améliorer un score (ex. MDS-UPDRS) ≠ prouver un effet modificateur.\nBiomarqueurs de progression encore insuffisants — d’où la prudence méthodologique.",
+        size=18, color=WHITE)
     footer(s, p)
 
     # 8 REPOSITIONING
@@ -363,20 +363,20 @@ def build():
     s = prs.slides.add_slide(blank)
     header(s, "Contexte", "Pourquoi repositionner les agonistes du GLP-1 ?")
     panel(s, Inches(0.3), Inches(1.3), Inches(6.3), Inches(5.5),
-          "Avantages",
+          "Avantages du repositionnement",
           ["PK/PD déjà connues",
            "Tolérance documentée",
-           "Développement accéléré",
-           "GLP-1R présent dans le SNC",
-           "Essais humains déjà menés"],
+           "Pharmacovigilance existante",
+           "Développement accéléré possible",
+           "Mais preuve d’efficacité toujours requise"],
           TEAL, "A")
     panel(s, Inches(6.8), Inches(1.3), Inches(6.2), Inches(5.5),
-          "Hypothèse",
-          ["Anti-inflammatoire",
-           "Anti-oxydant",
-           "Anti-apoptotique",
-           "Soutien mitochondrial",
-           "Clairance α-synucléine (hypothèse)"],
+          "Prudence scientifique",
+          ["Plausibilité ≠ efficacité clinique",
+           "Pas d’équivalence entre molécules",
+           "Pas d’effet de classe présumé",
+           "Symptomatique ≠ modificateur",
+           "Indication PD : aucune à ce jour"],
           CORAL, "H")
     footer(s, p)
 
@@ -440,18 +440,18 @@ def build():
     header(s, "Chapitre 1", "Panorama des agonistes — référence claire")
     rows = [
         ["Molécule", "Profil", "Admin.", "Point clé"],
-        ["Exénatide", "Courte", "2×/j ou LP", "Essais Parkinson"],
-        ["Lixisénatide", "Courte", "1×/j", "LIXIPARK"],
-        ["Liraglutide", "Longue", "1×/j", "LEADER / obésité"],
+        ["Exénatide", "Courte / LP", "2×/j ou 1×/sem.", "Exenatide-PD3 négatif"],
+        ["Lixisénatide", "Courte", "1×/j", "LIXIPARK (phase II)"],
+        ["Liraglutide", "Longue", "1×/j", "LEADER / obésité 3 mg"],
         ["Dulaglutide", "Longue", "1×/sem.", "REWIND"],
-        ["Sémaglutide", "Longue", "1×/sem. / oral", "STEP / essais PD"],
-        ["Tirzépatide", "GIP/GLP-1", "1×/sem.", "Puissance ++"],
+        ["Sémaglutide", "Longue", "1×/sem. / oral", "SELECT · FLOW · MOST-ABLE"],
+        ["Tirzépatide", "GIP/GLP-1", "1×/sem.", "Non sélectif GLP-1R"],
     ]
     table(s, Inches(0.25), Inches(1.25), Inches(12.8), rows,
           [Inches(2.4), Inches(2.2), Inches(2.8), Inches(5.4)], fs=16, rh=0.55)
     rect(s, Inches(0.25), Inches(5.5), Inches(12.8), Inches(1.35), TEAL)
     txt(s, Inches(0.5), Inches(5.85), Inches(12.3), Inches(0.7),
-        "Structure différente → demi-vie et accès au SNC variables. La classe n’est pas uniforme en neurologie.",
+        "Tirzépatide ≠ agoniste sélectif. Structure/PK variables → pas d’effet de classe neurologique présumé.",
         size=18, color=WHITE)
     footer(s, p)
 
@@ -518,11 +518,11 @@ def build():
            "Impact cardiométabolique"],
           TEAL, "M")
     panel(s, Inches(6.8), Inches(3.35), Inches(6.2), Inches(3.45),
-          "Conseil pharmacien",
+          "Vigilance clinique",
           ["Titration = adhésion",
-           "EI digestifs = 1ʳᵉ cause d’arrêt",
-           "Repas légers + hydratation",
-           "Éducation injection"],
+           "EI digestifs fréquents",
+           "Attention âgés / fragiles",
+           "Risque dénutrition / sarcopénie"],
           CORAL, "P")
     footer(s, p)
 
@@ -532,13 +532,13 @@ def build():
         prs, blank, "Chapitre 2 · atlas médical",
         "Cardioprotection et néphroprotection",
         "med_05_cardiorenal.png",
-        ["LEADER : liraglutide",
+        ["LEADER : liraglutide (MACE↓)",
          "SUSTAIN-6 : sémaglutide",
          "REWIND : dulaglutide",
-         "↓ MACE démontré",
-         "Signal rénal favorable",
-         "Au-delà de l’HbA1c"],
-        "Ces essais ont repositionné la classe dans les recommandations internationales.",
+         "SELECT : séma sans DT2",
+         "FLOW : séma + MRC",
+         "Molécule ≠ classe entière"],
+        "Bénéfices cardio-rénaux démontrés pour certaines molécules — pas une interchangeabilité automatique.",
         p, GREEN
     )
 
@@ -606,7 +606,7 @@ def build():
          "↓ stress oxydatif",
          "↓ apoptose",
          "Autophagie / α-syn"],
-        "Plausibilité biologique forte — étape nécessaire avant la preuve clinique.",
+        "Plausibilité biologique forte — hypothèses précliniques, pas une preuve d’efficacité humaine.",
         p, GREEN
     )
 
@@ -637,19 +637,19 @@ def build():
     header(s, "Chapitre 3", "Exénatide : espoir puis échec de phase III")
     panel(s, Inches(0.3), Inches(1.3), Inches(6.3), Inches(5.5),
           "Espoir initial",
-          ["Études ouvertes encourageantes",
-           "Essai contrôlé initial positif",
-           "Bonne tolérance",
+          ["Études pilotes / phase II",
+           "Signal moteur exploratoire",
+           "Bonne tolérance globale",
            "Rationnel préclinique solide",
-           "Ouverture du champ GLP-1 / PD"],
+           "A justifié Exenatide-PD3"],
           TEAL, "+")
     panel(s, Inches(6.8), Inches(1.3), Inches(6.2), Inches(5.5),
-          "Phase III",
-          ["Pas de bénéfice significatif",
-           "Déception pour le champ",
-           "N’invalide pas toute la classe",
-           "Limites : sélection, durée, BHE ?",
-           "Signal ≠ preuve définitive"],
+          "Exenatide-PD3 (phase III)",
+          ["194 participants · 96 semaines",
+           "Exénatide hebdomadaire vs placebo",
+           "MDS-UPDRS III OFF : pas de différence",
+           "Pas d’effet modificateur démontré",
+           "Fin de l’optimisme de classe"],
           CORAL, "–")
     footer(s, p)
 
@@ -657,15 +657,15 @@ def build():
     p += 1
     atlas_slide(
         prs, blank, "Chapitre 3 · atlas médical",
-        "LIXIPARK — signal clinique le plus encourageant",
+        "LIXIPARK — signal phase II, pas une preuve de neuroprotection",
         "med_07_lixipark.png",
-        ["PD stade précoce",
-         "Lixisénatide vs placebo",
-         "Scores moteurs stabilisés",
-         "Placebo : aggravation",
-         "Effet après washout",
-         "Questions de durabilité"],
-        "Persistance après washout : argument contre un pur effet symptomatique immédiat.",
+        ["Phase II · 156 patients",
+         "Parkinson précoce · 12 mois",
+         "MDS-UPDRS III : −0,04 vs +3,04",
+         "Différence ajustée : 3,08 pts",
+         "Nausées / vomissements ↑",
+         "Pas d’indication réglementaire"],
+        "Signal moteur favorable à court terme — insuffisant pour affirmer un effet modificateur durable.",
         p, GREEN
     )
 
@@ -675,16 +675,17 @@ def build():
     header(s, "Chapitre 3", "Synthèse des essais — classe hétérogène")
     rows = [
         ["Molécule / essai", "Design", "Résultat"],
-        ["Exénatide", "Ouvert → phase III", "Non confirmé"],
-        ["Lixisénatide (LIXIPARK)", "Contrôlé, précoce", "Stabilisation + washout"],
-        ["Sémaglutide", "En cours", "Résultats attendus"],
+        ["Exénatide (pilote/ph.II)", "Faible effectif", "Signal exploratoire"],
+        ["LIXIPARK (lixisénatide)", "Ph.II · 156 · 12 mois", "+3,08 pts MDS-UPDRS III"],
+        ["Exenatide-PD3", "Ph.III · 194 · 96 sem.", "Négatif (OFF)"],
+        ["MOST-ABLE (séma oral)", "Ph.II · 99 · 48 sem.", "Résultats en attente"],
     ]
     table(s, Inches(0.25), Inches(1.3), Inches(12.8), rows,
-          [Inches(4.0), Inches(3.8), Inches(5.0)], fs=17, rh=0.75)
+          [Inches(4.0), Inches(3.8), Inches(5.0)], fs=16, rh=0.65)
     rect(s, Inches(0.25), Inches(4.9), Inches(12.8), Inches(1.9), NAVY)
     txt(s, Inches(0.5), Inches(5.3), Inches(12.3), Inches(1.2),
-        "L’efficacité dépend de la molécule, du stade, de la BHE et du design.\nNe pas extrapoler un résultat à toute la classe.",
-        size=19, color=WHITE)
+        "Pas d’effet de classe démontré. Pas d’indication dans Parkinson hors essai clinique.\nMéta-analyse globale : pas de bénéfice moteur significatif (signal courte durée = exploratoire).",
+        size=17, color=WHITE)
     footer(s, p)
 
     # 27 LIMITS / PERSPECTIVES
@@ -693,19 +694,19 @@ def build():
     header(s, "Chapitre 3", "Limites et perspectives")
     panel(s, Inches(0.3), Inches(1.3), Inches(6.3), Inches(5.5),
           "Limites",
-          ["Peu d’essais, tailles modestes",
-           "Durées courtes vs maladie lente",
-           "Critères ≠ preuve neuroprotectrice",
-           "Passage BHE variable",
-           "Biomarqueurs manquants"],
+          ["Phase II ≠ preuve modificatrice",
+           "Durées souvent trop courtes",
+           "MDS-UPDRS OFF insuffisant seul",
+           "Biomarqueurs non validés",
+           "Hétérogénéité patients / molécules"],
           CORAL, "L")
     panel(s, Inches(6.8), Inches(1.3), Inches(6.2), Inches(5.5),
           "Perspectives",
-          ["Intervention précoce",
-           "Sélection par biomarqueurs",
-           "Essais plus larges et longs",
-           "Analogues plus pénétrants",
-           "Approches combinées"],
+          ["Stade précoce + suivi long",
+           "Critères moteurs + non moteurs",
+           "Cognition, chutes, nutrition",
+           "Stratification / biomarqueurs",
+           "MOST-ABLE et essais confirmatoires"],
           GREEN, "P")
     footer(s, p)
 
@@ -715,13 +716,13 @@ def build():
         prs, blank, "Chapitre 3 · atlas médical",
         "Rôle du pharmacien — sécuriser le parcours",
         "med_08_pharma.png",
-        ["Éducation injection",
-         "Titration progressive",
-         "Gestion EI digestifs",
-         "Pharmacovigilance",
-         "Usage validé vs expérimental",
-         "Coordination pluridisciplinaire"],
-        "Aujourd’hui en métabolisme ; demain potentiellement en neurologie : le pharmacien reste central.",
+        ["Éducation injection / titration",
+         "EI digestifs & hydratation",
+         "Constipation / perte de poids",
+         "Risque chute / sarcopénie (PD)",
+         "Hypoglycémie si associations",
+         "Hors essai = pas d’indication PD"],
+        "Le pharmacien sécurise l’usage métabolique et rappelle clairement le caractère expérimental dans Parkinson.",
         p, SKY
     )
 
@@ -730,12 +731,12 @@ def build():
     s = prs.slides.add_slide(blank)
     header(s, "Chapitre 3", "Missions du pharmacien — grille claire")
     roles = [
-        ("Éducation", ["Injection SC", "Titration", "Oublis"], TEAL),
-        ("Tolérance", ["EI digestifs", "Repas légers", "Adhésion"], CORAL),
-        ("Vigilance", ["Insuline/sulfamides", "Pancréatite", "Biliaire"], GOLD),
+        ("Éducation", ["Injection SC", "Titration", "Oublis / conservation"], TEAL),
+        ("Tolérance", ["Nausées / vomissements", "Constipation (PD)", "Hydratation"], CORAL),
+        ("Vigilance", ["Insuline/sulfamides", "Dénutrition", "Chutes / fragilité"], GOLD),
         ("Essais", ["Traçabilité", "Protocole", "Dispensation"], GREEN),
-        ("Information", ["Validé vs expérimental", "Attentes réalistes"], SKY),
-        ("Coordination", ["Neurologue", "Endocrinologue", "MG"], BLUE),
+        ("Information", ["Pas d’indication PD", "Attentes réalistes", "Anti-automédication"], SKY),
+        ("Coordination", ["Neurologue", "Endocrinologue", "Diététicien / MG"], BLUE),
     ]
     for i, (t, items, col) in enumerate(roles):
         c, r = i % 3, i // 3
@@ -749,11 +750,11 @@ def build():
     s = prs.slides.add_slide(blank)
     header(s, "Conclusion", "Cinq messages à retenir")
     msgs = [
-        ("1", "Classe mature", "DT2, obésité, cardio-rénal : place solide.", TEAL),
-        ("2", "Rationnel fort", "Neuroprotection plausible en préclinique.", GREEN),
-        ("3", "Clinique mixte", "Exénatide –  ·  LIXIPARK +  ·  séma en cours.", CORAL),
-        ("4", "Preuve à bâtir", "Essais plus larges, précoces, ciblés, longs.", GOLD),
-        ("5", "Pharmacien clé", "Éducation, vigilance, coordination.", SKY),
+        ("1", "Classe mature en métabolisme", "DT2, obésité, cardio-rénal : bénéfices molécule-spécifiques.", TEAL),
+        ("2", "Rationnel PD plausible", "Survie, mitochondries, inflammation, α-syn — préclinique.", GREEN),
+        ("3", "Clinique hétérogène", "LIXIPARK + (ph.II) · Exenatide-PD3 − · pas d’effet de classe.", CORAL),
+        ("4", "Pas d’indication actuelle", "Hors protocole de recherche : ne pas prescrire dans Parkinson.", GOLD),
+        ("5", "Pharmacien central", "Éducation, tolérance, nutrition, information réaliste.", SKY),
     ]
     for i, (n, t, d, col) in enumerate(msgs):
         y = Inches(1.25) + Inches(i * 1.05)
