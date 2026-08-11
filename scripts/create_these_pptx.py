@@ -230,7 +230,7 @@ def build():
     p += 1
     s = prs.slides.add_slide(blank)
     # Grande photo de fond, couleurs atténuées, sans cadre
-    img(s, "title_bg_muted.png", 0, 0, W, H)
+    img(s, "title_bg_muted_v2.png", 0, 0, W, H)
     # Voile sombre léger (panneau gauche) pour lisibilité du titre gras
     rect(s, 0, 0, Inches(7.0), H, NAVY)
     rect(s, Inches(7.0), 0, Inches(0.1), H, TEAL)
@@ -243,7 +243,7 @@ def build():
         "Agonistes du GLP-1 :\nmise au point et potentiel\nprometteur pour la\nmaladie de Parkinson",
         size=30, bold=True, color=WHITE, font="Georgia")
     # Photo principale à droite (sur le fond atténué)
-    img(s, "med_01_brain_pd_bold.png", Inches(7.35), Inches(0.55), Inches(5.7), Inches(4.4))
+    img(s, "med_01_brain_pd.png", Inches(7.35), Inches(0.55), Inches(5.7), Inches(4.4))
     labels = [("Physiologie", TEAL), ("Métabolisme", CORAL), ("Neuroprotection", GREEN),
               ("LIXIPARK", GOLD), ("Pharmacien", SKY)]
     for i, (lab, col) in enumerate(labels):
@@ -307,7 +307,7 @@ def build():
     atlas_slide(
         prs, blank, "Contexte · atlas médical",
         "Maladie de Parkinson — anatomie fonctionnelle",
-        "med_01_brain_pd_bold.png",
+        "med_01_brain_pd.png",
         ["2ᵉ neurodégénérescence",
          "Atteinte substance noire",
          "Déficit dopaminergique",
