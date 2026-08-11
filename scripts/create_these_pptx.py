@@ -229,13 +229,11 @@ def build():
     # 1 TITLE — fond photo atténué + contenu
     p += 1
     s = prs.slides.add_slide(blank)
-    # Grande photo de fond, couleurs atténuées, sans cadre
+    # Grande photo de fond, couleurs atténuées, sans cadre (visible aussi derrière les boxs du bas)
     img(s, "title_bg_muted_v2.png", 0, 0, W, H)
-    # Voile sombre léger (panneau gauche) pour lisibilité du titre gras
-    rect(s, 0, 0, Inches(7.0), H, NAVY)
-    rect(s, Inches(7.0), 0, Inches(0.1), H, TEAL)
-    # Voile bas pour les pastilles
-    rect(s, Inches(7.1), Inches(5.2), Inches(6.2), Inches(2.3), NAVY)
+    # Voile sombre à gauche UNIQUEMENT derrière le titre (s'arrête au-dessus des boxs)
+    rect(s, 0, 0, Inches(7.0), Inches(5.25), NAVY)
+    rect(s, Inches(7.0), 0, Inches(0.1), Inches(5.25), TEAL)
     txt(s, Inches(0.55), Inches(0.9), Inches(6.2), Inches(0.35),
         "SOUTENANCE DE THÈSE  ·  PHARMACIE", size=15, bold=True,
         color=RGBColor(0x8E, 0xC8, 0xD4))
@@ -244,6 +242,7 @@ def build():
         size=30, bold=True, color=WHITE, font="Georgia")
     # Photo principale à droite (sur le fond atténué)
     img(s, "med_01_brain_pd.png", Inches(7.35), Inches(0.55), Inches(5.7), Inches(4.4))
+    # Boxs du bas : la photo de fond reste visible derrière elles
     labels = [("Physiologie", TEAL), ("Métabolisme", CORAL), ("Neuroprotection", GREEN),
               ("LIXIPARK", GOLD), ("Pharmacien", SKY)]
     for i, (lab, col) in enumerate(labels):
