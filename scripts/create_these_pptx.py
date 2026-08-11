@@ -226,18 +226,24 @@ def build():
     blank = prs.slide_layouts[6]
     p = 0
 
-    # 1 TITLE
+    # 1 TITLE — fond photo atténué + contenu
     p += 1
     s = prs.slides.add_slide(blank)
-    bg(s, NAVY)
-    rect(s, 0, 0, Inches(0.22), H, TEAL)
-    txt(s, Inches(0.55), Inches(0.9), Inches(6.4), Inches(0.35),
+    # Grande photo de fond, couleurs atténuées, sans cadre
+    img(s, "title_bg_muted.png", 0, 0, W, H)
+    # Voile sombre léger (panneau gauche) pour lisibilité du titre gras
+    rect(s, 0, 0, Inches(7.0), H, NAVY)
+    rect(s, Inches(7.0), 0, Inches(0.1), H, TEAL)
+    # Voile bas pour les pastilles
+    rect(s, Inches(7.1), Inches(5.2), Inches(6.2), Inches(2.3), NAVY)
+    txt(s, Inches(0.55), Inches(0.9), Inches(6.2), Inches(0.35),
         "SOUTENANCE DE THÈSE  ·  PHARMACIE", size=15, bold=True,
         color=RGBColor(0x8E, 0xC8, 0xD4))
-    txt(s, Inches(0.55), Inches(1.4), Inches(6.5), Inches(2.8),
+    txt(s, Inches(0.55), Inches(1.4), Inches(6.2), Inches(2.8),
         "Agonistes du GLP-1 :\nmise au point et potentiel\nprometteur pour la\nmaladie de Parkinson",
         size=30, bold=True, color=WHITE, font="Georgia")
-    img(s, "med_01_brain_pd.png", Inches(7.2), Inches(0.7), Inches(5.8), Inches(4.3))
+    # Photo principale à droite (sur le fond atténué)
+    img(s, "med_01_brain_pd_bold.png", Inches(7.35), Inches(0.55), Inches(5.7), Inches(4.4))
     labels = [("Physiologie", TEAL), ("Métabolisme", CORAL), ("Neuroprotection", GREEN),
               ("LIXIPARK", GOLD), ("Pharmacien", SKY)]
     for i, (lab, col) in enumerate(labels):
@@ -301,7 +307,7 @@ def build():
     atlas_slide(
         prs, blank, "Contexte · atlas médical",
         "Maladie de Parkinson — anatomie fonctionnelle",
-        "med_01_brain_pd.png",
+        "med_01_brain_pd_bold.png",
         ["2ᵉ neurodégénérescence",
          "Atteinte substance noire",
          "Déficit dopaminergique",
