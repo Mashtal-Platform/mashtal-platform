@@ -1,26 +1,21 @@
-# Plan de soutenance (~30 slides) — version colorée + images
+# Plan — version dense + images annotées (~30 slides)
 
-**Fichier :** `Soutenance_GLP1_Parkinson.pptx`  
-**Durée orale :** ~18–22 min + questions
+## Intention
+- **Minimiser le vide** : cartes, KPI, tableaux et bandeaux « À retenir » remplissent l’espace
+- **Images annotées** (légendes FR) : le spectateur comprend l’idée en regardant l’illustration
+- **Mix** : slides **illustrées** (image + panneau) ↔ slides **classiques** (grilles / tableaux)
+- Ton **créatif + professionnel** (pharmacie clinique)
 
-## Ce qui change dans cette version
-- Palette plus colorée (teal, corail, or, vert, ciel)
-- **8 illustrations** intégrées (cerveau PD, GLP-1, récepteur, stylos, cardio-rénal, neuroprotection, essai clinique, pharmacien)
-- Layouts image + texte pour clarifier les idées clés
-- Cartes / KPI / tableaux colorés — peu de zones vides
+## Mix illustré / classique
+| Type | Slides | Rôle |
+|------|--------|------|
+| Illustrées | 5, 10, 11, 12, 18, 22, 25, 28 | Idée visuelle annotée + points + takeaway |
+| Classiques | reste | Densité textuelle / tableaux / grilles |
+| Séparateurs | 4, 9, 15, 20 | Transition avec roadmap remplie |
 
-## Images utilisées
-| Fichier | Sujet |
-|---------|--------|
-| `01_parkinson_brain.png` | Parkinson / cerveau |
-| `02_glp1_physiology.png` | Physiologie GLP-1 |
-| `03_receptor_signaling.png` | GLP-1R & signalisation |
-| `04_agonists_compare.png` | Courte vs longue durée |
-| `05_cardiorenal.png` | Protection cœur / rein |
-| `06_neuroprotection.png` | Neuroprotection |
-| `07_clinical_trial.png` | Essais / LIXIPARK |
-| `08_pharmacist.png` | Rôle du pharmacien |
+## Images annotées
+`ann_01_parkinson` · `ann_02_glp1` · `ann_03_signal` · `ann_04_agonistes`  
+`ann_05_cardio` · `ann_06_neuro` · `ann_07_lixipark` · `ann_08_pharma`
 
 ## Téléchargement
-- Branche / PR (après push)
-- Ou artefact agent : `Soutenance_GLP1_Parkinson.pptx`
+https://github.com/Mashtal-Platform/mashtal-platform/raw/cursor/these-glp1-visual-pptx-ab6d/docs/presentation/Soutenance_GLP1_Parkinson.pptx
