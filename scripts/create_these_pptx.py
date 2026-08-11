@@ -39,9 +39,10 @@ T_KPI = 28
 T_SMALL = 15
 
 
-def run(r, size=T_BODY, bold=False, color=DARK, font="Calibri"):
+def run(r, size=T_BODY, bold=True, color=DARK, font="Calibri"):
+    """Tout le texte en gras pour lisibilité projection."""
     r.font.size = Pt(size)
-    r.font.bold = bold
+    r.font.bold = True  # forcé bold partout
     r.font.color.rgb = color
     r.font.name = font
 
@@ -73,7 +74,7 @@ def oval(slide, l, t, w, h, fill):
     return sh
 
 
-def txt(slide, l, t, w, h, text, size=T_BODY, bold=False, color=DARK,
+def txt(slide, l, t, w, h, text, size=T_BODY, bold=True, color=DARK,
         align=PP_ALIGN.LEFT, font="Calibri"):
     box = slide.shapes.add_textbox(l, t, w, h)
     tf = box.text_frame
@@ -82,7 +83,7 @@ def txt(slide, l, t, w, h, text, size=T_BODY, bold=False, color=DARK,
     p.alignment = align
     r = p.add_run()
     r.text = text
-    run(r, size=size, bold=bold, color=color, font=font)
+    run(r, size=size, bold=True, color=color, font=font)
     return box
 
 
@@ -100,10 +101,10 @@ def bullets(slide, l, t, w, h, items, size=T_BULLET, color=DARK, spacing=8):
             run(r, size=size, bold=True, color=color)
             r2 = p.add_run()
             r2.text = item[1]
-            run(r2, size=size, bold=False, color=MUTED)
+            run(r2, size=size, bold=True, color=MUTED)
         else:
             r.text = "●  " + item
-            run(r, size=size, color=color)
+            run(r, size=size, bold=True, color=color)
     return box
 
 
@@ -174,18 +175,27 @@ def table(slide, l, t, w, rows, widths, fs=16, rh=0.48):
     return sh
 
 
-def divider(prs, blank, num, title, subtitle, page, accent=TEAL):
+def divider(prs, blank, num, title, subtitle, page, accent=TEAL, image=None):
+    """Séparateur : grande photo plein écran SANS cadre + titre gras."""
     s = prs.slides.add_slide(blank)
     bg(s, NAVY)
-    rect(s, 0, 0, Inches(0.25), H, accent)
-    txt(s, Inches(0.8), Inches(2.2), Inches(11.5), Inches(0.4),
-        f"PARTIE  {num}", size=18, bold=True, color=accent)
-    txt(s, Inches(0.8), Inches(2.8), Inches(11.5), Inches(1.3),
-        title, size=36, bold=True, color=WHITE, font="Georgia")
-    txt(s, Inches(0.8), Inches(4.3), Inches(11.5), Inches(0.8),
-        subtitle, size=20, color=RGBColor(0xA8, 0xD4, 0xDE))
-    txt(s, Inches(0.8), Inches(6.5), Inches(11), Inches(0.3),
-        f"{page} / {TOTAL}", size=14, color=RGBColor(0x7A, 0xA8, 0xB0))
+    if image:
+        # Grande photo plein écran, sans cadre
+        img(s, image, 0, 0, W, H)
+        # Voile sombre à gauche pour lisibilité du titre (pas un cadre photo)
+        rect(s, 0, 0, Inches(6.8), H, NAVY)
+        # Fine barre d'accent (pas un cadre autour de la photo)
+        rect(s, Inches(6.8), 0, Inches(0.12), H, accent)
+    else:
+        rect(s, 0, 0, Inches(0.25), H, accent)
+    txt(s, Inches(0.7), Inches(2.0), Inches(5.8), Inches(0.4),
+        f"PARTIE  {num}", size=20, bold=True, color=accent)
+    txt(s, Inches(0.7), Inches(2.55), Inches(5.8), Inches(1.6),
+        title, size=34, bold=True, color=WHITE, font="Georgia")
+    txt(s, Inches(0.7), Inches(4.4), Inches(5.8), Inches(1.2),
+        subtitle, size=20, bold=True, color=RGBColor(0xB5, 0xDC, 0xE4))
+    txt(s, Inches(0.7), Inches(6.5), Inches(5.5), Inches(0.35),
+        f"{page} / {TOTAL}", size=15, bold=True, color=RGBColor(0x8A, 0xB8, 0xC0))
     return s
 
 
@@ -368,7 +378,8 @@ def build():
     # 9 DIVIDER B
     p += 1
     divider(prs, blank, "B", "Chapitre 1 — Physiologie & pharmacologie",
-            "GLP-1, récepteur, courte/longue durée, panorama", p, TEAL)
+            "GLP-1, récepteur, courte/longue durée, panorama", p, TEAL,
+            image="sec_ch1_glp1.png")
 
     # 10 ATLAS GLP1
     p += 1
@@ -461,7 +472,8 @@ def build():
     # 15 DIVIDER C
     p += 1
     divider(prs, blank, "C", "Chapitre 2 — Indications validées",
-            "DT2, obésité, cardio-rénal, tolérance", p, SKY)
+            "DT2, obésité, cardio-rénal, tolérance", p, SKY,
+            image="sec_ch2_metabolic.png")
 
     # 16 DT2
     p += 1
@@ -558,7 +570,8 @@ def build():
     # 20 DIVIDER D
     p += 1
     divider(prs, blank, "D", "Chapitre 3 — Parkinson & preuves",
-            "Mécanismes, préclinique, essais, pharmacien", p, GREEN)
+            "Mécanismes, préclinique, essais, pharmacien", p, GREEN,
+            image="sec_ch3_parkinson.png")
 
     # 21 MATRIX
     p += 1
