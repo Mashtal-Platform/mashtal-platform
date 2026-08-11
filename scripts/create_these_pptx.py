@@ -219,61 +219,63 @@ def atlas_slide(prs, blank, kicker, title, image, points, takeaway, page, accent
     return s
 
 
-def info_header(slide, badge, title, key_text, accent=CORAL):
-    """En-tête style infographie médicale : badge + titre + POINT CLÉ."""
+def info_header(slide, badge, title, accent=CORAL):
+    """En-tête mix : badge + titre large — SANS encadré POINT CLÉ à droite."""
     bg(slide, BG)
-    # bande haute claire
-    rect(slide, 0, 0, W, Inches(1.15), WHITE)
-    rect(slide, 0, Inches(1.15), W, Inches(0.04), accent)
-    # badge numéro/section
-    rect(slide, Inches(0.25), Inches(0.22), Inches(1.35), Inches(0.7), accent)
-    txt(slide, Inches(0.25), Inches(0.35), Inches(1.35), Inches(0.45),
-        badge, size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    # titre
-    txt(slide, Inches(1.8), Inches(0.28), Inches(7.2), Inches(0.65),
+    rect(slide, 0, 0, W, Inches(1.05), WHITE)
+    rect(slide, 0, Inches(1.05), W, Inches(0.05), accent)
+    # badge
+    rect(slide, Inches(0.25), Inches(0.2), Inches(1.45), Inches(0.65), accent)
+    txt(slide, Inches(0.25), Inches(0.32), Inches(1.45), Inches(0.4),
+        badge, size=15, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    # titre sur toute la largeur restante (plus de POINT CLÉ)
+    txt(slide, Inches(1.9), Inches(0.28), Inches(11.1), Inches(0.55),
         title.upper(), size=20, bold=True, color=NAVY)
-    # POINT CLÉ
-    rect(slide, Inches(9.15), Inches(0.15), Inches(3.9), Inches(0.85), accent)
-    txt(slide, Inches(9.3), Inches(0.2), Inches(3.6), Inches(0.25),
-        "POINT CLÉ", size=11, bold=True, color=WHITE)
-    txt(slide, Inches(9.3), Inches(0.45), Inches(3.6), Inches(0.5),
-        key_text, size=13, bold=True, color=WHITE)
+
+
+def icon_circle(slide, l, t, size, accent, icon):
+    """Petite icône dans un cercle coloré (symbole d’idée, pas un numéro)."""
+    oval(slide, l, t, size, size, accent)
+    label = str(icon)[:2]
+    fs = 14 if len(label) <= 1 else 11
+    txt(slide, l - Inches(0.02), t + Inches(0.06), size + Inches(0.04), size - Inches(0.08),
+        label, size=fs, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
 
 
 def mech_flow(slide, l, t, w, title, steps, accent=TEAL):
-    """Colonne gauche : mécanisme proposé (flowchart vertical)."""
-    rect(slide, l, t, w, Inches(5.7), SOFT)
+    """Colonne gauche : mécanisme avec icônes (pas 1,2,3...).
+    steps = list of (icon, text)
+    """
+    rect(slide, l, t, w, Inches(5.8), SOFT)
     txt(slide, l + Inches(0.15), t + Inches(0.12), w - Inches(0.3), Inches(0.35),
         title.upper(), size=14, bold=True, color=accent)
     n = len(steps)
     step_h = 0.72 if n <= 5 else 0.58
-    for i, step in enumerate(steps):
+    for i, item in enumerate(steps):
+        icon, step = item if isinstance(item, tuple) else ("●", item)
         y = t + Inches(0.55) + Inches(i * (step_h + 0.18))
-        oval(slide, l + Inches(0.18), y + Inches(0.08), Inches(0.48), Inches(0.48), accent)
-        txt(slide, l + Inches(0.18), y + Inches(0.15), Inches(0.48), Inches(0.35),
-            str(i + 1), size=14, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+        icon_circle(slide, l + Inches(0.18), y + Inches(0.1), Inches(0.48), accent, icon)
         rect(slide, l + Inches(0.8), y, w - Inches(1.0), Inches(step_h), WHITE)
         txt(slide, l + Inches(0.95), y + Inches(0.15), w - Inches(1.3), Inches(step_h - 0.2),
             step, size=14, bold=True, color=DARK)
         if i < n - 1:
-            # flèche simple
-            txt(slide, l + Inches(0.25), y + Inches(step_h - 0.05), Inches(0.4), Inches(0.25),
-                "▼", size=12, bold=True, color=accent, align=PP_ALIGN.CENTER)
+            txt(slide, l + Inches(0.25), y + Inches(step_h - 0.02), Inches(0.4), Inches(0.22),
+                "▾", size=11, bold=True, color=accent, align=PP_ALIGN.CENTER)
 
 
 def evid_col(slide, l, t, w, title, blocks, accent=NAVY):
-    """Colonne droite : preuves / données cliniques numérotées."""
-    rect(slide, l, t, w, Inches(5.7), SOFT)
+    """Colonne droite : preuves avec icônes (pas d’énumération 123).
+    blocks = list of (icon, head, body)
+    """
+    rect(slide, l, t, w, Inches(5.8), SOFT)
     txt(slide, l + Inches(0.15), t + Inches(0.12), w - Inches(0.3), Inches(0.35),
         title.upper(), size=14, bold=True, color=accent)
     y = t + Inches(0.55)
-    for num, head, body in blocks:
-        # hauteur adaptative
-        bh = Inches(1.15) if len(body) < 70 else Inches(1.35)
+    for item in blocks:
+        icon, head, body = item
+        bh = Inches(1.15) if len(body) < 75 else Inches(1.35)
         rect(slide, l + Inches(0.15), y, w - Inches(0.3), bh, WHITE)
-        oval(slide, l + Inches(0.28), y + Inches(0.2), Inches(0.42), Inches(0.42), accent)
-        txt(slide, l + Inches(0.28), y + Inches(0.25), Inches(0.42), Inches(0.32),
-            str(num), size=13, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+        icon_circle(slide, l + Inches(0.28), y + Inches(0.22), Inches(0.42), accent, icon)
         txt(slide, l + Inches(0.85), y + Inches(0.12), w - Inches(1.2), Inches(0.35),
             head, size=15, bold=True, color=NAVY)
         txt(slide, l + Inches(0.85), y + Inches(0.48), w - Inches(1.2), bh - Inches(0.55),
@@ -281,13 +283,46 @@ def evid_col(slide, l, t, w, title, blocks, accent=NAVY):
         y += bh + Inches(0.12)
 
 
-def info_slide(prs, blank, badge, title, key_text, mech_title, steps,
+def info_slide(prs, blank, badge, title, mech_title, steps,
                evid_title, blocks, page, accent=CORAL):
-    """Slide sans photo, style infographie médicale (mécanisme | preuves)."""
+    """Mix : structure mécanisme|preuves, sans POINT CLÉ, avec icônes."""
     s = prs.slides.add_slide(blank)
-    info_header(s, badge, title, key_text, accent)
-    mech_flow(s, Inches(0.25), Inches(1.35), Inches(5.9), mech_title, steps, accent)
-    evid_col(s, Inches(6.35), Inches(1.35), Inches(6.7), evid_title, blocks, NAVY)
+    info_header(s, badge, title, accent)
+    mech_flow(s, Inches(0.25), Inches(1.25), Inches(5.9), mech_title, steps, accent)
+    evid_col(s, Inches(6.35), Inches(1.25), Inches(6.7), evid_title, blocks, NAVY)
+    footer(s, page)
+    return s
+
+
+def dense_dual(prs, blank, badge, title, left_title, left_items, right_title, right_items,
+               page, accent=TEAL, takeaway=None):
+    """Mix style précédent : 2 colonnes denses + icônes, sans POINT CLÉ."""
+    s = prs.slides.add_slide(blank)
+    info_header(s, badge, title, accent)
+    # left
+    rect(s, Inches(0.25), Inches(1.25), Inches(6.3), Inches(4.5 if takeaway else 5.55), SOFT)
+    txt(s, Inches(0.4), Inches(1.35), Inches(6.0), Inches(0.35),
+        left_title.upper(), size=14, bold=True, color=accent)
+    y = Inches(1.8)
+    for icon, line in left_items:
+        icon_circle(s, Inches(0.45), y, Inches(0.4), accent, icon)
+        txt(s, Inches(1.0), y + Inches(0.02), Inches(5.3), Inches(0.45),
+            line, size=15, bold=True, color=DARK)
+        y += Inches(0.55)
+    # right
+    rect(s, Inches(6.75), Inches(1.25), Inches(6.3), Inches(4.5 if takeaway else 5.55), SOFT)
+    txt(s, Inches(6.9), Inches(1.35), Inches(6.0), Inches(0.35),
+        right_title.upper(), size=14, bold=True, color=NAVY)
+    y = Inches(1.8)
+    for icon, line in right_items:
+        icon_circle(s, Inches(6.95), y, Inches(0.4), NAVY, icon)
+        txt(s, Inches(7.5), y + Inches(0.02), Inches(5.3), Inches(0.45),
+            line, size=15, bold=True, color=DARK)
+        y += Inches(0.55)
+    if takeaway:
+        rect(s, Inches(0.25), Inches(5.9), Inches(12.8), Inches(0.95), accent)
+        txt(s, Inches(0.45), Inches(6.15), Inches(12.4), Inches(0.55),
+            takeaway, size=16, bold=True, color=WHITE)
     footer(s, page)
     return s
 
@@ -324,39 +359,41 @@ def build():
         txt(s, x, Inches(5.85), Inches(2.35), Inches(0.5),
             lab, size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
 
-    # 2 PLAN — infographie
+    # 2 PLAN — mix dense (style précédent)
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "01 · PLAN", "Organisation de la soutenance",
-        "5 blocs · lecture continue",
         "Parcours logique",
-        ["Besoin médical (Parkinson)",
-         "Physiologie & pharmacologie GLP-1",
-         "Indications métaboliques validées",
-         "Repositionnement PD & essais",
-         "Conclusion & rôle du pharmacien"],
+        [("◎", "Besoin médical (Parkinson)"),
+         ("Φ", "Physiologie & pharmacologie GLP-1"),
+         ("♥", "Indications métaboliques validées"),
+         ("↻", "Repositionnement PD & essais"),
+         ("✚", "Conclusion & rôle du pharmacien")],
         "Ce que chaque partie apporte",
-        [("1", "Contexte", "Fardeau, physiopathologie, traitements symptomatiques, besoin non couvert."),
-         ("2", "Chapitres 1–2", "Fondements GLP-1 puis bénéfices DT2 / obésité / cardio-rénal."),
-         ("3", "Chapitre 3", "LIXIPARK vs Exenatide-PD3 : lecture critique molécule par molécule.")],
-        p, TEAL
+        [("◎", "Contexte : fardeau, physiopatho, soins symptomatiques"),
+         ("Φ", "Chap. 1–2 : fondements GLP-1 puis DT2 / poids / CV-rein"),
+         ("↻", "Chap. 3 : LIXIPARK vs Exenatide-PD3, molécule par molécule"),
+         ("★", "Fil conducteur : plausibilité ≠ preuve clinique"),
+         ("✚", "Ouverture : missions du pharmacien")],
+        p, TEAL,
+        takeaway="Lecture continue : du besoin médical aux preuves, sans surinterprétation."
     )
 
-    # 3 OBJECTIFS — infographie
+    # 3 OBJECTIFS — infographie icônes
     p += 1
     info_slide(
         prs, blank, "02 · OBJECTIFS", "Objectifs de la thèse",
-        "Plausibilité ≠ preuve clinique",
         "Démarche de la thèse",
-        ["Décrire GLP-1 / GLP-1R / molécules",
-         "Analyser DT2, obésité, cardio-rénal",
-         "Évaluer le repositionnement PD",
-         "Préciser le rôle du pharmacien",
-         "Conclure sans surinterprétation"],
+        [
+         ("Φ", "Décrire GLP-1 / GLP-1R / molécules"),
+         ("♥", "Analyser DT2, obésité, cardio-rénal"),
+         ("↻", "Évaluer le repositionnement PD"),
+         ("✚", "Préciser le rôle du pharmacien"),
+         ("★", "Conclure sans surinterprétation")],
         "Questions centrales",
-        [("1", "Pharmacologie", "Différences PK/PD : pas d’équivalence entre agonistes."),
-         ("2", "Clinique PD", "LIXIPARK (ph.II) vs Exenatide-PD3 (ph.III négatif)."),
-         ("3", "Pratique", "Aucune indication PD hors protocole de recherche.")],
+        [("◇", "Pharmacologie", "Différences PK/PD : pas d’équivalence entre agonistes."),
+         ("◎", "Clinique PD", "LIXIPARK (ph.II) vs Exenatide-PD3 (ph.III négatif)."),
+         ("!", "Pratique", "Aucune indication PD hors protocole de recherche.")],
         p, CORAL
     )
 
@@ -381,57 +418,59 @@ def build():
         p, CORAL
     )
 
-    # 6 PHYSIOPATH — infographie
+    # 6 PHYSIOPATH — infographie icônes
     p += 1
     info_slide(
         prs, blank, "03 · PD", "Physiopathologie multifactorielle",
-        "Plusieurs cibles potentielles du GLP-1R",
         "Mécanismes proposés",
-        ["Agrégation d’α-synucléine",
-         "Dysfonction mitochondriale",
-         "Stress oxydatif (ROS)",
-         "Neuroinflammation microgliale",
-         "Autophagie / protéostase altérées"],
+        [
+         ("α", "Agrégation d’α-synucléine"),
+         ("✧", "Dysfonction mitochondriale"),
+         ("✦", "Stress oxydatif (ROS)"),
+         ("μ", "Neuroinflammation microgliale"),
+         ("↻", "Autophagie / protéostase altérées")],
         "Implications cliniques",
-        [("1", "Hétérogénéité", "Expression clinique et progression très variables d’un patient à l’autre."),
-         ("2", "Cibles GLP-1", "Survie cellulaire, mitochondries, inflammation, α-syn (préclinique)."),
-         ("3", "Limite", "Mécanismes plausibles ≠ démonstration d’efficacité humaine.")],
+        [("◎", "Hétérogénéité", "Expression clinique et progression très variables d’un patient à l’autre."),
+         ("✚", "Cibles GLP-1", "Survie cellulaire, mitochondries, inflammation, α-syn (préclinique)."),
+         ("!", "Limite", "Mécanismes plausibles ≠ démonstration d’efficacité humaine.")],
         p, CORAL
     )
 
-    # 7 TREATMENTS — infographie
+    # 7 TREATMENTS — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "04 · SOINS", "Traitements actuels de la Parkinson",
-        "MDS-UPDRS ≠ neuroprotection",
         "Stratégie symptomatique",
-        ["Lévodopa = référence motrice",
-         "Agonistes dopaminergiques",
-         "IMAO-B / ICOMT / amantadine",
-         "Stimulation cérébrale profonde",
-         "Aucun modificateur certain"],
+        [("◆", "Lévodopa = référence motrice"),
+         ("◎", "Agonistes dopaminergiques"),
+         ("◇", "IMAO-B / ICOMT / amantadine"),
+         ("✧", "Stimulation cérébrale profonde"),
+         ("!", "Aucun modificateur certain")],
         "Lecture méthodologique",
-        [("1", "Efficacité motrice", "Les traitements améliorent les symptômes, pas la dégénérescence."),
-         ("2", "Scores cliniques", "Une variation MDS-UPDRS peut être symptomatique ou variable."),
-         ("3", "Besoin", "Essais longs + biomarqueurs pour prouver un effet modificateur.")],
-        p, GOLD
+        [("★", "Efficacité = symptômes, pas dégénérescence"),
+         ("◎", "MDS-UPDRS : peut être symptomatique / variable"),
+         ("✚", "Besoin : essais longs + biomarqueurs"),
+         ("!", "Ne pas confondre score et neuroprotection"),
+         ("→", "Place aux stratégies modificatrices à tester")],
+        p, GOLD,
+        takeaway="Les soins actuels soulagent — ils ne prouvent pas un effet modificateur de maladie."
     )
 
-    # 8 REPOSITIONING — infographie
+    # 8 REPOSITIONING — infographie icônes
     p += 1
     info_slide(
         prs, blank, "05 · RATIONNEL", "Repositionnement des agonistes du GLP-1",
-        "Aucune indication PD à ce jour",
         "Pourquoi cette classe ?",
-        ["PK/PD et tolérance déjà connues",
-         "GLP-1R présent dans le SNC",
-         "Voies AMPc / PI3K / MAPK",
-         "Signaux précliniques favorables",
-         "Essais humains déjà conduits"],
+        [
+         ("◇", "PK/PD et tolérance déjà connues"),
+         ("Φ", "GLP-1R présent dans le SNC"),
+         ("✧", "Voies AMPc / PI3K / MAPK"),
+         ("★", "Signaux précliniques favorables"),
+         ("◎", "Essais humains déjà conduits")],
         "Garde-fous scientifiques",
-        [("1", "Pas d’effet de classe", "Chaque molécule a sa PK, son exposition et ses preuves."),
-         ("2", "Preuve requise", "Le repositionnement n’exempte pas d’essais rigoureux."),
-         ("3", "Distinction clé", "Plausibilité / symptomatique / modificateur de maladie.")],
+        [("!", "Pas d’effet de classe", "Chaque molécule a sa PK, son exposition et ses preuves."),
+         ("★", "Preuve requise", "Le repositionnement n’exempte pas d’essais rigoureux."),
+         ("◆", "Distinction clé", "Plausibilité / symptomatique / modificateur de maladie.")],
         p, TEAL
     )
 
@@ -489,39 +528,39 @@ def build():
         p, CORAL
     )
 
-    # 13 PANORAMA — infographie
+    # 13 PANORAMA — infographie icônes
     p += 1
     info_slide(
         prs, blank, "06 · MOLÉCULES", "Panorama des agonistes du GLP-1R",
-        "Tirzépatide ≠ sélectif GLP-1R",
         "Logique de classification",
-        ["Exendine-4 : exénatide, lixisénatide",
-         "Analogues GLP-1 humain : lira/dula/séma",
-         "Courte vs longue durée d’action",
-         "PK différente → effets différents",
-         "Tirzépatide : double GIP/GLP-1"],
+        [
+         ("◈", "Exendine-4 : exénatide, lixisénatide"),
+         ("◎", "Analogues GLP-1 humain : lira/dula/séma"),
+         ("≈", "Courte vs longue durée d’action"),
+         ("◇", "PK différente → effets différents"),
+         ("2×", "Tirzépatide : double GIP/GLP-1")],
         "Ancrage Parkinson / preuves",
-        [("1", "Exénatide LP", "Évalué en PD ; Exenatide-PD3 négatif (ph.III)."),
-         ("2", "Lixisénatide", "LIXIPARK ph.II : signal moteur +3,08 pts."),
-         ("3", "Sémaglutide", "SELECT / FLOW ; MOST-ABLE (oral) en cours.")],
+        [("!", "Exénatide LP", "Évalué en PD ; Exenatide-PD3 négatif (ph.III)."),
+         ("★", "Lixisénatide", "LIXIPARK ph.II : signal moteur +3,08 pts."),
+         ("→", "Sémaglutide", "SELECT / FLOW ; MOST-ABLE (oral) en cours.")],
         p, BLUE
     )
 
-    # 14 ACTIONS MÉTABOLIQUES — infographie
+    # 14 ACTIONS MÉTABOLIQUES — infographie icônes
     p += 1
     info_slide(
         prs, blank, "07 · ACTION", "Effets métaboliques des agonistes",
-        "Action plurimodale glucose-dépendante",
         "Mécanisme d’action",
-        ["↑ Insuline (si hyperglycémie)",
-         "↓ Glucagon (si hyperglycémie)",
-         "Ralentissement vidange gastrique",
-         "↑ Satiété / ↓ apports",
-         "Effets cardio-rénaux (certaines molécules)"],
+        [
+         ("↑", "↑ Insuline (si hyperglycémie)"),
+         ("↓", "↓ Glucagon (si hyperglycémie)"),
+         ("◷", "Ralentissement vidange gastrique"),
+         ("◎", "↑ Satiété / ↓ apports"),
+         ("♥", "Effets cardio-rénaux (certaines molécules)")],
         "Conséquences pratiques",
-        [("1", "Hypoglycémie", "Faible en monothérapie ; ↑ si insuline/sulfamides."),
-         ("2", "Courte durée", "Effet postprandial plus marqué (vidange)."),
-         ("3", "Longue durée", "Meilleur contrôle jeûne / HbA1c (exposition continue).")],
+        [("!", "Hypoglycémie", "Faible en monothérapie ; ↑ si insuline/sulfamides."),
+         ("◷", "Courte durée", "Effet postprandial plus marqué (vidange)."),
+         ("◎", "Longue durée", "Meilleur contrôle jeûne / HbA1c (exposition continue).")],
         p, TEAL
     )
 
@@ -531,39 +570,41 @@ def build():
             "DT2, obésité, cardio-rénal, tolérance", p, SKY,
             image="sec_ch2_metabolic.png")
 
-    # 16 DT2 — infographie
+    # 16 DT2 — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "08 · DT2", "Diabète de type 2 : place des GLP-1R",
-        "Priorité aux comorbidités CV/MRC",
         "Rationnel physiopathologique",
-        ["Insulinorésistance + déficit β",
-         "Effet incrétine diminué",
-         "Activation pharmacologique GLP-1R",
-         "↓ glycémie jeûne et postprandiale",
-         "↓ poids + faible hypo intrinsèque"],
+        [("◈", "Insulinorésistance + déficit β"),
+         ("↓", "Effet incrétine diminué"),
+         ("Φ", "Activation pharmacologique GLP-1R"),
+         ("◎", "↓ glycémie jeûne et postprandiale"),
+         ("♥", "↓ poids + faible hypo intrinsèque")],
         "Décision thérapeutique",
-        [("1", "Cibles", "HbA1c n’est plus le seul critère : CV, rein, poids, préférences."),
-         ("2", "Introduction", "Possible tôt si MCV/MRC, selon molécule et recommandations."),
-         ("3", "Associations", "Attention insuline/sulfamides (hypoglycémie) et SGLT2 (hydratation).")],
-        p, TEAL
+        [("★", "Cibles : HbA1c + CV, rein, poids, préférences"),
+         ("✚", "Introduction tôt possible si MCV/MRC"),
+         ("!", "Associations : insuline/sulfamides (hypo)"),
+         ("◇", "SGLT2 : surveiller hydratation"),
+         ("→", "Choix molécule-spécifique, pas de classe")],
+        p, TEAL,
+        takeaway="En DT2, le choix se guide aussi par les comorbidités cardio-rénales — molécule par molécule."
     )
 
-    # 17 OBÉSITÉ — infographie
+    # 17 OBÉSITÉ — infographie icônes
     p += 1
     info_slide(
         prs, blank, "09 · POIDS", "Obésité et réduction pondérale",
-        "Réponse variable · reprise après arrêt",
         "Mécanisme pondéral",
-        ["↑ satiété / ↓ faim",
-         "↓ apports énergétiques",
-         "Liraglutide 3 mg (SCALE)",
-         "Sémaglutide hebdo (STEP)",
-         "Tirzépatide : double agoniste"],
+        [
+         ("◎", "↑ satiété / ↓ faim"),
+         ("↓", "↓ apports énergétiques"),
+         ("◆", "Liraglutide 3 mg (SCALE)"),
+         ("◇", "Sémaglutide hebdo (STEP)"),
+         ("2×", "Tirzépatide : double agoniste")],
         "Vigilance clinique",
-        [("1", "Bénéfice", "Utile si obésité + risque cardiométabolique."),
-         ("2", "Risque", "Âgés / fragiles : dénutrition, sarcopénie, déshydratation."),
-         ("3", "Suivi", "Poids + apports + digestif + force / autonomie.")],
+        [("★", "Bénéfice", "Utile si obésité + risque cardiométabolique."),
+         ("!", "Risque", "Âgés / fragiles : dénutrition, sarcopénie, déshydratation."),
+         ("→", "Suivi", "Poids + apports + digestif + force / autonomie.")],
         p, GOLD
     )
 
@@ -583,22 +624,24 @@ def build():
         p, GREEN
     )
 
-    # 19 SAFETY — infographie
+    # 19 SAFETY — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "10 · SÉCURITÉ", "Tolérance et sécurité d’emploi",
-        "Titration = clé d’adhésion",
         "Cascade des EI digestifs",
-        ["Instauration / ↑ dose",
-         "Nausées, vomissements, diarrhée",
-         "↓ appétit / constipation",
-         "Risque déshydratation",
-         "Arrêt si intolérance sévère"],
+        [("◈", "Instauration / ↑ dose"),
+         ("!", "Nausées, vomissements, diarrhée"),
+         ("◎", "↓ appétit / constipation"),
+         ("≈", "Risque déshydratation"),
+         ("✕", "Arrêt si intolérance sévère")],
         "Points de vigilance pharmacien",
-        [("1", "Hypoglycémie", "Rare seul ; surveiller si insuline ou sulfamides."),
-         ("2", "Alertes", "Douleur abdominale intense : biliaire / pancréatite."),
-         ("3", "Éducation", "Injection, conservation, oubli, repas légers, hydratation.")],
-        p, CORAL
+        [("!", "Hypoglycémie rare seul ; ↑ si insuline/sulfamides"),
+         ("✚", "Douleur abdo intense : biliaire / pancréatite"),
+         ("✎", "Éducation : injection, conservation, oubli"),
+         ("◎", "Repas légers + hydratation"),
+         ("→", "Titration = clé d’adhésion")],
+        p, CORAL,
+        takeaway="La plupart des EI digestifs sont dose-dépendants : titration lente et éducation patient."
     )
 
     # 20 DIVIDER D
@@ -607,21 +650,21 @@ def build():
             "Mécanismes, préclinique, essais, pharmacien", p, GREEN,
             image="sec_ch3_parkinson.png")
 
-    # 21 WHY PD — infographie
+    # 21 WHY PD — infographie icônes
     p += 1
     info_slide(
         prs, blank, "11 · PD/GLP-1", "Pourquoi explorer le GLP-1 dans Parkinson ?",
-        "Hypothèses précliniques, pas une preuve",
         "Chaîne mécanistique proposée",
-        ["Activation du GLP-1R",
-         "AMPc / PKA / EPAC2",
-         "PI3K-Akt & MAPK-ERK",
-         "↓ inflammation / oxydatif",
-         "Survie neuronale putative"],
+        [
+         ("Φ", "Activation du GLP-1R"),
+         ("✧", "AMPc / PKA / EPAC2"),
+         ("↻", "PI3K-Akt & MAPK-ERK"),
+         ("↓", "↓ inflammation / oxydatif"),
+         ("★", "Survie neuronale putative")],
         "Niveau de preuve actuel",
-        [("1", "Préclinique ++", "Signaux sur inflammation, ROS, survie (modèles)."),
-         ("2", "α-synucléine", "Autophagie / protéostase : encore exploratoire."),
-         ("3", "Clinique", "Hétérogène : LIXIPARK ≠ Exenatide-PD3.")],
+        [("★", "Préclinique ++", "Signaux sur inflammation, ROS, survie (modèles)."),
+         ("α", "α-synucléine", "Autophagie / protéostase : encore exploratoire."),
+         ("◎", "Clinique", "Hétérogène : LIXIPARK ≠ Exenatide-PD3.")],
         p, GREEN
     )
 
@@ -641,39 +684,39 @@ def build():
         p, GREEN
     )
 
-    # 23 PRECLIN — infographie
+    # 23 PRECLIN — infographie icônes
     p += 1
     info_slide(
         prs, blank, "12 · PRÉCLIN.", "Données expérimentales (MPTP / 6-OHDA)",
-        "Preuve de concept ≠ validation humaine",
         "Ce que montrent les modèles",
-        ["Atteinte dopaminergique induite",
-         "Exénatide / lira / lixi / séma",
-         "Signaux moteurs / histologiques",
-         "↓ oxydatif / inflammation",
-         "Justification d’essais cliniques"],
+        [
+         ("◎", "Atteinte dopaminergique induite"),
+         ("◈", "Exénatide / lira / lixi / séma"),
+         ("★", "Signaux moteurs / histologiques"),
+         ("↓", "↓ oxydatif / inflammation"),
+         ("→", "Justification d’essais cliniques")],
         "Limites de transposition",
-        [("1", "Modèles toxiques", "Lésion rapide ≠ progression lente humaine."),
-         ("2", "α-synucléine", "Mal reproduite dans MPTP/6-OHDA classiques."),
-         ("3", "Lecture", "Soutenir un essai, pas conclure à l’efficacité.")],
+        [("!", "Modèles toxiques", "Lésion rapide ≠ progression lente humaine."),
+         ("α", "α-synucléine", "Mal reproduite dans MPTP/6-OHDA classiques."),
+         ("◆", "Lecture", "Soutenir un essai, pas conclure à l’efficacité.")],
         p, TEAL
     )
 
-    # 24 EXENATIDE — infographie
+    # 24 EXENATIDE — infographie icônes
     p += 1
     info_slide(
         prs, blank, "13 · EXÉNATIDE", "De l’espoir initial à Exenatide-PD3",
-        "Phase III négative · 96 semaines",
         "Trajectoire des preuves",
-        ["Études pilotes / ph.II",
-         "Signal moteur exploratoire",
-         "Justification d’un grand essai",
-         "Exenatide-PD3 (194 patients)",
-         "Pas de différence OFF"],
+        [
+         ("★", "Études pilotes / ph.II"),
+         ("◎", "Signal moteur exploratoire"),
+         ("→", "Justification d’un grand essai"),
+         ("◈", "Exenatide-PD3 (194 patients)"),
+         ("✕", "Pas de différence OFF")],
         "Données chiffrées clés",
-        [("1", "Design PD3", "Exénatide hebdo vs placebo · 96 semaines."),
-         ("2", "Critère", "MDS-UPDRS III à l’état OFF : aggravation similaire."),
-         ("3", "Conclusion", "Pas d’effet modificateur démontré pour l’exénatide.")],
+        [("◎", "Design PD3", "Exénatide hebdo vs placebo · 96 semaines."),
+         ("!", "Critère", "MDS-UPDRS III à l’état OFF : aggravation similaire."),
+         ("◆", "Conclusion", "Pas d’effet modificateur démontré pour l’exénatide.")],
         p, CORAL
     )
 
@@ -693,39 +736,41 @@ def build():
         p, GREEN
     )
 
-    # 26 SYNTHESIS — infographie
+    # 26 SYNTHESIS — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "14 · SYNTHÈSE", "Essais cliniques : lecture comparative",
-        "Pas d’effet de classe démontré",
         "Hiérarchie des résultats",
-        ["Pilotes exénatide : signal",
-         "LIXIPARK : +3,08 pts (ph.II)",
-         "Exenatide-PD3 : négatif (ph.III)",
-         "MOST-ABLE : en cours",
-         "Méta-analyse : globalement NS"],
+        [("★", "Pilotes exénatide : signal exploratoire"),
+         ("✚", "LIXIPARK : +3,08 pts (ph.II)"),
+         ("✕", "Exenatide-PD3 : négatif (ph.III)"),
+         ("→", "MOST-ABLE : en cours"),
+         ("◎", "Méta-analyse : globalement NS")],
         "Interprétation prudente",
-        [("1", "LIXIPARK", "156 patients · 12 mois · Parkinson précoce · EI digestifs ↑."),
-         ("2", "Exenatide-PD3", "194 patients · 96 sem. · pas de bénéfice OFF."),
-         ("3", "Pratique", "Aucune indication PD hors essai clinique.")],
-        p, NAVY
+        [("✚", "LIXIPARK : 156 pts · 12 mois · PD précoce"),
+         ("!", "EI digestifs ↑ sous lixisénatide"),
+         ("✕", "Exenatide-PD3 : 194 pts · 96 sem. · OFF NS"),
+         ("◆", "Pas d’effet de classe démontré"),
+         ("!", "Aucune indication PD hors essai")],
+        p, NAVY,
+        takeaway="Signal phase II (LIXIPARK) ≠ preuve phase III (Exenatide-PD3) — lire molécule par molécule."
     )
 
-    # 27 LIMITS — infographie
+    # 27 LIMITS — infographie icônes
     p += 1
     info_slide(
         prs, blank, "15 · MÉTHODE", "Limites et perspectives de recherche",
-        "Symptomatique vs modificateur",
         "Obstacles méthodologiques",
-        ["Durées trop courtes",
-         "MDS-UPDRS OFF insuffisant seul",
-         "Biomarqueurs non validés",
-         "Hétérogénéité patients/molécules",
-         "Risque de surinterprétation"],
+        [
+         ("◷", "Durées trop courtes"),
+         ("◎", "MDS-UPDRS OFF insuffisant seul"),
+         ("◇", "Biomarqueurs non validés"),
+         ("≈", "Hétérogénéité patients/molécules"),
+         ("!", "Risque de surinterprétation")],
         "Ce que devront faire les essais futurs",
-        [("1", "Design", "Stade précoce + suivi long + puissance adéquate."),
-         ("2", "Critères", "Moteurs + non moteurs + cognition + chutes + nutrition."),
-         ("3", "Stratification", "Phénotypes métaboliques/génétiques testés a priori.")],
+        [("★", "Design", "Stade précoce + suivi long + puissance adéquate."),
+         ("✚", "Critères", "Moteurs + non moteurs + cognition + chutes + nutrition."),
+         ("◆", "Stratification", "Phénotypes métaboliques/génétiques testés a priori.")],
         p, GOLD
     )
 
@@ -745,40 +790,44 @@ def build():
         p, SKY
     )
 
-    # 29 PHARMA GRID — infographie
+    # 29 PHARMA GRID — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "16 · PHARMA", "Missions du pharmacien (contexte PD)",
-        "Pas d’usage hors essai clinique",
         "Parcours d’accompagnement",
-        ["Éducation injection / titration",
-         "Repérage EI digestifs",
-         "Surveillance poids / hydratation",
-         "Prévention hypoglycémie associée",
-         "Coordination pluridisciplinaire"],
+        [("✎", "Éducation injection / titration"),
+         ("!", "Repérage EI digestifs"),
+         ("◎", "Surveillance poids / hydratation"),
+         ("↓", "Prévention hypoglycémie associée"),
+         ("✚", "Coordination pluridisciplinaire")],
         "Spécificités Parkinson",
-        [("1", "Vulnérabilités", "Constipation, sarcopénie, chutes, dextérité, cognition."),
-         ("2", "Information", "Rappeler le caractère expérimental de la stratégie PD."),
-         ("3", "Sécurité", "Prévenir automédication et attentes disproportionnées.")],
-        p, SKY
+        [("!", "Vulnérabilités : constipation, sarcopénie, chutes"),
+         ("◎", "Dextérité / cognition pour l’injection"),
+         ("✎", "Rappeler le caractère expérimental PD"),
+         ("✕", "Prévenir automédication / attentes excessives"),
+         ("→", "Sécuriser l’usage métabolique légitime")],
+        p, SKY,
+        takeaway="Le pharmacien sécurise l’usage métabolique et cadre clairement l’absence d’indication PD hors essai."
     )
 
-    # 30 CONCLUSION — infographie
+    # 30 CONCLUSION — mix dense
     p += 1
-    info_slide(
+    dense_dual(
         prs, blank, "17 · FIN", "Messages à retenir pour le jury",
-        "Candidats au repositionnement, pas traitements établis",
         "Fil de démonstration",
-        ["Classe mature en métabolisme",
-         "Rationnel PD biologiquement cohérent",
-         "Clinique hétérogène (LIXI ≠ EXEN)",
-         "Aucune indication PD actuelle",
-         "Pharmacien = sécurisation + information"],
+        [("◈", "Classe mature en métabolisme"),
+         ("↻", "Rationnel PD biologiquement cohérent"),
+         ("◎", "Clinique hétérogène (LIXI ≠ EXEN)"),
+         ("!", "Aucune indication PD actuelle"),
+         ("✚", "Pharmacien = sécurisation + information")],
         "Formulation finale",
-        [("1", "Métabolisme", "Bénéfices CV/rénaux : molécule et population spécifiques."),
-         ("2", "Parkinson", "LIXIPARK signal ph.II ; Exenatide-PD3 négatif ; pas d’effet de classe."),
-         ("3", "Avenir", "Essais longs, ciblés, multicritères — puis seulement pratique.")],
-        p, NAVY
+        [("♥", "Métabolisme : bénéfices CV/rénaux molécule-spécifiques"),
+         ("✚", "LIXIPARK signal ph.II ; Exenatide-PD3 négatif"),
+         ("!", "Pas d’effet de classe en Parkinson"),
+         ("→", "Avenir : essais longs, ciblés, multicritères"),
+         ("★", "Puis seulement éventuelle pratique clinique")],
+        p, NAVY,
+        takeaway="Plausibilité ≠ symptomatique ≠ modificateur de maladie — conclure avec prudence."
     )
 
     assert p == TOTAL, f"Expected {TOTAL}, got {p}"
