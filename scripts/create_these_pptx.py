@@ -29,7 +29,7 @@ ROW = RGBColor(0xE8, 0xF0, 0xF5)
 
 W = Inches(13.333)
 H = Inches(7.5)
-TOTAL = 35
+TOTAL = 37
 ASSETS = "/workspace/docs/presentation/assets"
 ICONS = os.path.join(ASSETS, "icons")
 
@@ -760,7 +760,41 @@ def build():
         idea="Les bénéfices CV/rénaux sont prouvés pour des molécules précises, pas pour « les GLP-1 » en bloc."
     )
 
-    # 19 SAFETY
+    # Pont Chapitre 3 — cadre du repositionnement (après cardio = slide 23)
+    p += 1
+    atlas_slide(
+        prs, blank, "Chapitre 3 · introduction",
+        "Du métabolisme au SNC : cadre du repositionnement dans Parkinson",
+        "med_ch3_repositionnement.png",
+        ["Bénéfices métaboliques/cardio-rénaux → question extra-métabolique",
+         "Parkinson = indication de repositionnement très étudiée",
+         "Plausibilité biologique ≠ preuve d’efficacité",
+         "Distinguer : préclinique / symptomatique / score / modificateur",
+         "Chapitre : cadre, mécanismes, préclinique, essais, limites",
+         "Lecture prudente, molécule par molécule"],
+        "La plausibilité mécanistique ouvre une piste — elle ne démontre pas un effet thérapeutique dans Parkinson.",
+        p, GREEN,
+        idea="Avant les essais : fixer le cadre méthodologique du repositionnement."
+    )
+
+    # III.1 + III.2 — hétérogénéité, besoin, effet modificateur
+    p += 1
+    atlas_slide(
+        prs, blank, "Chapitre 3 · III.1–III.2",
+        "Hétérogénéité clinique, besoin non couvert et effet modificateur",
+        "med_ch3_parkinson_besoin.png",
+        ["PD hétérogène — moteurs + non moteurs + autonomie",
+         "α-syn, mitochondries, oxydatif, inflammation, autophagie",
+         "Soins actuels = symptomatiques (lévodopa, DA, SCP…)",
+         "Besoin : mieux contrôler ET freiner la dégénérescence",
+         "Repositionnement — accélère, mais n’exempte pas de preuve",
+         "Modificateur ≠ amélioration ponctuelle d’un score OFF"],
+        "DT2/obésité n’annoncent pas une efficacité neurologique : conclure molécule par molécule, jamais par classe.",
+        p, CORAL,
+        idea="Un score moteur peut être symptomatique ; un modificateur doit ralentir la maladie."
+    )
+
+    # SAFETY
     p += 1
     s = prs.slides.add_slide(blank)
     header(s, "Chapitre 2", "Tolérance & sécurité — check-list",
