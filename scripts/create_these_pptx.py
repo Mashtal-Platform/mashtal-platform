@@ -29,7 +29,7 @@ ROW = RGBColor(0xE8, 0xF0, 0xF5)
 
 W = Inches(13.333)
 H = Inches(7.5)
-TOTAL = 30
+TOTAL = 31
 ASSETS = "/workspace/docs/presentation/assets"
 ICONS = os.path.join(ASSETS, "icons")
 
@@ -455,7 +455,34 @@ def build():
             image="sec_ch1_glp1.png",
             idea="Idée : comprendre la classe avant de juger son potentiel neurologique.")
 
-    # 10 ATLAS GLP1
+    # 10 PROGLUCAGON / ORIGINE DU GLP-1 (nouvelle slide après le séparateur)
+    p += 1
+    s = prs.slides.add_slide(blank)
+    header(s, "Chapitre 1 · physiologie", "Origine du GLP-1 : du proglucagon aux formes actives",
+           idea="Un même précurseur, des enzymes de maturation différentes → des peptides aux rôles distincts.")
+    # Illustration principale
+    img(s, "med_proglucagon_glp1.png", Inches(0.25), Inches(1.45), Inches(8.15), Inches(4.55))
+    # Panneau droit : idées brèves
+    panel(s, Inches(8.55), Inches(1.45), Inches(4.5), Inches(4.55),
+          "Idées à retenir",
+          ["Incrétine peptidique — issue du proglucagon (pancréas, intestin, SNC)",
+           "Cellules α — proglucagon → glucagon",
+           "Cellules L (iléon/côlon) — GLP-1, GLP-2, glicentine, oxyntomoduline",
+           "Formes actives — GLP-1(7-36) amide et GLP-1(7-37)",
+           "Sécrétion postprandiale — glucides, lipides, protéines",
+           "Réponse précoce — signaux nerveux / endocrines / paracrines",
+           "NTS (tronc cérébral) — GLP-1 central (satiété) ; intestin = source circulante"],
+          TEAL, "Φ",
+          idea="Spécificité tissulaire = fonctions différentes.")
+    rect(s, Inches(0.25), Inches(6.1), Inches(12.8), Inches(0.85), NAVY)
+    txt(s, Inches(0.45), Inches(6.2), Inches(2.0), Inches(0.25),
+        "À RETENIR", size=13, bold=True, color=GOLD)
+    txt(s, Inches(0.45), Inches(6.45), Inches(12.4), Inches(0.4),
+        "Le tractus gastro-intestinal est la principale source de GLP-1 circulant ; la production centrale reste complémentaire.",
+        size=15, color=WHITE)
+    footer(s, p)
+
+    # 11 ATLAS GLP1
     p += 1
     atlas_slide(
         prs, blank, "Chapitre 1 · atlas médical",
