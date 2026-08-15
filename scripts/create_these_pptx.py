@@ -29,7 +29,7 @@ ROW = RGBColor(0xE8, 0xF0, 0xF5)
 
 W = Inches(13.333)
 H = Inches(7.5)
-TOTAL = 33
+TOTAL = 34
 ASSETS = "/workspace/docs/presentation/assets"
 ICONS = os.path.join(ASSETS, "icons")
 
@@ -564,7 +564,7 @@ def build():
         idea="Activer le GLP-1R n’est pas un seul effet : c’est un réseau de signaux."
     )
 
-    # 12 ATLAS agonists
+    # 15 ATLAS agonists (courte vs longue)
     p += 1
     atlas_slide(
         prs, blank, "Chapitre 1 · atlas médical",
@@ -581,26 +581,51 @@ def build():
         idea="Deux agonistes « GLP-1 » ne donnent pas le même profil d’action."
     )
 
-    # 13 TABLE
+    # 16 HÉTÉROGÉNÉITÉ PHARMACOLOGIQUE (après slide courte/longue)
     p += 1
     s = prs.slides.add_slide(blank)
-    header(s, "Chapitre 1", "Panorama des agonistes — référence claire",
-           idea="Chaque molécule a un profil, une posologie et une ancre de preuve distincts.")
+    header(s, "Chapitre 1 · I.3–I.4", "Une classe hétérogène — pas un groupe homogène",
+           idea="Même récepteur GLP-1R, mais structures, PK/PD et preuves très différentes.")
+    img(s, "med_agonistes_hetero.png", Inches(0.25), Inches(1.45), Inches(8.15), Inches(4.55))
+    panel(s, Inches(8.55), Inches(1.45), Inches(4.5), Inches(4.55),
+          "Idées à retenir",
+          ["Exendine-4 — exénatide, lixisénatide (Heloderma)",
+           "Analogues humains — lira, dula, séma (albumine / Fc)",
+           "Tirzépatide — double GIP/GLP-1, non sélectif",
+           "Action courte — stimulation intermittente, postprandial ++",
+           "Action prolongée — jeûne/HbA1c ; tachyphylaxie vidange possible",
+           "Lecture PD — chaque molécule a ses propres preuves"],
+          CORAL, "≠",
+          idea="Pas d’effet de classe neurologique présumé.")
+    rect(s, Inches(0.25), Inches(6.1), Inches(12.8), Inches(0.85), NAVY)
+    txt(s, Inches(0.45), Inches(6.2), Inches(2.0), Inches(0.25),
+        "À RETENIR", size=13, bold=True, color=GOLD)
+    txt(s, Inches(0.45), Inches(6.45), Inches(12.4), Inches(0.4),
+        "Différences de structure, demi-vie, administration et pharmacodynamie : lire molécule par molécule.",
+        size=15, color=WHITE)
+    footer(s, p)
+
+    # 17 TABLEAU 1 — profils PK
+    p += 1
+    s = prs.slides.add_slide(blank)
+    header(s, "Chapitre 1 · Tableau 1", "Principales molécules et profils pharmacocinétiques",
+           idea="Comparaison structurale, demi-vie, administration et particularités cliniques.")
     rows = [
-        ["Molécule", "Profil", "Admin.", "Idée / ancre de preuve"],
-        ["Exénatide", "Courte / LP", "2×/j ou 1×/sem.", "Testé en PD ; Exenatide-PD3 négatif"],
-        ["Lixisénatide", "Courte", "1×/j", "LIXIPARK : signal moteur phase II"],
-        ["Liraglutide", "Longue", "1×/j", "LEADER (CV) · obésité 3 mg"],
-        ["Dulaglutide", "Longue", "1×/sem.", "REWIND : bénéfice CV"],
-        ["Sémaglutide", "Longue", "1×/sem. / oral", "SELECT · FLOW · MOST-ABLE (PD)"],
-        ["Tirzépatide", "GIP/GLP-1", "1×/sem.", "Double agoniste — non sélectif"],
+        ["Molécule", "Structure / mécanisme", "Demi-vie", "Admin.", "Particularités"],
+        ["Exénatide", "Exendine-4 synthétique", "~heures / LP", "2×/j ou 1×/sem.", "DT2 ; LP évalué en PD"],
+        ["Lixisénatide", "Exendine-4 courte", "~3 h", "1×/j SC", "Postprandial ++ ; LIXIPARK"],
+        ["Liraglutide", "GLP-1 + chaîne C16", "~13 h", "1×/j SC", "DT2 ; obésité (dose)"],
+        ["Dulaglutide", "2× GLP-1–Fc IgG4", "~5 j", "1×/sem. SC", "DT2 ; REWIND (CV)"],
+        ["Sémaglutide", "GLP-1 + chaîne C18", "~1 sem.", "1×/sem. / oral", "DT2 ; obésité ; cardio-rénal"],
+        ["Tirzépatide", "Double GIP/GLP-1", "~5 j", "1×/sem. SC", "Non sélectif GLP-1R"],
     ]
-    table(s, Inches(0.25), Inches(1.5), Inches(12.8), rows,
-          [Inches(2.4), Inches(2.2), Inches(2.8), Inches(5.4)], fs=15, rh=0.52)
-    rect(s, Inches(0.25), Inches(5.5), Inches(12.8), Inches(1.35), TEAL)
-    txt(s, Inches(0.5), Inches(5.85), Inches(12.3), Inches(0.7),
-        "Tirzépatide ≠ agoniste sélectif. Structure/PK variables → pas d’effet de classe neurologique présumé.",
-        size=17, color=WHITE)
+    table(s, Inches(0.2), Inches(1.45), Inches(12.9), rows,
+          [Inches(2.0), Inches(3.3), Inches(1.7), Inches(2.3), Inches(3.6)], fs=13, rh=0.52)
+    rect(s, Inches(0.2), Inches(5.5), Inches(12.9), Inches(1.35), TEAL)
+    txt(s, Inches(0.45), Inches(5.7), Inches(12.4), Inches(0.9),
+        "Indications selon spécialité, dose et cadre réglementaire. "
+        "Tirzépatide ≠ agoniste sélectif : ses effets ne se réduisent pas à l’activation du GLP-1R.",
+        size=15, color=WHITE)
     footer(s, p)
 
     # 14 MECHANISMS
