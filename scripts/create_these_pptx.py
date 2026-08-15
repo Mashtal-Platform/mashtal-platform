@@ -908,28 +908,20 @@ def build():
 
     # 31 STRATÉGIE DT2 (après slide 30 — synthèse essais ; contenu II.1–II.2)
     p += 1
-    s = prs.slides.add_slide(blank)
-    header(s, "Chapitre 2 · II.1–II.2", "Stratégie DT2 : au-delà de l’HbA1c",
-           idea="Choisir selon les priorités du patient : CV, MRC, poids, hypo, autogestion, préférences.")
-    img(s, "med_strategie_dt2.png", Inches(0.25), Inches(1.45), Inches(8.15), Inches(4.55))
-    panel(s, Inches(8.55), Inches(1.45), Inches(4.5), Inches(4.55),
-          "Idées à retenir",
-          ["Pas seulement HbA1c — organiser autour des comorbidités",
-           "GLP-1R à bénéfice CV — possible tôt si MCV / haut risque",
-           "± SGLT2 — si CV, MRC, IC ou besoin de ↓ poids",
-           "Courte vs longue — postprandial vs jeûne/HbA1c",
-           "Poids — bénéfice si obésité ; vigilance si fragilité",
-           "Suivi large — apports, digestif, hydratation, force",
-           "Tirzépatide — GIP+GLP-1, non sélectif"],
-          SKY, "★",
-          idea="L’efficacité glycémique moyenne ne suffit pas.")
-    rect(s, Inches(0.25), Inches(6.1), Inches(12.8), Inches(0.85), NAVY)
-    txt(s, Inches(0.45), Inches(6.2), Inches(2.0), Inches(0.25),
-        "À RETENIR", size=13, bold=True, color=GOLD)
-    txt(s, Inches(0.45), Inches(6.45), Inches(12.4), Inches(0.4),
+    atlas_slide(
+        prs, blank, "Chapitre 2 · II.1–II.2",
+        "Stratégie DT2 : au-delà de l’HbA1c",
+        "med_strategie_dt2_photo.png",
+        ["Pas seulement HbA1c — intégrer CV, MRC, poids, hypo, préférences",
+         "GLP-1R à bénéfice CV — possible tôt si MCV / haut risque",
+         "± SGLT2 — si CV, MRC, IC ou besoin de ↓ poids",
+         "Courte → postprandial ; longue → jeûne / HbA1c",
+         "Poids — utile si obésité ; vigilance si fragilité / sarcopénie",
+         "Tirzépatide — double GIP/GLP-1, non sélectif GLP-1R"],
         "Améliorer HbA1c ou le poids ≠ prouver à soi seul un bénéfice CV/rénal — se fier aux essais de résultats.",
-        size=15, color=WHITE)
-    footer(s, p)
+        p, SKY,
+        idea="Choisir selon les priorités du patient, pas seulement l’efficacité glycémique moyenne."
+    )
 
     # 32 LIMITS / PERSPECTIVES
     p += 1
