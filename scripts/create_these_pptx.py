@@ -29,7 +29,7 @@ ROW = RGBColor(0xE8, 0xF0, 0xF5)
 
 W = Inches(13.333)
 H = Inches(7.5)
-TOTAL = 31
+TOTAL = 33
 ASSETS = "/workspace/docs/presentation/assets"
 ICONS = os.path.join(ASSETS, "icons")
 
@@ -482,7 +482,55 @@ def build():
         size=15, color=WHITE)
     footer(s, p)
 
-    # 11 ATLAS GLP1
+    # 11 EFFET INCRÉTINE & RÉGULATION GLYCÉMIQUE
+    p += 1
+    s = prs.slides.add_slide(blank)
+    header(s, "Chapitre 1 · I.1.2", "Effet incrétine et régulation glycémique",
+           idea="Glucose oral > glucose I.V. : le GLP-1 (avec le GIP) amplifie l’insuline de façon glucose-dépendante.")
+    img(s, "med_incretine_glycemie.png", Inches(0.25), Inches(1.45), Inches(8.15), Inches(4.55))
+    panel(s, Inches(8.55), Inches(1.45), Inches(4.5), Inches(4.55),
+          "Idées à retenir",
+          ["Effet incrétine — plus d’insuline après glucose oral qu’après I.V.",
+           "GLP-1 + GIP — action coordonnée postprandiale",
+           "Insuline glucose-dépendante — max si glycémie ↑, ↓ si glycémie ↓",
+           "↓ Glucagon en hyperglycémie — moins de glucose hépatique",
+           "Vidange gastrique ralentie — atténue le pic postprandial",
+           "Hypoglycémie — faible risque seul ; ↑ si insuline/sulfamides"],
+          TEAL, "G",
+          idea="Propriété clé de sécurité de la classe.")
+    rect(s, Inches(0.25), Inches(6.1), Inches(12.8), Inches(0.85), NAVY)
+    txt(s, Inches(0.45), Inches(6.2), Inches(2.0), Inches(0.25),
+        "À RETENIR", size=13, bold=True, color=GOLD)
+    txt(s, Inches(0.45), Inches(6.45), Inches(12.4), Inches(0.4),
+        "En association à l’insuline ou aux sulfamides, anticiper l’hypoglycémie et adapter si besoin.",
+        size=15, color=WHITE)
+    footer(s, p)
+
+    # 12 SATIÉTÉ & PRISE ALIMENTAIRE
+    p += 1
+    s = prs.slides.add_slide(blank)
+    header(s, "Chapitre 1 · I.1.3", "Satiété et régulation de la prise alimentaire",
+           idea="Signaux digestifs, vagaux et centraux → satiété ↑, faim ↓, apports énergétiques ↓.")
+    img(s, "med_satiete_appetit.png", Inches(0.25), Inches(1.45), Inches(8.15), Inches(4.55))
+    panel(s, Inches(8.55), Inches(1.45), Inches(4.5), Inches(4.55),
+          "Idées à retenir",
+          ["Satiété / faim — intégration périphérique et centrale",
+           "↓ apports énergétiques — fondement du traitement de l’obésité",
+           "Bénéfice — utile si obésité ou DT2 à haut risque cardiométabolique",
+           "Vigilance — âgés, fragiles, dénutris, sarcopéniques",
+           "Risques — déshydratation, perte de masse maigre, ↓ autonomie",
+           "Chapitre II — cette balance bénéfice/risque sera développée"],
+          GOLD, "P",
+          idea="La perte de poids n’est pas un bien absolu.")
+    rect(s, Inches(0.25), Inches(6.1), Inches(12.8), Inches(0.85), NAVY)
+    txt(s, Inches(0.45), Inches(6.2), Inches(2.0), Inches(0.25),
+        "À RETENIR", size=13, bold=True, color=GOLD)
+    txt(s, Inches(0.45), Inches(6.45), Inches(12.4), Inches(0.4),
+        "Juger la perte de poids dans le contexte clinique global : bénéfice cardiométabolique vs risque de fragilité.",
+        size=15, color=WHITE)
+    footer(s, p)
+
+    # 13 ATLAS GLP1
     p += 1
     atlas_slide(
         prs, blank, "Chapitre 1 · atlas médical",
