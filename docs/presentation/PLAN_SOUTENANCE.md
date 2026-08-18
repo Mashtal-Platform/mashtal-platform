@@ -1,41 +1,36 @@
-# Plan de soutenance (21 diapositives)
+# Plan de soutenance (21 slides, 15–20 min)
 
-**Public :** jury de thèse (pharmacie)  
-**Date :** 03 septembre 2026  
 **Auteures :** Sara Yousef & Wiam Bourhan  
 **Directrice :** Pr. Dalia Khachman  
 **Établissement :** Université Libanaise — Faculté de Pharmacie  
+**Date :** 03 septembre 2026  
 **Fichier :** `Soutenance_GLP1_Parkinson.pptx`  
 **Régénération :** `pip install -r scripts/requirements-pptx.txt && python3 scripts/create_these_pptx.py`
 
-Le texte à l’écran est volontairement synthétique ; les détails du manuscrit se développent à l’oral.
+**Fil directeur :** piste de repositionnement crédible, **sans preuve clinique suffisante** pour une indication dans Parkinson. Distinguer à l’oral : plausibilité biologique ≠ signal clinique ≠ effet modificateur.
 
-## Slides
+Prévoir 45–60 s par slide ; davantage de temps pour les slides **14 à 20**.
 
-| # | Titre | Contenu |
-|---|-------|---------|
-| 1 | Titre | Titre de thèse, auteures, directrice, faculté, date |
-| 2 | Contexte | Parkinson progressive ; symptômes ; pas de modificateur certain |
-| 3 | Problématique | Les agonistes du GLP-1R, une stratégie dans Parkinson ? |
-| 4 | Objectifs | Physiologie, indications validées, repositionnement, lecture critique, pharmacien |
-| 5 | Rappels PD | SNpc, dopamine, moteurs / non moteurs |
-| 6 | Hétérogénéité | α-syn, mitochondries, oxydatif, inflammation, autophagie |
-| 7 | Physiologie GLP-1 | Cellules L, incrétine, satiété + figure |
-| 8 | Limites du GLP-1 endogène | Demi-vie 1–2 min, DPP-4 |
-| 9 | Récepteur et signalisation | Gs → AMPc → PKA/EPAC2 ; PI3K/Akt ; MAPK/ERK + figure |
-| 10 | Principaux agonistes | Tableau des 6 molécules |
-| 11 | Non interchangeables | Pas d’effet neurologique de classe |
-| 12 | Diabète | Glycémie, HbA1c, faible hypoglycémie intrinsèque |
-| 13 | Obésité et cardio-rénal | LEADER, SUSTAIN-6, SELECT, REWIND, FLOW |
-| 14 | Tolérance | EI digestifs, titration, précautions |
-| 15 | Repositionnement | Pourquoi Parkinson ; efficacité métabolique ≠ neurologique |
-| 16 | Mécanismes | Hypothèses précliniques + figure |
-| 17 | Mitochondries / inflammation | Paramètres expérimentaux, pas de preuve humaine |
-| 18 | Alpha-synucléine | MPTP / 6-OHDA ; transposition limitée |
-| 19 | LIXIPARK | n=156 ; 12 mois ; −0,04 vs +3,04 ; Δ 3,08 |
-| 20 | Exenatide-PD3 | n=194 ; 96 sem. ; critère principal négatif |
-| 21 | Messages clés | Pas d’indication Parkinson hors recherche ; rôle du pharmacien |
-
-## Pitch (30 secondes)
-
-Aucun modificateur de maladie n’est démontré dans Parkinson. Les agonistes du GLP-1R sont une classe métabolique mature, avec des bénéfices cardio-rénaux **molécule-spécifiques**. La plausibilité neuroprotectrice est préclinique. En clinique : signal de **LIXIPARK**, échec d’**Exenatide-PD3**. Pas d’effet de classe, pas d’indication hors essai. Le pharmacien sécurise l’usage et prévient le hors AMM injustifié.
+| # | Titre | Visuel |
+|---|-------|--------|
+| 1 | Titre | Logos UL + Faculté ; cerveau / pancréas |
+| 2 | Contexte et problématique | Symptomatique → besoin de neuroprotection |
+| 3 | Objectifs | 4 étapes |
+| 4 | Plan | Frise I–IV |
+| 5 | Besoin thérapeutique Parkinson | Moteurs / non moteurs |
+| 6 | Physiologie du GLP-1 | Biosynthèse / incrétine |
+| 7 | Pourquoi des agonistes ? | DPP-4 vs analogues |
+| 8 | Récepteur et signalisation | Figure des voies |
+| 9 | Non interchangeables | Tableau familles |
+| 10 | Profils PK | Tableau molécule / demi-vie / administration |
+| 11 | Place dans le DT2 | Effets métaboliques |
+| 12 | Obésité et cardio-rénal | LEADER, SUSTAIN-6, REWIND, SELECT, FLOW |
+| 13 | Tolérance et pharmacien | Injection, hydratation, alimentation, poids |
+| 14 | Repositionnement | Médicament métabolique → hypothèse → essais |
+| 15 | Mécanismes neuroprotecteurs | Figure de synthèse |
+| 16 | Mitochondries / inflammation | Synthèse préclinique |
+| 17 | Autophagie / α-synucléine | Synthèse |
+| 18 | Préclinique : intérêt et limites | Balance |
+| 19 | Essais cliniques contrastés | Tableau ; LIXIPARK, NEJM 2024 · Exenatide-PD3, phase III |
+| 20 | Interprétation et perspectives | Données actuelles → exigences futures |
+| 21 | Cinq messages + merci | Slide épurée |
