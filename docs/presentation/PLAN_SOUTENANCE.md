@@ -1,56 +1,41 @@
-# Plan de soutenance (30 diapositives)
+# Plan de soutenance (21 diapositives)
 
 **Public :** jury de thèse (pharmacie)  
-**Durée orale recommandée :** 18–22 min + questions  
+**Date :** 03 septembre 2026  
+**Auteures :** Sara Yousef & Wiam Bourhan  
+**Directrice :** Pr. Dalia Khachman  
+**Établissement :** Université Libanaise — Faculté de Pharmacie  
 **Fichier :** `Soutenance_GLP1_Parkinson.pptx`  
-**Régénération :** `python3 scripts/create_these_pptx.py` (dépend de `python-pptx`)
+**Régénération :** `pip install -r scripts/requirements-pptx.txt && python3 scripts/create_these_pptx.py`
 
-## Fil conducteur
+Le texte à l’écran est volontairement synthétique ; les détails du manuscrit se développent à l’oral.
 
-Besoin médical (Parkinson) → repositionnement → pharmacologie GLP-1 → preuves métaboliques et cardio-rénales → neuroprotection et essais (LIXIPARK vs Exenatide-PD3) → rôle du pharmacien → messages clés.
+## Slides
 
-## Détail des 30 slides
+| # | Titre | Contenu |
+|---|-------|---------|
+| 1 | Titre | Titre de thèse, auteures, directrice, faculté, date |
+| 2 | Contexte | Parkinson progressive ; symptômes ; pas de modificateur certain |
+| 3 | Problématique | Les agonistes du GLP-1R, une stratégie dans Parkinson ? |
+| 4 | Objectifs | Physiologie, indications validées, repositionnement, lecture critique, pharmacien |
+| 5 | Rappels PD | SNpc, dopamine, moteurs / non moteurs |
+| 6 | Hétérogénéité | α-syn, mitochondries, oxydatif, inflammation, autophagie |
+| 7 | Physiologie GLP-1 | Cellules L, incrétine, satiété + figure |
+| 8 | Limites du GLP-1 endogène | Demi-vie 1–2 min, DPP-4 |
+| 9 | Récepteur et signalisation | Gs → AMPc → PKA/EPAC2 ; PI3K/Akt ; MAPK/ERK + figure |
+| 10 | Principaux agonistes | Tableau des 6 molécules |
+| 11 | Non interchangeables | Pas d’effet neurologique de classe |
+| 12 | Diabète | Glycémie, HbA1c, faible hypoglycémie intrinsèque |
+| 13 | Obésité et cardio-rénal | LEADER, SUSTAIN-6, SELECT, REWIND, FLOW |
+| 14 | Tolérance | EI digestifs, titration, précautions |
+| 15 | Repositionnement | Pourquoi Parkinson ; efficacité métabolique ≠ neurologique |
+| 16 | Mécanismes | Hypothèses précliniques + figure |
+| 17 | Mitochondries / inflammation | Paramètres expérimentaux, pas de preuve humaine |
+| 18 | Alpha-synucléine | MPTP / 6-OHDA ; transposition limitée |
+| 19 | LIXIPARK | n=156 ; 12 mois ; −0,04 vs +3,04 ; Δ 3,08 |
+| 20 | Exenatide-PD3 | n=194 ; 96 sem. ; critère principal négatif |
+| 21 | Messages clés | Pas d’indication Parkinson hors recherche ; rôle du pharmacien |
 
-| # | Type | Titre | Idée à faire passer |
-|---|------|-------|---------------------|
-| 1 | Titre | Agonistes du GLP-1 & Parkinson | Cadre ; pas d’indication actuelle hors recherche |
-| 2 | Plan | 5 parties | Feuille de route |
-| 3 | Objectifs | 4 objectifs | Plausibilité ≠ preuve modificatrice |
-| 4 | Séparateur | Partie A — Contexte | Transition |
-| 5 | Contenu | Enjeu de santé publique | 2ᵉ maladie ND ; moteurs et non moteurs |
-| 6 | Contenu | Physiopathologie | DA, α-syn, mitochondries, inflammation, autophagie |
-| 7 | Contenu | Traitements actuels | Symptomatique seulement ; MDS-UPDRS ≠ neuroprotection |
-| 8 | Contenu | Repositionnement | Attractif, non suffisant ; pas d’effet de classe a priori |
-| 9 | Séparateur | Partie B — Chapitre I | Transition |
-| 10 | Contenu + figure | Physiologie GLP-1 | DPP-4 / demi-vie 1–2 min |
-| 11 | Contenu + figure 1 | GLP-1R | Gs–AMPc–PKA/EPAC2 ; PI3K/Akt ; MAPK/ERK |
-| 12 | Contenu | Classification | Exendine vs humain ; courte vs longue ; tirzépatide |
-| 13 | Tableau 1 | Molécules | PK, voies, particularités (LIXIPARK, REWIND…) |
-| 14 | Contenu | Exposition SNC | Direct vs indirect ; molécules non interchangeables |
-| 15 | Séparateur | Partie C — Chapitre II | Transition |
-| 16 | Contenu | DT2 | Décision autour du risque CV/rénal, pas seulement HbA1c |
-| 17 | Contenu | Poids / obésité | Bénéfice ou risque (sujet âgé, sarcopénie) |
-| 18 | Tableau 2 | Cardio-rénal | LEADER, SUSTAIN-6, REWIND, SELECT, FLOW |
-| 19 | Contenu | Tolérance & pharmacien | EI digestifs, titration, hypoglycémie associée |
-| 20 | Séparateur | Partie D — Chapitre III | Transition |
-| 21 | Contenu | Effet modificateur | Score OFF ≠ préservation neuronale |
-| 22 | Contenu + figure 2 | Mécanismes | Hypothèses précliniques |
-| 23 | Contenu | Préclinique | 6-OHDA / MPTP : preuve de concept, transposition limitée |
-| 24 | Contenu | **LIXIPARK** | n=156 ; 12 mois ; −0,04 vs +3,04 ; Δ 3,08 pts |
-| 25 | Contenu | **Exenatide-PD3** | n=194 ; 96 sem. ; critère principal négatif |
-| 26 | Tableau 3 + figure | Synthèse essais | Hétérogénéité ; méta-analyse globale non significative |
-| 27 | Contenu | Perspectives | MOST-ABLE (séma oral, n=99, 48 sem.) — pas encore de résultat |
-| 28 | Contenu | Pharmacien / PD | Constipation, dénutrition, chutes ; hors essai = non indiqué |
-| 29 | Conclusion | 5 messages | Candidats, pas traitements établis |
-| 30 | Clôture | Merci | Mots-clés et ouverture à la discussion |
+## Pitch (30 secondes)
 
-## Pitch oral (30 secondes)
-
-La Parkinson n’a **aucun modificateur de maladie démontré**. Les agonistes du GLP-1R sont une classe **métabolique mature**, avec des bénéfices **cardio-rénaux molécule-spécifiques** (LEADER, SUSTAIN-6, REWIND, SELECT, FLOW). Leur **plausibilité neuroprotectrice** est préclinique. En clinique, les résultats sont **hétérogènes** : signal de **LIXIPARK** (lixisénatide, phase II), échec d’**Exenatide-PD3** (phase III). **Pas d’indication** dans Parkinson hors recherche ; le **pharmacien** sécurise l’usage métabolique et prévient les attentes disproportionnées.
-
-## Conseils d’oral
-
-- Accorder le plus de temps aux slides **24–26** (clinique).
-- Slide **28** (pharmacien) : attendue en thèse de pharmacie.
-- Personnaliser nom / affiliation / date sur la slide 1 avant la soutenance.
-- Figures 1 et 2 du manuscrit sont reprises (slides 11 et 22).
+Aucun modificateur de maladie n’est démontré dans Parkinson. Les agonistes du GLP-1R sont une classe métabolique mature, avec des bénéfices cardio-rénaux **molécule-spécifiques**. La plausibilité neuroprotectrice est préclinique. En clinique : signal de **LIXIPARK**, échec d’**Exenatide-PD3**. Pas d’effet de classe, pas d’indication hors essai. Le pharmacien sécurise l’usage et prévient le hors AMM injustifié.
